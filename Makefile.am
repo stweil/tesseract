@@ -21,6 +21,9 @@ endif
 SUBDIRS = src/arch src/ccutil src/viewer src/cutil src/opencl src/ccstruct
 SUBDIRS += src/dict src/classify src/wordrec src/textord src/lstm
 SUBDIRS += src/ccmain src/api . tessdata doc unittest
+if MINGW
+SUBDIRS += nsis
+endif
 
 EXTRA_DIST = README.md
 EXTRA_DIST += aclocal.m4 config configure.ac autogen.sh
@@ -59,6 +62,11 @@ doc-pack: doc
 
 doc-clean:
 	rm -rf $(top_srcdir)/doc/html/*
+
+if MINGW
+winsetup: training ScrollView.jar
+	@cd "$(top_builddir)/nsis" && $(MAKE) winsetup
+endif
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = tesseract.pc
