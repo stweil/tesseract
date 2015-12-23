@@ -40,8 +40,22 @@ typedef float FLOAT32;
 typedef double FLOAT64;
 typedef unsigned char BOOL8;
 
-#define INT32FORMAT "%d"
-#define INT64FORMAT "%lld"
+#if defined(_WIN32)
+
+/* MinGW defines the standard PRI... macros, but MSVS doesn't. */
+
+#if !defined(PRId32)
+# define PRId32 "d"
+#endif
+
+#if !defined(PRId64)
+# define PRId64 "I64d"
+#endif
+
+#endif /* _WIN32 */
+
+#define INT32FORMAT "%" PRId32
+#define INT64FORMAT "%" PRId64
 
 #define MAX_INT8  0x7f
 #define MAX_INT16 0x7fff
