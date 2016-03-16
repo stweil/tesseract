@@ -78,6 +78,8 @@ void OSResults::update_best_orientation() {
   }
   // Store difference of top two orientation scores.
   best_result.oconfidence = first - second;
+  printf("first:  %02f\n", first);
+  printf("second: %02f\n", second);
 }
 
 void OSResults::set_best_orientation(int orientation_id) {
