@@ -23,6 +23,7 @@ SetCompressorDictSize 32
 ; Settings which normally should be passed as command line arguments.
 ;define CROSSBUILD
 ;define SHARED
+;define TRAINING
 ;define W64
 !ifndef SRCDIR
 !define SRCDIR .
@@ -53,7 +54,7 @@ SetCompressorDictSize 32
 Name "${PRODUCT_NAME}"
 Caption "${PRODUCT_NAME} ${VERSION}"
 !ifndef CROSSBUILD
-BrandingText /TRIMCENTER "(c) 2010-2015 ${PRODUCT_NAME}"
+BrandingText /TRIMCENTER "(c) 2010-2016 ${PRODUCT_NAME}"
 !endif
 
 !define REGKEY "SOFTWARE\${PRODUCT_NAME}"
@@ -140,16 +141,25 @@ CRCCheck on
 InstProgressFlags smooth colored
 CRCCheck On  # Do a CRC check before installing
 !ifdef W64
-InstallDir "$PROGRAMFILES64\Tesseract-OCR"
+InstallDir "$PROGRAMFILES64\${PRODUCT_NAME}"
 !else
-InstallDir "$PROGRAMFILES\Tesseract-OCR"
+InstallDir "$PROGRAMFILES\${PRODUCT_NAME}"
 !endif
+; Registry key to check for directory (so if you install again, it will
+; overwrite the old one automatically)
+InstallDirRegKey HKLM "${REGKEY}" "Path"
 # Name of program and file
-!ifdef VERSION
-OutFile tesseract-ocr-setup-${VERSION}.exe
+!ifdef W64
+!define SETUP tesseract-ocr-w64-setup
 !else
-OutFile tesseract-ocr-setup.exe
+!define SETUP tesseract-ocr-w32-setup
 !endif
+!ifdef VERSION
+OutFile ${SETUP}-${VERSION}.exe
+!else
+OutFile ${SETUP}.exe
+!endif
+
 
 !macro AddToPath
   # TODO(zdenop): Check if $INSTDIR is in path. If yes, do not append it.
@@ -293,7 +303,11 @@ Section -Main SEC0000
   File ${PREFIX}/bin/tesseract.exe
   File ${PREFIX}/bin/libtesseract-3.dll
 !ifdef CROSSBUILD
+!ifdef W64
+  File ${SRCDIR}\dll\x86_64-w64-mingw32\*.dll
+!else
   File ${SRCDIR}\dll\i686-w64-mingw32\*.dll
+!endif
 !endif
   File ${SRCDIR}\nsis\tar.exe
   CreateDirectory "$INSTDIR\tessdata"
@@ -324,6 +338,7 @@ Section "ScrollView" SecScrollView
   File ..\java\piccolo2d-extras-3.0.jar
 SectionEnd
 
+!ifdef TRAINING
 Section "Training Tools" SecTr
   SectionIn 1
   SetOutPath "$INSTDIR"
@@ -339,11 +354,16 @@ Section "Training Tools" SecTr
   File ${TRAININGDIR}\shapeclustering.exe
   File ${TRAININGDIR}\text2image.exe
 SectionEnd
+!endif ; TRAINING
 
 !define UNINST_EXE "$INSTDIR\tesseract-uninstall.exe"
 !define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 
 Section -post SEC0001
+!ifdef W64
+  SetRegView 64
+!endif
+
   ;Store installation folder - we always use HKLM!
   WriteRegStr HKLM "${REGKEY}" "Path" "$INSTDIR"
   WriteRegStr HKLM "${REGKEY}" "Mode" $MultiUser.InstallMode
@@ -1017,6 +1037,9 @@ SectionGroupEnd
 
 ;Section /o -un.Main UNSEC0000
 Section -un.Main UNSEC0000
+!ifdef W64
+  SetRegView 64
+!endif
   DetailPrint "Removing everything"
   Delete "$SMPROGRAMS\${PRODUCT_NAME}\*.*"
   RMDir  "$SMPROGRAMS\${PRODUCT_NAME}"
