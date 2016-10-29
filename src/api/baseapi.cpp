@@ -379,7 +379,7 @@ int TessBaseAPI::Init(const char* data, int data_size, const char* language,
   }
   // PERF_COUNT_SUB("delete tesseract_")
 #ifdef USE_OPENCL
-  OpenclDevice od;
+  static OpenclDevice od;
   od.InitEnv();
 #endif
   PERF_COUNT_SUB("OD::InitEnv()")
