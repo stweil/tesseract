@@ -2707,7 +2707,7 @@ ds_device OpenclDevice::getDeviceSelection( ) {
       // opencl isn't available at runtime, select native cpu device
       printf("[DS] OpenCL runtime not available.\n");
       selectedDevice.type = DS_DEVICE_NATIVE_CPU;
-      selectedDevice.oclDeviceName = "(null)";
+      selectedDevice.oclDeviceName = strdup("(null)");
       selectedDevice.score = nullptr;
       selectedDevice.oclDeviceID = nullptr;
       selectedDevice.oclDriverVersion = nullptr;
