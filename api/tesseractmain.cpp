@@ -359,7 +359,6 @@ void PreloadRenderers(tesseract::TessBaseAPI* api,
  *
  **********************************************************************/
 
-
 int main(int argc, char **argv) {
   const char* lang = "eng";
   const char* image = NULL;
@@ -461,8 +460,6 @@ int main(int argc, char **argv) {
         (api.GetBoolVariable("tessedit_make_boxes_from_boxes", &b) && b);
 
   tesseract::PointerVector<tesseract::TessResultRenderer> renderers;
-
-
 
   if (in_training_mode) {
     renderers.push_back(NULL);

@@ -2,18 +2,18 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/miah0ikfsf0j3819?svg=true)](https://ci.appveyor.com/project/zdenop/tesseract/)
 
 For the latest online version of the README.md see:
-    
+
   https://github.com/tesseract-ocr/tesseract/blob/master/README.md
 
 #About
 
 This package contains an OCR engine - `libtesseract` and a command line program - `tesseract`.
 
-The lead developer is Ray Smith. The maintainer is Zdenko Podobny. 
+The lead developer is Ray Smith. The maintainer is Zdenko Podobny.
 For a list of contributors see [AUTHORS](https://github.com/tesseract-ocr/tesseract/blob/master/AUTHORS) and github's log of [contributors](https://github.com/tesseract-ocr/tesseract/graphs/contributors).
 
 Tesseract has unicode (UTF-8) support, and can recognize more than 100
-languages "out of the box". It can be trained to recognize other languages. See [Tesseract Training](https://github.com/tesseract-ocr/tesseract/wiki/TrainingTesseract) for more information. 
+languages "out of the box". It can be trained to recognize other languages. See [Tesseract Training](https://github.com/tesseract-ocr/tesseract/wiki/TrainingTesseract) for more information.
 
 Tesseract supports various output formats: plain-text, hocr(html), pdf.
 
@@ -65,12 +65,12 @@ Basic command line usage:
 
     tesseract imagename outputbase [-l lang] [-psm pagesegmode] [configfiles...]
 
-For more information about the various command line options use `tesseract --help` or `man tesseract`. 
+For more information about the various command line options use `tesseract --help` or `man tesseract`.
 
 #Support
 
 Mailing-lists:
-* [tesseract-ocr](https://groups.google.com/d/forum/tesseract-ocr) - For tesseract users. 
-* [tesseract-dev](https://groups.google.com/d/forum/tesseract-dev) - For tesseract developers. 
+* [tesseract-ocr](https://groups.google.com/d/forum/tesseract-ocr) - For tesseract users.
+* [tesseract-dev](https://groups.google.com/d/forum/tesseract-dev) - For tesseract developers.
 
 Please read the [FAQ](https://github.com/tesseract-ocr/tesseract/wiki/FAQ) before asking any question in the mailing-list or reporting an issue.
