@@ -35,10 +35,11 @@
 #include "opencl_device_selection.h"
 GPUEnv OpenclDevice::gpuEnv;
 
-bool OpenclDevice::deviceIsSelected = false;
-ds_device OpenclDevice::selectedDevice;
+OpenclDevice OpenclDevice::od;
 
-int OpenclDevice::isInited = 0;
+bool OpenclDevice::deviceIsSelected = false;
+bool OpenclDevice::isInited = false;
+ds_device OpenclDevice::selectedDevice;
 
 static l_int32 MORPH_BC = ASYMMETRIC_MORPH_BC;
 
@@ -772,6 +773,7 @@ int OpenclDevice::ReleaseOpenclRunEnv()
 #endif
     return 1;
 }
+
 inline int OpenclDevice::AddKernelConfig( int kCount, const char *kName )
 {
     if ( kCount < 1 )
@@ -811,21 +813,20 @@ int OpenclDevice::InitOpenclRunEnv_DeviceSelection( int argc ) {
         } else {
             //printf("[DS] InitOpenclRunEnv_DS::Skipping populateGPUEnvFromDevice() b/c native cpu selected\n");
         }
-        isInited = 1;
+        isInited = true;
     }
 //PERF_COUNT_END
     return 0;
 }
 
-
 OpenclDevice::OpenclDevice()
 {
-    //InitEnv();
+    InitEnv();
 }
 
 OpenclDevice::~OpenclDevice()
 {
-    //ReleaseOpenclRunEnv();
+    ReleaseOpenclRunEnv();
 }
 
 int OpenclDevice::ReleaseOpenclEnv( GPUEnv *gpuInfo )
@@ -857,7 +858,7 @@ int OpenclDevice::ReleaseOpenclEnv( GPUEnv *gpuInfo )
         clReleaseContext( gpuEnv.mpContext );
         gpuEnv.mpContext = nullptr;
     }
-    isInited = 0;
+    isInited = false;
     gpuInfo->mnIsUserCreated = 0;
     delete[] gpuInfo->mpArryDevsID;
     return 1;
@@ -1041,8 +1042,7 @@ int OpenclDevice::CompileKernelFile( GPUEnv *gpuInfo, const char *buildOption )
     source = kernel_src;
 
     source_size[0] = strlen( source );
-    binaryExisted = 0;
-        binaryExisted = BinaryGenerated( filename, &fd ); // don't check for binary during microbenchmark
+    binaryExisted = BinaryGenerated( filename, &fd ); // don't check for binary during microbenchmark
 //PERF_COUNT_SUB("BinaryGenerated")
     if ( binaryExisted == 1 )
     {

@@ -218,10 +218,11 @@ typedef struct _GPUEnv
 
 class OpenclDevice
 {
-
 public:
+    static OpenclDevice od;
+
     static GPUEnv gpuEnv;
-    static int isInited;
+    static bool isInited;
     OpenclDevice();
     ~OpenclDevice();
     static int InitEnv(); // load dll, call InitOpenclRunEnv(0)

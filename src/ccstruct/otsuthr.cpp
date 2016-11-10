@@ -55,12 +55,11 @@ int OtsuThreshold(Pix* src_pix, int left, int top, int width, int height,
   int* histogramAllChannels = new int[kHistogramSize * num_channels];
 
   // Calculate Histogram on GPU
-  OpenclDevice od;
-  if (od.selectedDeviceIsOpenCL() && (num_channels == 1 || num_channels == 4) &&
+  if (OpenclDevice::od.selectedDeviceIsOpenCL() && (num_channels == 1 || num_channels == 4) &&
       top == 0 && left == 0) {
-    od.HistogramRectOCL((unsigned char*)pixGetData(src_pix), num_channels,
-                        pixGetWpl(src_pix) * 4, left, top, width, height,
-                        kHistogramSize, histogramAllChannels);
+    OpenclDevice::od.HistogramRectOCL((unsigned char*)pixGetData(src_pix), num_channels,
+                                      pixGetWpl(src_pix) * 4, left, top, width, height,
+                                      kHistogramSize, histogramAllChannels);
 
     // Calculate Threshold from Histogram on cpu
     for (int ch = 0; ch < num_channels; ++ch) {
