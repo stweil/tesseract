@@ -276,9 +276,9 @@ phase_I_generate_image() {
             # Parse .bigram_freqs file and compose a .train_ngrams file with text
             # for tesseract to recognize during training. Take only the ngrams whose
             # combined weight accounts for 95% of all the bigrams in the language.
-            NGRAM_FRAC=$(cat ${BIGRAM_FREQS_FILE} \
-                | awk '{s=s+$2}; END {print (s/100)*p}' p=99)
-            cat ${BIGRAM_FREQS_FILE} | sort -rnk2 \
+            NGRAM_FRAC=$(awk '{s=s+$2}; END {print (s/100)*p}' p=99 \
+                         ${BIGRAM_FREQS_FILE})
+            sort -rnk2 ${BIGRAM_FREQS_FILE} \
                 | awk '{s=s+$2; if (s <= x) {printf "%s ", $1; } }' \
                 x=${NGRAM_FRAC} > ${TRAIN_NGRAMS_FILE}
             check_file_readable ${TRAIN_NGRAMS_FILE}
@@ -419,8 +419,8 @@ phase_E_extract_features() {
     tlog "Using TESSDATA_PREFIX=${TESSDATA_PREFIX}"
     local counter=0
     for img_file in ${img_files}; do
-        run_command tesseract ${img_file} ${img_file%.*} \
-            ${box_config} ${config} &
+        run_command tesseract "${img_file}" ${img_file%.*} \
+            "${box_config}" "${config}" &
       let counter=counter+1
       let rem=counter%par_factor
       if [[ "${rem}" -eq 0 ]]; then
@@ -444,8 +444,8 @@ phase_C_cluster_prototypes() {
     run_command cntraining -D "${TRAINING_DIR}/" \
         $(ls ${TRAINING_DIR}/*.tr)
 
-    check_file_readable ${TRAINING_DIR}/normproto
-    mv ${TRAINING_DIR}/normproto ${out_normproto}
+    check_file_readable "${TRAINING_DIR}/normproto"
+    mv "${TRAINING_DIR}/normproto" "${out_normproto}"
 }
 
 # Phase S : (S)hape clustering
@@ -454,7 +454,7 @@ phase_S_cluster_shapes() {
         tlog "\n=== Shape Clustering disabled ==="
         return
     fi
-    check_file_readable ${LANGDATA_ROOT}/font_properties
+    check_file_readable "${LANGDATA_ROOT}/font_properties"
     local font_props="-F ${LANGDATA_ROOT}/font_properties"
     if [[ -r ${TRAINING_DIR}/${LANG_CODE}.xheights ]] &&\
        [[ -s ${TRAINING_DIR}/${LANG_CODE}.xheights ]]; then
@@ -463,19 +463,19 @@ phase_S_cluster_shapes() {
 
     run_command shapeclustering \
         -D "${TRAINING_DIR}/" \
-        -U ${TRAINING_DIR}/${LANG_CODE}.unicharset \
-        -O ${TRAINING_DIR}/${LANG_CODE}.mfunicharset \
-        ${font_props} \
+        -U "${TRAINING_DIR}/${LANG_CODE}.unicharset" \
+        -O "${TRAINING_DIR}/${LANG_CODE}.mfunicharset" \
+        "${font_props}" \
         $(ls ${TRAINING_DIR}/*.tr)
-    check_file_readable ${TRAINING_DIR}/shapetable \
-        ${TRAINING_DIR}/${LANG_CODE}.mfunicharset
+    check_file_readable "${TRAINING_DIR}/shapetable" \
+        "${TRAINING_DIR}/${LANG_CODE}.mfunicharset"
 }
 
 # Phase M : Clustering microfeatures (mfTraining)
 phase_M_cluster_microfeatures() {
     tlog "\n=== Phase M : Clustering microfeatures (mfTraining) ==="
 
-    check_file_readable ${LANGDATA_ROOT}/font_properties
+    check_file_readable "${LANGDATA_ROOT}/font_properties"
     font_props="-F ${LANGDATA_ROOT}/font_properties"
     if [[ -r ${TRAINING_DIR}/${LANG_CODE}.xheights ]] && \
        [[ -s ${TRAINING_DIR}/${LANG_CODE}.xheights ]]; then
@@ -484,16 +484,16 @@ phase_M_cluster_microfeatures() {
 
     run_command mftraining \
         -D "${TRAINING_DIR}/" \
-        -U ${TRAINING_DIR}/${LANG_CODE}.unicharset \
-        -O ${TRAINING_DIR}/${LANG_CODE}.mfunicharset \
-        ${font_props} \
-        $(ls ${TRAINING_DIR}/*.tr)
-    check_file_readable ${TRAINING_DIR}/inttemp ${TRAINING_DIR}/shapetable \
-        ${TRAINING_DIR}/pffmtable ${TRAINING_DIR}/${LANG_CODE}.mfunicharset
-    mv ${TRAINING_DIR}/inttemp ${TRAINING_DIR}/${LANG_CODE}.inttemp
-    mv ${TRAINING_DIR}/shapetable ${TRAINING_DIR}/${LANG_CODE}.shapetable
-    mv ${TRAINING_DIR}/pffmtable ${TRAINING_DIR}/${LANG_CODE}.pffmtable
-    mv ${TRAINING_DIR}/${LANG_CODE}.mfunicharset ${TRAINING_DIR}/${LANG_CODE}.unicharset
+        -U "${TRAINING_DIR}/${LANG_CODE}.unicharset" \
+        -O "${TRAINING_DIR}/${LANG_CODE}.mfunicharset" \
+        "${font_props}" \
+        $(ls "${TRAINING_DIR}"/*.tr)
+    check_file_readable "${TRAINING_DIR}/inttemp" "${TRAINING_DIR}/shapetable" \
+        "${TRAINING_DIR}/pffmtable" "${TRAINING_DIR}/${LANG_CODE}.mfunicharset"
+    mv "${TRAINING_DIR}/inttemp" "${TRAINING_DIR}/${LANG_CODE}.inttemp"
+    mv "${TRAINING_DIR}/shapetable" "${TRAINING_DIR}/${LANG_CODE}.shapetable"
+    mv "${TRAINING_DIR}/pffmtable" "${TRAINING_DIR}/${LANG_CODE}.pffmtable"
+    mv "${TRAINING_DIR}/${LANG_CODE}.mfunicharset" "${TRAINING_DIR}/${LANG_CODE}.unicharset"
 }
 
 phase_B_generate_ambiguities() {
@@ -502,10 +502,10 @@ phase_B_generate_ambiguities() {
   # Check for manually created ambiguities data.
   if [[ -r ${LANGDATA_ROOT}/${LANG_CODE}/${LANG_CODE}.unicharambigs ]]; then
       tlog "Found file ${LANGDATA_ROOT}/${LANG_CODE}/${LANG_CODE}.unicharambigs"
-      cp ${LANGDATA_ROOT}/${LANG_CODE}/${LANG_CODE}.unicharambigs \
-          ${TRAINING_DIR}/${LANG_CODE}.unicharambigs
+      cp "${LANGDATA_ROOT}/${LANG_CODE}/${LANG_CODE}.unicharambigs" \
+          "${TRAINING_DIR}/${LANG_CODE}.unicharambigs"
       # Make it writable, as it may be read-only in the client.
-      chmod u+w ${TRAINING_DIR}/${LANG_CODE}.unicharambigs
+      chmod u+w "${TRAINING_DIR}/${LANG_CODE}.unicharambigs"
       return
   else
       tlog "No unicharambigs file found!"
@@ -567,17 +567,17 @@ make__traineddata() {
   # Combine available files for this language from the langdata dir.
   if [[ -r ${lang_prefix}.config ]]; then
     tlog "Copying ${lang_prefix}.config to ${TRAINING_DIR}"
-    cp ${lang_prefix}.config ${TRAINING_DIR}
-    chmod u+w ${TRAINING_DIR}/${LANG_CODE}.config
+    cp "${lang_prefix}.config" "${TRAINING_DIR}"
+    chmod u+w "${TRAINING_DIR}/${LANG_CODE}.config"
   fi
   if [[ -r ${lang_prefix}.params-model ]]; then
     tlog "Copying ${lang_prefix}.params-model to ${TRAINING_DIR}"
-    cp ${lang_prefix}.params-model ${TRAINING_DIR}
-    chmod u+w ${TRAINING_DIR}/${LANG_CODE}.params-model
+    cp "${lang_prefix}.params-model" "${TRAINING_DIR}"
+    chmod u+w "${TRAINING_DIR}/${LANG_CODE}.params-model"
   fi
 
   # Compose the traineddata file.
-  run_command combine_tessdata ${TRAINING_DIR}/${LANG_CODE}.
+  run_command combine_tessdata "${TRAINING_DIR}/${LANG_CODE}".
 
   # Copy it to the output dir, overwriting only if allowed by the cmdline flag.
   if [[ ! -d ${OUTPUT_DIR} ]]; then
@@ -589,5 +589,5 @@ make__traineddata() {
       err_exit "File ${destfile} exists and no --overwrite specified";
   fi
   tlog "Moving ${TRAINING_DIR}/${LANG_CODE}.traineddata to ${OUTPUT_DIR}"
-  cp -f ${TRAINING_DIR}/${LANG_CODE}.traineddata ${destfile}
+  cp -f "${TRAINING_DIR}/${LANG_CODE}.traineddata" "${destfile}"
 }
