@@ -18,19 +18,10 @@
 #include "simddetect.h"
 #include "tprintf.h"
 
-#undef X86_BUILD
-#if defined(__x86_64__) || defined(__i386__) || defined(_WIN32)
-#if !defined(ANDROID_BUILD)
-#define X86_BUILD 1
-#endif  // !ANDROID_BUILD
-#endif  // x86 target
-
-#if defined(X86_BUILD)
 #if defined(__GNUC__)
-#include <cpuid.h>
+# include <cpuid.h>
 #elif defined(_WIN32)
-#include <intrin.h>
-#endif
+# include <intrin.h>
 #endif
 
 SIMDDetect SIMDDetect::detector;
@@ -49,13 +40,15 @@ bool SIMDDetect::sse_available_;
 // __GNUC__ is also defined by compilers that include GNU extensions such as
 // clang.
 SIMDDetect::SIMDDetect() {
-#if defined(X86_BUILD)
 #if defined(__GNUC__)
   unsigned int eax, ebx, ecx, edx;
   if (__get_cpuid(1, &eax, &ebx, &ecx, &edx) != 0) {
     // Note that these tests all use hex because the older compilers don't have
     // the newer flags.
+#if defined(__SSE4_1__)
     sse_available_ = (ecx & 0x00080000) != 0;
+#endif
+#if defined(__AVX__)
     avx_available_ = (ecx & 0x10000000) != 0;
     if (avx_available_) {
       // There is supposed to be a __get_cpuid_count function, but this is all
@@ -66,17 +59,21 @@ SIMDDetect::SIMDDetect() {
       avx512F_available_ = (ebx & 0x00010000) != 0;
       avx512BW_available_ = (ebx & 0x40000000) != 0;
     }
+#endif
   }
 #elif defined(_WIN32)
   int cpuInfo[4];
   __cpuid(cpuInfo, 0);
   if (cpuInfo[0] >= 1) {
     __cpuid(cpuInfo, 1);
+#if defined(__SSE4_1__)
     sse_available_ = (cpuInfo[2] & 0x00080000) != 0;
+#endif
+#if defined(__AVX__)
     avx_available_ = (cpuInfo[2] & 0x10000000) != 0;
+#endif
   }
 #else
 #error "I don't know how to test for SIMD with this compiler"
 #endif
-#endif  // X86_BUILD
 }
