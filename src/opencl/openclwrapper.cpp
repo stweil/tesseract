@@ -653,6 +653,7 @@ int OpenclDevice::LoadOpencl()
 #endif
     return 1;
 }
+
 int OpenclDevice::SetKernelEnv( KernelEnv *envInfo )
 {
     envInfo->mpkContext = gpuEnv.mpContext;
@@ -782,6 +783,7 @@ inline int OpenclDevice::AddKernelConfig( int kCount, const char *kName )
     gpuEnv.mnKernelCount++;
     return 0;
 }
+
 int OpenclDevice::RegistOpenclKernel()
 {
     if ( !gpuEnv.mnIsUserCreated )
@@ -832,7 +834,6 @@ OpenclDevice::~OpenclDevice()
 int OpenclDevice::ReleaseOpenclEnv( GPUEnv *gpuInfo )
 {
     int i = 0;
-    int clStatus = 0;
 
     if ( !isInited )
     {
@@ -843,7 +844,7 @@ int OpenclDevice::ReleaseOpenclEnv( GPUEnv *gpuInfo )
     {
         if ( gpuEnv.mpArryPrograms[i] )
         {
-            clStatus = clReleaseProgram( gpuEnv.mpArryPrograms[i] );
+            cl_int clStatus = clReleaseProgram(gpuEnv.mpArryPrograms[i]);
             CHECK_OPENCL( clStatus, "clReleaseProgram" );
             gpuEnv.mpArryPrograms[i] = nullptr;
         }
@@ -863,6 +864,7 @@ int OpenclDevice::ReleaseOpenclEnv( GPUEnv *gpuInfo )
     delete[] gpuInfo->mpArryDevsID;
     return 1;
 }
+
 int OpenclDevice::BinaryGenerated( const char * clFileName, FILE ** fhandle )
 {
     unsigned int i = 0;
@@ -888,6 +890,7 @@ int OpenclDevice::BinaryGenerated( const char * clFileName, FILE ** fhandle )
     return status;
 
 }
+
 int OpenclDevice::CachedOfKernerPrg( const GPUEnv *gpuEnvCached, const char * clFileName )
 {
     int i;
@@ -903,6 +906,7 @@ int OpenclDevice::CachedOfKernerPrg( const GPUEnv *gpuEnvCached, const char * cl
 
     return 0;
 }
+
 int OpenclDevice::WriteBinaryToFile( const char* fileName, const char* birary, size_t numBytes )
 {
   FILE *output = nullptr;
@@ -917,6 +921,7 @@ int OpenclDevice::WriteBinaryToFile( const char* fileName, const char* birary, s
     return 1;
 
 }
+
 int OpenclDevice::GeneratBinFromKernelSource( cl_program program, const char * clFileName )
 {
     unsigned int i = 0;
@@ -1021,7 +1026,7 @@ int OpenclDevice::GeneratBinFromKernelSource( cl_program program, const char * c
 int OpenclDevice::CompileKernelFile( GPUEnv *gpuInfo, const char *buildOption )
 {
 //PERF_COUNT_START("CompileKernelFile")
-    cl_int clStatus = 0;
+    cl_int clStatus = CL_SUCCESS;
     size_t length;
     char *buildLog = nullptr, *binary;
     const char *source;
@@ -2719,7 +2724,6 @@ ds_device OpenclDevice::getDeviceSelection( ) {
   // PERF_COUNT_END
   return selectedDevice;
 }
-
 
 bool OpenclDevice::selectedDeviceIsOpenCL() {
   ds_device device = getDeviceSelection();
