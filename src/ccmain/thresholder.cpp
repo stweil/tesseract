@@ -271,7 +271,7 @@ void ImageThresholder::OtsuThresholdRectToPix(Pix* src_pix,
                                    rect_height_, &thresholds, &hi_values);
   // only use opencl if compiled w/ OpenCL and selected device is opencl
 #ifdef USE_OPENCL
-  if ((num_channels == 4 || num_channels == 1) &&
+  if (false && (num_channels == 4 || num_channels == 1) &&
       OpenclDevice::od.selectedDeviceIsOpenCL() &&
       rect_top_ == 0 && rect_left_ == 0) {
     OpenclDevice::od.ThresholdRectToPixOCL((unsigned char*)pixGetData(src_pix),

@@ -2664,47 +2664,33 @@ ds_device OpenclDevice::getDeviceSelection( ) {
         TessDeviceScore score = *(TessDeviceScore *)device.score;
 
         float time = score.time;
-        printf("[DS] Device[%u] %i:%s score is %f\n", d + 1, device.type,
+        printf("[DS] Device[%u] %s score is %f\n", d + 1,
                device.oclDeviceName, time);
         if (time < bestTime) {
           bestTime = time;
           bestDeviceIdx = d;
         }
       }
+      // cleanup
+      // TODO: call destructor for profile object?
+
+      // Allow overriding the automated choice by setting
+      // the environment variable TESSERACT_OPENCL_DEVICE.
+      char *overrideDeviceStr = getenv("TESSERACT_OPENCL_DEVICE");
+      if (overrideDeviceStr != nullptr) {
+        int overrideDeviceIdx = atoi(overrideDeviceStr);
+        if (overrideDeviceIdx < 1 && overrideDeviceIdx > profile->numDevices) {
+          overrideDeviceIdx = profile->numDevices;
+        }
+        bestDeviceIdx = overrideDeviceIdx - 1;
+      }
+
       printf("[DS] Selected Device[%i]: \"%s\" (%s)\n", bestDeviceIdx + 1,
              profile->devices[bestDeviceIdx].oclDeviceName,
              profile->devices[bestDeviceIdx].type == DS_DEVICE_OPENCL_DEVICE
                  ? "OpenCL"
                  : "Native");
-      // cleanup
-      // TODO: call destructor for profile object?
 
-      bool overridden = false;
-      char *overrideDeviceStr = getenv("TESSERACT_OPENCL_DEVICE");
-      if (overrideDeviceStr != nullptr) {
-        int overrideDeviceIdx = atoi(overrideDeviceStr);
-        if (overrideDeviceIdx > 0 && overrideDeviceIdx <= profile->numDevices) {
-          printf(
-              "[DS] Overriding Device Selection (TESSERACT_OPENCL_DEVICE=%s, "
-              "%i)\n",
-              overrideDeviceStr, overrideDeviceIdx);
-          bestDeviceIdx = overrideDeviceIdx - 1;
-          overridden = true;
-        } else {
-          printf(
-              "[DS] Ignoring invalid TESSERACT_OPENCL_DEVICE=%s ([1,%i] are "
-              "valid devices).\n",
-              overrideDeviceStr, profile->numDevices);
-        }
-      }
-
-      if (overridden) {
-        printf("[DS] Overridden Device[%i]: \"%s\" (%s)\n", bestDeviceIdx + 1,
-               profile->devices[bestDeviceIdx].oclDeviceName,
-               profile->devices[bestDeviceIdx].type == DS_DEVICE_OPENCL_DEVICE
-                   ? "OpenCL"
-                   : "Native");
-      }
       selectedDevice = profile->devices[bestDeviceIdx];
       // cleanup
       releaseDSProfile(profile, releaseScore);
