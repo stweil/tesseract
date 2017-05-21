@@ -28,7 +28,7 @@
 #include "networkscratch.h"
 
 // Number of threads to use for parallel calculation of Forward and Backward.
-#ifdef _OPENMP
+#ifdef _OPENMPxx
 const int kNumThreads = 4;
 #else
 const int kNumThreads = 1;

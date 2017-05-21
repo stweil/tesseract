@@ -292,7 +292,9 @@ void WeightMatrix::SumOuterTransposed(const TransposedArray& u,
   int num_samples = u.dim2();
   // v is missing the last element in dim1.
   assert(v.dim1() == num_inputs);
-#ifdef _OPENMP
+#if defined(_OPENMPxx)
+  // The calculation of the dot product is limited by memory i/o,
+  // so using parallel threads does not improve the performance.
 #pragma omp parallel for num_threads(4) if (in_parallel)
 #endif
   for (int i = 0; i < num_outputs; ++i) {
