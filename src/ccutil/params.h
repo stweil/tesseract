@@ -332,19 +332,7 @@ tesseract::ParamsVectors *GlobalParams();
 #define float_MEMBER(name, val, comment, vec)\
   name(val, #name, comment, false, vec)
 
-#define INT_INIT_MEMBER(name, val, comment, vec)\
-  name(val, #name, comment, true, vec)
-
-#define BOOL_INIT_MEMBER(name, val, comment, vec)\
-  name(val, #name, comment, true, vec)
-
-#define STRING_INIT_MEMBER(name, val, comment, vec)\
-  name(val, #name, comment, true, vec)
-
-#define double_INIT_MEMBER(name, val, comment, vec)\
-  name(val, #name, comment, true, vec)
-
-#define float_INIT_MEMBER(name, val, comment, vec)\
+#define INIT_MEMBER(name, val, comment, vec)\
   name(val, #name, comment, true, vec)
 
 #endif

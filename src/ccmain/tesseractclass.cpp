@@ -76,11 +76,11 @@ Tesseract::Tesseract()
           " 5=line, 6=word, 7=char"
           " (Values from PageSegMode enum in publictypes.h)",
           this->params()),
-      INT_INIT_MEMBER(tessedit_ocr_engine_mode, tesseract::OEM_DEFAULT,
-                      "Which OCR engine(s) to run (Tesseract, LSTM, both)."
-                      " Defaults to loading and running the most accurate"
-                      " available.",
-                      this->params()),
+      INIT_MEMBER(tessedit_ocr_engine_mode, tesseract::OEM_DEFAULT,
+                  "Which OCR engine(s) to run (Tesseract, LSTM, both)."
+                  " Defaults to loading and running the most accurate"
+                  " available.",
+                  this->params()),
       STRING_MEMBER(tessedit_char_blacklist, "",
                     "Blacklist of chars not to recognize", this->params()),
       STRING_MEMBER(tessedit_char_whitelist, "",
@@ -487,11 +487,11 @@ Tesseract::Tesseract()
       BOOL_MEMBER(poly_allow_detailed_fx, false,
                   "Allow feature extractors to see the original outline",
                   this->params()),
-      BOOL_INIT_MEMBER(tessedit_init_config_only, false,
-                       "Only initialize with the config file. Useful if the "
-                       "instance is not going to be used for OCR but say only "
-                       "for layout analysis.",
-                       this->params()),
+      INIT_MEMBER(tessedit_init_config_only, false,
+                  "Only initialize with the config file. Useful if the "
+                  "instance is not going to be used for OCR but say only "
+                  "for layout analysis.",
+                  this->params()),
       BOOL_MEMBER(textord_equation_detect, false, "Turn on equation detector",
                   this->params()),
       BOOL_MEMBER(textord_tabfind_vertical_text, true,
