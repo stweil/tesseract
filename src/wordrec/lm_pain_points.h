@@ -100,7 +100,7 @@ class LMPainPoints {
                           WERD_RES *word_res);
 
   // Generate a pain point for the blamer.
-  bool GenerateForBlamer(double max_char_wh_ratio, WERD_RES *word_res,
+  bool GenerateForBlamer(float max_char_wh_ratio, WERD_RES *word_res,
                          int col, int row) {
     return GeneratePainPoint(col, row, LM_PPTYPE_BLAMER, 0.0, false,
                              max_char_wh_ratio, word_res);
