@@ -109,7 +109,7 @@ class LSTMRecognizer {
     }
   }
   // Multiplies the all the learning rate(s) by the given factor.
-  void ScaleLearningRate(double factor) {
+  void ScaleLearningRate(float factor) {
     ASSERT_HOST(network_ != nullptr && network_->type() == NT_SERIES);
     learning_rate_ *= factor;
     if (network_->TestFlag(NF_LAYER_SPECIFIC_LR)) {
@@ -120,7 +120,7 @@ class LSTMRecognizer {
     }
   }
   // Multiplies the learning rate of the layer with id, by the given factor.
-  void ScaleLayerLearningRate(const STRING& id, double factor) {
+  void ScaleLayerLearningRate(const STRING& id, float factor) {
     ASSERT_HOST(network_ != nullptr && network_->type() == NT_SERIES);
     ASSERT_HOST(id.length() > 1 && id[0] == ':');
     Series* series = static_cast<Series*>(network_);
