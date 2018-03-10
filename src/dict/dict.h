@@ -53,7 +53,6 @@ using DawgVector = GenericVector<Dawg *>;
 // Constants
 //
 static const int kRatingPad = 4;
-static const char kDictWildcard[] = "\u2606";   // WHITE STAR
 static const int kDictMaxWildcards = 2;  // max wildcards for a word
 // TODO(daria): If hyphens are different in different languages and can be
 // inferred from training data we should load their values dynamically.
@@ -409,7 +408,6 @@ class Dict {
         getCCUtil()->lang.string(), path);
   }
 
-  inline void SetWildcardID(UNICHAR_ID id) { wildcard_unichar_id_ = id; }
   inline UNICHAR_ID WildcardID() const { return wildcard_unichar_id_; }
   /// Return the number of dawgs in the dawgs_ vector.
   inline int NumDawgs() const { return dawgs_.size(); }
