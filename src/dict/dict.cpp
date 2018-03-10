@@ -111,8 +111,8 @@ Dict::Dict(CCUtil *ccutil)
                   "Use only the first UTF8 step of the given string"
                   " when computing log probabilities.",
                   getCCUtil()->params()),
-      double_MEMBER(certainty_scale, 20.0, "Certainty scaling factor",
-                    getCCUtil()->params()),
+      float_MEMBER(certainty_scale, 20.0f, "Certainty scaling factor",
+                   getCCUtil()->params()),
       double_MEMBER(stopper_nondict_certainty_base, -2.50,
                     "Certainty threshold for non-dict words",
                     getCCUtil()->params()),

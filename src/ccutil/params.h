@@ -31,6 +31,7 @@ class IntParam;
 class BoolParam;
 class StringParam;
 class DoubleParam;
+class FloatParam;
 
 // Enum for constraints on what kind of params should be set by SetParam().
 enum SetParamConstraint {
@@ -45,6 +46,7 @@ struct ParamsVectors {
   GenericVector<BoolParam *> bool_params;
   GenericVector<StringParam *> string_params;
   GenericVector<DoubleParam *> double_params;
+  GenericVector<FloatParam *> float_params;
 };
 
 // Utility functions for working with Tesseract parameters.
@@ -240,6 +242,30 @@ class DoubleParam : public Param {
   GenericVector<DoubleParam *> *params_vec_;
 };
 
+class FloatParam : public Param {
+ public:
+  FloatParam(float value, const char *name, const char *comment,
+             bool init, ParamsVectors *vec) : Param(name, comment, init) {
+    value_ = value;
+    default_ = value;
+    params_vec_ = &(vec->float_params);
+    vec->float_params.push_back(this);
+  }
+  ~FloatParam() { ParamUtils::RemoveParam<FloatParam>(this, params_vec_); }
+  operator float() const { return value_; }
+  void operator=(float value) { value_ = value; }
+  void set_value(float value) { value_ = value; }
+  void ResetToDefault() {
+    value_ = default_;
+  }
+
+ private:
+  float value_;
+  float default_;
+  // Pointer to the vector that contains this param (not owned by this class).
+  GenericVector<FloatParam *> *params_vec_;
+};
+
 }  // namespace tesseract
 
 // Global parameter lists.
@@ -273,6 +299,9 @@ tesseract::ParamsVectors *GlobalParams();
 #define double_VAR_H(name,val,comment)\
   tesseract::DoubleParam     name
 
+#define float_VAR_H(name,val,comment)\
+  tesseract::FloatParam     name
+
 #define INT_VAR(name,val,comment)\
   tesseract::IntParam      name(val,#name,comment,false,GlobalParams())
 
@@ -284,6 +313,9 @@ tesseract::ParamsVectors *GlobalParams();
 
 #define double_VAR(name,val,comment)\
   tesseract::DoubleParam     name(val,#name,comment,false,GlobalParams())
+
+#define float_VAR(name,val,comment)\
+  tesseract::FloatParam     name(val,#name,comment,false,GlobalParams())
 
 #define INT_MEMBER(name, val, comment, vec)\
   name(val, #name, comment, false, vec)
@@ -297,6 +329,9 @@ tesseract::ParamsVectors *GlobalParams();
 #define double_MEMBER(name, val, comment, vec)\
   name(val, #name, comment, false, vec)
 
+#define float_MEMBER(name, val, comment, vec)\
+  name(val, #name, comment, false, vec)
+
 #define INT_INIT_MEMBER(name, val, comment, vec)\
   name(val, #name, comment, true, vec)
 
@@ -307,6 +342,9 @@ tesseract::ParamsVectors *GlobalParams();
   name(val, #name, comment, true, vec)
 
 #define double_INIT_MEMBER(name, val, comment, vec)\
+  name(val, #name, comment, true, vec)
+
+#define float_INIT_MEMBER(name, val, comment, vec)\
   name(val, #name, comment, true, vec)
 
 #endif

@@ -608,7 +608,7 @@ class Dict {
   BOOL_VAR_H(use_only_first_uft8_step, false,
              "Use only the first UTF8 step of the given string"
              " when computing log probabilities.");
-  double_VAR_H(certainty_scale, 20.0, "Certainty scaling factor");
+  float_VAR_H(certainty_scale, 20.0f, "Certainty scaling factor");
   double_VAR_H(stopper_nondict_certainty_base, -2.50,
                "Certainty threshold for non-dict words");
   double_VAR_H(stopper_phase2_certainty_rejection_offset, 1.0,
