@@ -347,18 +347,18 @@ class LanguageModel {
                "Penalty for words not in the frequent word dictionary");
   double_VAR_H(language_model_penalty_non_dict_word, 0.15,
                "Penalty for non-dictionary words");
-  double_VAR_H(language_model_penalty_punc, 0.2,
-               "Penalty for inconsistent punctuation");
-  double_VAR_H(language_model_penalty_case, 0.1,
-               "Penalty for inconsistent case");
+  float_VAR_H(language_model_penalty_punc, 0.2f,
+              "Penalty for inconsistent punctuation");
+  float_VAR_H(language_model_penalty_case, 0.1f,
+              "Penalty for inconsistent case");
   double_VAR_H(language_model_penalty_script, 0.5,
                "Penalty for inconsistent script");
-  double_VAR_H(language_model_penalty_chartype, 0.3,
-               "Penalty for inconsistent character type");
+  float_VAR_H(language_model_penalty_chartype, 0.3f,
+              "Penalty for inconsistent character type");
   double_VAR_H(language_model_penalty_font, 0.00,
                "Penalty for inconsistent font");
-  double_VAR_H(language_model_penalty_spacing, 0.05,
-               "Penalty for inconsistent spacing");
+  float_VAR_H(language_model_penalty_spacing, 0.05f,
+              "Penalty for inconsistent spacing");
   double_VAR_H(language_model_penalty_increment, 0.01, "Penalty increment");
   INT_VAR_H(wordrec_display_segmentations, 0, "Display Segmentations");
   BOOL_VAR_H(language_model_use_sigmoidal_certainty, false,
