@@ -126,7 +126,7 @@ class LanguageModel {
     if (num_problems == 0) return 0.0f;
     if (num_problems == 1) return penalty;
     return (penalty + (language_model_penalty_increment *
-                       static_cast<float>(num_problems-1)));
+                       (num_problems - 1)));
   }
 
   // Computes the adjustment to the ratings sum based on the given
@@ -359,7 +359,7 @@ class LanguageModel {
                "Penalty for inconsistent font");
   float_VAR_H(language_model_penalty_spacing, 0.05f,
               "Penalty for inconsistent spacing");
-  double_VAR_H(language_model_penalty_increment, 0.01, "Penalty increment");
+  float_VAR_H(language_model_penalty_increment, 0.01f, "Penalty increment");
   INT_VAR_H(wordrec_display_segmentations, 0, "Display Segmentations");
   BOOL_VAR_H(language_model_use_sigmoidal_certainty, false,
              "Use sigmoidal score for certainty");
