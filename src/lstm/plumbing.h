@@ -108,7 +108,7 @@ class Plumbing : public Network {
     return *lr_ptr;
   }
   // Scales the learning rate for a specific layer of the stack.
-  void ScaleLayerLearningRate(const char* id, double factor) {
+  void ScaleLayerLearningRate(const char* id, float factor) {
     float* lr_ptr = LayerLearningRatePtr(id);
     ASSERT_HOST(lr_ptr != nullptr);
     *lr_ptr *= factor;
