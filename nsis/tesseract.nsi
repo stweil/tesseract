@@ -433,183 +433,182 @@ SectionGroupEnd
 SectionGroup "Additional script data (download)" SecGrp_ASD
   Section /o "Arabic script" SecLang_Arabic
     AddSize 8880
-    !insertmacro Download_Lang_Data Arabic
+    !insertmacro Download_Lang_Data script/Arabic
   SectionEnd
 
   Section /o "Armenian script" SecLang_Armenian
     AddSize 7510
-    !insertmacro Download_Lang_Data Armenian
+    !insertmacro Download_Lang_Data script/Armenian
   SectionEnd
 
   Section /o "Bengali script" SecLang_Bengali
     AddSize 5450
-    !insertmacro Download_Lang_Data Bengali
+    !insertmacro Download_Lang_Data script/Bengali
   SectionEnd
 
   Section /o "Canadian Aboriginal script" SecLang_Canadian_Aboriginal
     AddSize 6850
-    !insertmacro Download_Lang_Data Canadian_Aboriginal
+    !insertmacro Download_Lang_Data script/Canadian_Aboriginal
   SectionEnd
 
   Section /o "Cherokee script" SecLang_Cherokee
     AddSize 4040
-    !insertmacro Download_Lang_Data Cherokee
+    !insertmacro Download_Lang_Data script/Cherokee
   SectionEnd
 
   Section /o "Cyrillic script" SecLang_Cyrillic
     AddSize 27900
-    !insertmacro Download_Lang_Data Cyrillic
+    !insertmacro Download_Lang_Data script/Cyrillic
   SectionEnd
 
   Section /o "Devanagari script" SecLang_Devanagari
     AddSize 17100
-    !insertmacro Download_Lang_Data Devanagari
+    !insertmacro Download_Lang_Data script/Devanagari
   SectionEnd
 
   Section /o "Ethiopic script" SecLang_Ethiopic
     AddSize 8650
-    !insertmacro Download_Lang_Data Ethiopic
+    !insertmacro Download_Lang_Data script/Ethiopic
   SectionEnd
 
   Section /o "Fraktur script" SecLang_Fraktur
     AddSize 10400
-    !insertmacro Download_Lang_Data Fraktur
+    !insertmacro Download_Lang_Data script/Fraktur
   SectionEnd
 
   Section /o "Georgian script" SecLang_Georgian
     AddSize 6630
-    !insertmacro Download_Lang_Data Georgian
+    !insertmacro Download_Lang_Data script/Georgian
   SectionEnd
 
   Section /o "Greek script" SecLang_Greek
     AddSize 2900
-    !insertmacro Download_Lang_Data Greek
+    !insertmacro Download_Lang_Data script/Greek
   SectionEnd
 
   Section /o "Gujarati script" SecLang_Gujarati
     AddSize 4780
-    !insertmacro Download_Lang_Data Gujarati
+    !insertmacro Download_Lang_Data script/Gujarati
   SectionEnd
 
   Section /o "Gurmukhi script" SecLang_Gurmukhi
     AddSize 4020
-    !insertmacro Download_Lang_Data Gurmukhi
+    !insertmacro Download_Lang_Data script/Gurmukhi
   SectionEnd
 
   Section /o "Han Simplified script" SecLang_HanS
     AddSize 5700
-    !insertmacro Download_Lang_Data HanS
+    !insertmacro Download_Lang_Data script/HanS
   SectionEnd
 
   Section /o "Han Traditional script" SecLang_HanT
     AddSize 5200
-    !insertmacro Download_Lang_Data HanT
+    !insertmacro Download_Lang_Data script/HanT
   SectionEnd
 
   Section /o "Han Traditional vertical script" SecLang_HanT_vert
     AddSize 5200
-    !insertmacro Download_Lang_Data HanT_vert
+    !insertmacro Download_Lang_Data script/HanT_vert
   SectionEnd
 
   Section /o "Hangul script" SecLang_Hangul
     AddSize 4620
-    !insertmacro Download_Lang_Data Hangul
+    !insertmacro Download_Lang_Data script/Hangul
   SectionEnd
 
   Section /o "Hangul vertical script" SecLang_Hangul_vert
     AddSize 4510
-    !insertmacro Download_Lang_Data Hangul_vert
+    !insertmacro Download_Lang_Data script/Hangul_vert
   SectionEnd
 
   Section /o "Hebrew script" SecLang_Hebrew
     AddSize 4640
-    !insertmacro Download_Lang_Data Hebrew
+    !insertmacro Download_Lang_Data script/Hebrew
   SectionEnd
 
   Section /o "Japanese script" SecLang_Japanese
     AddSize 5610
-    !insertmacro Download_Lang_Data Japanese
+    !insertmacro Download_Lang_Data script/Japanese
   SectionEnd
 
   Section /o "Japanese vertical script" SecLang_Japanese_vert
     AddSize 6150
-    !insertmacro Download_Lang_Data Japanese_vert
+    !insertmacro Download_Lang_Data script/Japanese_vert
   SectionEnd
 
   Section /o "Kannada script" SecLang_Kannada
     AddSize 6460
-    !insertmacro Download_Lang_Data Kannada
+    !insertmacro Download_Lang_Data script/Kannada
   SectionEnd
 
   Section /o "Khmer script" SecLang_Khmer
     AddSize 4270
-    !insertmacro Download_Lang_Data Khmer
+    !insertmacro Download_Lang_Data script/Khmer
   SectionEnd
 
   Section /o "Lao script" SecLang_Laos
     AddSize 9640
-    ; fixme: Lao / lao conflict
-    ; !insertmacro Download_Lang_Data Laos
+    !insertmacro Download_Lang_Data script/Laos
   SectionEnd
 
   Section /o "Latin script" SecLang_Latin
     AddSize 85200
-    !insertmacro Download_Lang_Data Latin
+    !insertmacro Download_Lang_Data script/Latin
   SectionEnd
 
   Section /o "Malayalam script" SecLang_Malayalam
     AddSize 8590
-    !insertmacro Download_Lang_Data Malayalam
+    !insertmacro Download_Lang_Data script/Malayalam
   SectionEnd
 
   Section /o "Myanmar script" SecLang_Myanmar
     AddSize 7480
-    !insertmacro Download_Lang_Data Myanmar
+    !insertmacro Download_Lang_Data script/Myanmar
   SectionEnd
 
   Section /o "Oriya script" SecLang_Oriya
     AddSize 5480
-    !insertmacro Download_Lang_Data Oriya
+    !insertmacro Download_Lang_Data script/Oriya
   SectionEnd
 
   Section /o "Sinhala script" SecLang_Sinhala
     AddSize 4560
-    !insertmacro Download_Lang_Data Sinhala
+    !insertmacro Download_Lang_Data script/Sinhala
   SectionEnd
 
   Section /o "Syriac script" SecLang_Syriac
     AddSize 5530
-    !insertmacro Download_Lang_Data Syriac
+    !insertmacro Download_Lang_Data script/Syriac
   SectionEnd
 
   Section /o "Tamil script" SecLang_Tamil
     AddSize 6760
-    !insertmacro Download_Lang_Data Tamil
+    !insertmacro Download_Lang_Data script/Tamil
   SectionEnd
 
   Section /o "Telugu script" SecLang_Telugu
     AddSize 6180
-    !insertmacro Download_Lang_Data Telugu
+    !insertmacro Download_Lang_Data script/Telugu
   SectionEnd
 
   Section /o "Thaana script" SecLang_Thaana
     AddSize 5770
-    !insertmacro Download_Lang_Data Thaana
+    !insertmacro Download_Lang_Data script/Thaana
   SectionEnd
 
   Section /o "Thai script" SecLang_Thai
     AddSize 4050
-    !insertmacro Download_Lang_Data Thai
+    !insertmacro Download_Lang_Data script/Thai
   SectionEnd
 
   Section /o "Tibetan script" SecLang_Tibetan
     AddSize 5440
-    !insertmacro Download_Lang_Data Tibetan
+    !insertmacro Download_Lang_Data script/Tibetan
   SectionEnd
 
   Section /o "Vietnamese script" SecLang_Vietnamese
     AddSize 1590
-    !insertmacro Download_Lang_Data Vietnamese
+    !insertmacro Download_Lang_Data script/Vietnamese
   SectionEnd
 
 SectionGroupEnd
