@@ -501,6 +501,11 @@ SectionGroup "Additional script data (download)" SecGrp_ASD
     !insertmacro Download_Lang_Data script/HanS
   SectionEnd
 
+  Section /o "Han Simplified vertical script" SecLang_HanS_vert
+    AddSize 5304
+    !insertmacro Download_Lang_Data script/HanS_vert
+  SectionEnd
+
   Section /o "Han Traditional script" SecLang_HanT
     AddSize 5200
     !insertmacro Download_Lang_Data script/HanT
