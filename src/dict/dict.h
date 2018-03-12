@@ -19,6 +19,7 @@
 #ifndef TESSERACT_DICT_DICT_H_
 #define TESSERACT_DICT_DICT_H_
 
+#include <assert.h>
 #include "ambigs.h"
 #include "dawg.h"
 #include "dawg_cache.h"
@@ -408,7 +409,7 @@ class Dict {
         getCCUtil()->lang.string(), path);
   }
 
-  inline UNICHAR_ID WildcardID() const { return wildcard_unichar_id_; }
+  inline UNICHAR_ID WildcardID() const { assert(0); return wildcard_unichar_id_; }
   /// Return the number of dawgs in the dawgs_ vector.
   inline int NumDawgs() const { return dawgs_.size(); }
   /// Return i-th dawg pointer recorded in the dawgs_ vector.
