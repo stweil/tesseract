@@ -45,7 +45,15 @@ SetCompressorDictSize 32
 !addplugindir ${SRCDIR}\nsis\plugins
 !endif
 
-!define PREFIX "../usr/i686-w64-mingw32"
+!ifdef W64
+!define ARCH "x86_64"
+!define SETUP "tesseract-ocr-w64-setup"
+!else
+!define ARCH "i686"
+!define SETUP "tesseract-ocr-w32-setup"
+!endif
+
+!define PREFIX "../usr/${ARCH}-w64-mingw32"
 !define TRAININGDIR "${PREFIX}/bin"
 
 # General Definitions
@@ -149,9 +157,9 @@ InstallDir "$PROGRAMFILES\Tesseract-OCR"
 !endif
 # Name of program and file
 !ifdef VERSION
-OutFile tesseract-ocr-setup-${VERSION}.exe
+OutFile ${SETUP}-${VERSION}.exe
 !else
-OutFile tesseract-ocr-setup.exe
+OutFile ${SETUP}.exe
 !endif
 
 !ifdef REGISTRY_SETTINGS
@@ -214,7 +222,7 @@ Section -Main SEC0000
   File ${PREFIX}/bin/tesseract.exe
   File ${PREFIX}/bin/libtesseract-*.dll
 !ifdef CROSSBUILD
-  File ${SRCDIR}\dll\i686-w64-mingw32\*.dll
+  File ${SRCDIR}\dll\${ARCH}-w64-mingw32\*.dll
 !endif
   CreateDirectory "$INSTDIR\tessdata"
   SetOutPath "$INSTDIR\tessdata"
