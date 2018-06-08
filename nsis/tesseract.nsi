@@ -238,9 +238,6 @@ Section -Main SEC0000
   SetOutPath "$INSTDIR\doc"
   File ${SRCDIR}\AUTHORS
   File ${SRCDIR}\COPYING
-  File ${SRCDIR}\testing\eurotext.tif
-  File ${SRCDIR}\testing\phototest.tif
-  File ${SRCDIR}\testing\README
 ##  File ${SRCDIR}\ReleaseNotes
 SectionEnd
 
