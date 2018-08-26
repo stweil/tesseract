@@ -1,8 +1,8 @@
-#include "tesseract/training/normstrngs.h"
+#include "normstrngs.h"
 
-#include "tesseract/ccutil/strngs.h"
-#include "tesseract/ccutil/unichar.h"
-#include "tesseract/unittest/normstrngs_test.h"
+#include "strngs.h"
+#include "unichar.h"
+#include "normstrngs_test.h"
 #include "util/utf8/public/unilib.h"
 
 namespace tesseract {

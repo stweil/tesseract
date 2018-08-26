@@ -1,12 +1,25 @@
-#include <stdio.h>
+// (C) Copyright 2017, Google Inc.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#include "tesseract/ccutil/scanutils.h"
+//~ #include <cstdio>
+
+#include "scanutils.h"
+
+#include "include_gunit.h"
 
 namespace {
 
 class ScanutilsTest : public ::testing::Test {
  protected:
-  string TestDataNameToPath(const string& name) {
+  std::string TestDataNameToPath(const std::string& name) {
     return file::JoinPath(FLAGS_test_srcdir, "testdata/" + name);
   }
 };
@@ -15,7 +28,7 @@ TEST_F(ScanutilsTest, DoesScanf) {
   // This test verifies that tfscanf does Scanf the same as stdio fscanf.
   // There are probably a gazillion more test cases that could be added, but
   // these brought the tesseract and unittest test results in line.
-  string filename = TestDataNameToPath("scanftest.txt");
+  std::string filename = TestDataNameToPath("scanftest.txt");
   FILE* fp1 = fopen(filename.c_str(), "r");
   FILE* fp2 = fopen(filename.c_str(), "r");
   // The file contains this:
