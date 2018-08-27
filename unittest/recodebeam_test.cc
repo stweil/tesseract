@@ -1,12 +1,25 @@
-#include "tesseract/lstm/recodebeam.h"
-#include "tesseract/ccstruct/matrix.h"
-#include "tesseract/ccstruct/pageres.h"
-#include "tesseract/ccstruct/ratngs.h"
-#include "tesseract/ccutil/genericvector.h"
-#include "tesseract/ccutil/helpers.h"
-#include "tesseract/ccutil/unicharcompress.h"
-#include "tesseract/training/normstrngs.h"
-#include "tesseract/training/unicharset_training_utils.h"
+// (C) Copyright 2017, Google Inc.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "recodebeam.h"
+#include "matrix.h"
+#include "pageres.h"
+#include "ratngs.h"
+#include "genericvector.h"
+#include "helpers.h"
+#include "unicharcompress.h"
+#include "normstrngs.h"
+#include "unicharset_training_utils.h"
+
+#include "include_gunit.h"
 
 using tesseract::CCUtil;
 using tesseract::Dict;
