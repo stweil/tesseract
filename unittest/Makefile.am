@@ -52,7 +52,7 @@ GMOCK_LIBS =  libgmock.la libgmock_main.la
 TESS_LIBS = $(top_builddir)/src/api/libtesseract.la
 TRAINING_LIBS = $(top_builddir)/src/training/libtesseract_training.la
 TRAINING_LIBS += $(top_builddir)/src/training/libtesseract_tessopt.la
-TRAINING_LIBS += $(ICU_UC_LIBS)
+# TRAINING_LIBS += $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
 AM_CPPFLAGS +=   -isystem $(top_srcdir)/googletest/googletest/include \
                  -isystem $(top_srcdir)/googletest/googlemock/include
 
@@ -83,6 +83,7 @@ check_PROGRAMS = \
 
 if ENABLE_TRAINING
 check_PROGRAMS += commandlineflags_test
+check_PROGRAMS += ligature_table_test
 check_PROGRAMS += validator_test
 endif
 
@@ -123,6 +124,9 @@ intfeaturemap_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
 
 intsimdmatrix_test_SOURCES = intsimdmatrix_test.cc
 intsimdmatrix_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
+
+ligature_table_test_SOURCES = ligature_table_test.cc
+ligature_table_test_LDADD = $(GTEST_LIBS) $(TRAINING_LIBS) $(TESS_LIBS) -lfontconfig $(pango_LIBS) -lpangocairo-1.0 $(cairo_LIBS) -lpangoft2-1.0 $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
 
 linlsq_test_SOURCES = linlsq_test.cc
 linlsq_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)

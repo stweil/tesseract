@@ -1,9 +1,21 @@
+// (C) Copyright 2017, Google Inc.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#include "tesseract/training/ligature_table.h"
+#include "ligature_table.h"
 
-#include "tesseract/training/commandlineflags.h"
-#include "tesseract/training/fileio.h"
-#include "tesseract/training/pango_font_info.h"
+#include "commandlineflags.h"
+#include "fileio.h"
+#include "pango_font_info.h"
+
+#include "include_gunit.h"
 
 DECLARE_STRING_PARAM_FLAG(fonts_dir);
 DECLARE_STRING_PARAM_FLAG(fontconfig_tmpdir);
@@ -15,8 +27,8 @@ using tesseract::LigatureTable;
 using tesseract::PangoFontInfo;
 
 const char kEngNonLigatureText[] = "fidelity effigy ſteep";
-// Same as above text, but with "fi" in the first word and "ffi" in the second
-// word replaced with their respective ligatures.
+// Same as above text, but with "fi" in the first word, "ffi" in the second
+// word and "ſt" in the third word replaced with their respective ligatures.
 const char kEngLigatureText[] = "ﬁdelity eﬃgy ﬅeep";
 // Same as kEngLigatureText but with "fi" in both words replaced with their
 // ligature. The test Verdana font does not support the "ffi" or "ſt" ligature.
@@ -25,8 +37,10 @@ const char kRenderableEngLigatureText[] = "ﬁdelity efﬁgy ſteep";
 class LigatureTableTest : public ::testing::Test {
  protected:
   static void SetUpTestCase() {
+#if 0
     FLAGS_fonts_dir = File::JoinPath(FLAGS_test_srcdir, "testdata");
     FLAGS_fontconfig_tmpdir = FLAGS_test_tmpdir;
+#endif
   }
   void SetUp() { lig_table_ = LigatureTable::Get(); }
   LigatureTable* lig_table_;
