@@ -15,7 +15,6 @@
 #endif
 #include <cfloat>
 
-#include "oclkernels.h"
 #include "openclwrapper.h"
 
 // for micro-benchmark
