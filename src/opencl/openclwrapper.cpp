@@ -7,6 +7,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 #ifdef _WIN32
 #include <io.h>
 #else
@@ -25,10 +26,11 @@
 #include <mach/mach_time.h>
 #endif
 
-#ifdef USE_OPENCL
-
 #include <cstdio>
 #include <cstring>    // for memset, strcpy, ...
+#include <fstream>    // for std::ifstream
+#include <streambuf>
+#include <string>     // for std::string
 #include <vector>
 
 #include "errcode.h"  // for ASSERT_HOST
@@ -816,10 +818,10 @@ int OpenclDevice::ReleaseOpenclEnv(GPUEnv* gpuInfo) {
   delete[] gpuInfo->mpArryDevsID;
   return 1;
 }
-int OpenclDevice::BinaryGenerated(const char* clFileName, FILE** fhandle) {
+
+bool OpenclDevice::BinaryGenerated(const char* clFileName, FILE** fhandle) {
   unsigned int i = 0;
   cl_int clStatus;
-  int status = 0;
   FILE* fd = nullptr;
   char fileName[256] = {0}, cl_name[128] = {0};
   char deviceName[1024];
@@ -832,10 +834,8 @@ int OpenclDevice::BinaryGenerated(const char* clFileName, FILE** fhandle) {
   sprintf(fileName, "%s-%s.bin", cl_name, deviceName);
   legalizeFileName(fileName);
   fd = fopen(fileName, "rb");
-  status = (fd != nullptr) ? 1 : 0;
-  if (fd != nullptr) {
-    *fhandle = fd;
-  }
+  bool status = (fd != nullptr);
+  *fhandle = fd;
   return status;
 }
 int OpenclDevice::CachedOfKernerPrg(const GPUEnv* gpuEnvCached,
@@ -942,27 +942,20 @@ int OpenclDevice::GeneratBinFromKernelSource(cl_program program,
 int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo, const char* buildOption) {
   // PERF_COUNT_START("CompileKernelFile")
   cl_int clStatus = 0;
-  const char* source;
-  size_t source_size[1];
-  int binary_status, binaryExisted, idx;
-  cl_uint numDevices;
-  FILE *fd, *fd1;
+  FILE *fd;
   const char* filename = "kernel.cl";
   // fprintf(stderr, "[OD] CompileKernelFile ... \n");
   if (CachedOfKernerPrg(gpuInfo, filename) == 1) {
     return 1;
   }
 
-  idx = gpuInfo->mnFileCount;
+  int idx = gpuInfo->mnFileCount;
 
-  source = kernel_src;
-
-  source_size[0] = strlen(source);
-  binaryExisted = 0;
-  binaryExisted = BinaryGenerated(
+  bool binaryExisted = BinaryGenerated(
       filename, &fd);  // don't check for binary during microbenchmark
                        // PERF_COUNT_SUB("BinaryGenerated")
-  if (binaryExisted == 1) {
+  if (binaryExisted) {
+    cl_uint numDevices;
     clStatus = clGetContextInfo(gpuInfo->mpContext, CL_CONTEXT_NUM_DEVICES,
                                 sizeof(numDevices), &numDevices, nullptr);
     CHECK_OPENCL(clStatus, "clGetContextInfo");
@@ -995,6 +988,7 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo, const char* buildOption) {
     // PERF_COUNT_SUB("get devices")
     // fprintf(stderr, "[OD] Create kernel from binary\n");
     const uint8_t* c_binary = &binary[0];
+    int binary_status;
     gpuInfo->mpArryPrograms[idx] = clCreateProgramWithBinary(
         gpuInfo->mpContext, numDevices, &mpArryDevsID[0], &length, &c_binary,
         &binary_status, &clStatus);
@@ -1003,14 +997,23 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo, const char* buildOption) {
     // PERF_COUNT_SUB("binaryExisted")
   } else {
     // create a CL program using the kernel source
+    std::ifstream infile("oclkernels.cl", std::ifstream::binary);
     // fprintf(stderr, "[OD] Create kernel from source\n");
-    gpuInfo->mpArryPrograms[idx] = clCreateProgramWithSource(
-        gpuInfo->mpContext, 1, &source, source_size, &clStatus);
-    CHECK_OPENCL(clStatus, "clCreateProgramWithSource");
+    if (infile.good()) {
+      std::string source((std::istreambuf_iterator<char>(infile)),
+                         std::istreambuf_iterator<char>());
+      size_t source_size = source.size();
+      const char* source_data = source.data();
+      gpuInfo->mpArryPrograms[idx] = clCreateProgramWithSource(
+          gpuInfo->mpContext, 1, &source_data, &source_size, &clStatus);
+      CHECK_OPENCL(clStatus, "clCreateProgramWithSource");
+    } else {
+      fprintf(stderr, "Failed to read %s\n", "oclkernels.cl");
+    }
     // PERF_COUNT_SUB("!binaryExisted")
   }
 
-  if (gpuInfo->mpArryPrograms[idx] == (cl_program) nullptr) {
+  if (gpuInfo->mpArryPrograms[idx] == nullptr) {
     return 0;
   }
 
@@ -1061,7 +1064,7 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo, const char* buildOption) {
       return 0;
     }
 
-    fd1 = fopen("kernel-build.log", "w+");
+    FILE* fd1 = fopen("kernel-build.log", "w+");
     if (fd1 != nullptr) {
       fwrite(&buildLog[0], sizeof(char), length, fd1);
       fclose(fd1);
@@ -1073,7 +1076,7 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo, const char* buildOption) {
 
   strcpy(gpuInfo->mArryKnelSrcFile[idx], filename);
   // PERF_COUNT_SUB("strcpy")
-  if (binaryExisted == 0) {
+  if (!binaryExisted) {
     GeneratBinFromKernelSource(gpuInfo->mpArryPrograms[idx], filename);
     PERF_COUNT_SUB("GenerateBinFromKernelSource")
   }
@@ -2624,5 +2627,3 @@ bool OpenclDevice::selectedDeviceIsOpenCL() {
   ds_device device = getDeviceSelection();
   return (device.type == DS_DEVICE_OPENCL_DEVICE);
 }
-
-#endif

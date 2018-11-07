@@ -255,9 +255,7 @@ class OpenclDevice {
                                         const char* clFileName);
   static int WriteBinaryToFile(const char* fileName, const char* birary,
                                size_t numBytes);
-  static int BinaryGenerated(const char* clFileName, FILE** fhandle);
-  // static int CompileKernelFile( const char *filename, GPUEnv *gpuInfo, const
-  // char *buildOption );
+  static bool BinaryGenerated(const char* clFileName, FILE** fhandle);
   static l_uint32* pixReadFromTiffKernel(l_uint32* tiffdata, l_int32 w,
                                          l_int32 h, l_int32 wpl,
                                          l_uint32* line);
@@ -313,5 +311,4 @@ class OpenclDevice {
   static bool selectedDeviceIsOpenCL();
 };
 
-#endif  // USE_OPENCL
 #endif  // TESSERACT_OPENCL_OPENCLWRAPPER_H_

@@ -5,7 +5,11 @@ AM_CPPFLAGS += $(OPENCL_CFLAGS) \
 
 noinst_HEADERS = openclwrapper.h
 
+if USE_OPENCL
+
 noinst_LTLIBRARIES = libtesseract_opencl.la
 
 libtesseract_opencl_la_SOURCES = \
     openclwrapper.cpp
+
+endif

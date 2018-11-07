@@ -380,8 +380,8 @@ int TessBaseAPI::Init(const char* data, int data_size, const char* language,
 #ifdef USE_OPENCL
   OpenclDevice od;
   od.InitEnv();
-#endif
   PERF_COUNT_SUB("OD::InitEnv()")
+#endif
   bool reset_classifier = true;
   if (tesseract_ == nullptr) {
     reset_classifier = false;

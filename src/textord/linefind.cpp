@@ -3,7 +3,6 @@
 // Description: Class to find vertical lines in an image and create
 //              a corresponding list of empty blobs.
 // Author:      Ray Smith
-// Created:     Thu Mar 20 09:49:01 PDT 2008
 //
 // (C) Copyright 2008, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");

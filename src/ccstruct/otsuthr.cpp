@@ -2,7 +2,6 @@
  * File:        otsuthr.cpp
  * Description: Simple Otsu thresholding for binarizing images.
  * Author:      Ray Smith
- * Created:     Fri Mar 07 12:31:01 PST 2008
  *
  * (C) Copyright 2008, Google Inc.
  ** Licensed under the Apache License, Version 2.0 (the "License");
