@@ -265,6 +265,12 @@ class Network {
     tprintf("Must override Network::Forward for type %d\n", type_);
   }
 
+  virtual void ForwardFloat(bool debug, const NetworkIO& input,
+                       const TransposedArray* input_transpose,
+                       NetworkScratch* scratch, NetworkIO* output) {
+    tprintf("Must override Network::ForwardFloat for type %d\n", type_);
+  }
+
   // Runs backward propagation of errors on fwdX_deltas.
   // Note that fwd_deltas and back_deltas are both 2-d arrays as with Forward.
   // Returns false if back_deltas was not set, due to there being no point in

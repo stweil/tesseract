@@ -55,6 +55,10 @@ class Convolve : public Network {
                const TransposedArray* input_transpose,
                NetworkScratch* scratch, NetworkIO* output) override;
 
+  void ForwardFloat(bool debug, const NetworkIO& input,
+                    const TransposedArray* input_transpose, NetworkScratch* scratch,
+                    NetworkIO* output) override;
+
   // Runs backward propagation of errors on the deltas line.
   // See Network for a detailed discussion of the arguments.
   bool Backward(bool debug, const NetworkIO& fwd_deltas,

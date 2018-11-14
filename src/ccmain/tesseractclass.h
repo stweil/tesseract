@@ -1123,6 +1123,9 @@ class Tesseract : public Wordrec {
             "Valid input values are 0, 1 and 2. 0 is the default value. "
             "With 1 the alternative symbol choices per timestep are included. "
             "With 2 the alternative symbol choices are accumulated per character.");
+  BOOL_VAR_H(dotproduct_kahan_float_mode, false, 
+             "Set the vectors used for the dotproduct from double to "
+             "single precision.");
 
   //// ambigsrecog.cpp /////////////////////////////////////////////////////////
   FILE *init_recog_training(const STRING &fname);

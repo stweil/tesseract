@@ -169,6 +169,59 @@ void FullyConnected::Forward(bool debug, const NetworkIO& input,
   if (debug) DisplayForward(*output);
 }
 
+void FullyConnected::ForwardFloat(bool debug, const NetworkIO& input,
+                             const TransposedArray* input_transpose,
+                             NetworkScratch* scratch, NetworkIO* output) {
+  int width = input.Width();
+  if (type_ == NT_SOFTMAX)
+    output->ResizeFloat(input, no_);
+  else
+    output->Resize(input, no_);
+  SetupForward(input, input_transpose);
+  GenericVector<NetworkScratch::Float32Vec> temp_lines;
+  temp_lines.init_to_size(kNumThreads, NetworkScratch::Float32Vec());
+  GenericVector<NetworkScratch::Float32Vec> curr_input;
+  curr_input.init_to_size(kNumThreads, NetworkScratch::Float32Vec());
+  for (int i = 0; i < kNumThreads; ++i) {
+    temp_lines[i].Init(no_, scratch);
+    curr_input[i].Init(ni_, scratch);
+  }
+#ifdef _OPENMP
+#  pragma omp parallel for num_threads(kNumThreads)
+  for (int t = 0; t < width; ++t) {
+    // Thread-local pointer to temporary storage.
+    int thread_id = omp_get_thread_num();
+#else
+  for (int t = 0; t < width; ++t) {
+    // Thread-local pointer to temporary storage.
+    int thread_id = 0;
+#endif
+    float* temp_line = temp_lines[thread_id];
+    if (input.int_mode()) {
+      ForwardTimeStepFloat(input.i(t), t, temp_line);
+    } else {
+      input.ReadTimeStepFloat(t, curr_input[thread_id]);
+      ForwardTimeStepFloat(curr_input[thread_id], t, temp_line);
+    }
+    output->WriteTimeStepFloat(t, temp_line);
+    if (IsTraining() && type_ != NT_SOFTMAX) {
+      acts_.CopyTimeStepFrom(t, *output, t);
+    }
+  }
+  // Zero all the elements that are in the padding around images that allows
+  // multiple different-sized images to exist in a single array.
+  // acts_ is only used if this is not a softmax op.
+  if (IsTraining() && type_ != NT_SOFTMAX) {
+    acts_.ZeroInvalidElements();
+  }
+  output->ZeroInvalidElements();
+#if DEBUG_DETAIL > 0
+  tprintf("F Output:%s\n", name_.string());
+  output->Print(10);
+#endif
+  if (debug) DisplayForward(*output);
+}
+
 // Components of Forward so FullyConnected can be reused inside LSTM.
 void FullyConnected::SetupForward(const NetworkIO& input,
                                   const TransposedArray* input_transpose) {
@@ -200,6 +253,24 @@ void FullyConnected::ForwardTimeStep(int t, double* output_line) {
   }
 }
 
+void FullyConnected::ForwardTimeStepFloat(int t, float* output_line) {
+  if (type_ == NT_TANH) {
+    FuncInplaceFloat<GFunc>(no_, output_line);
+  } else if (type_ == NT_LOGISTIC) {
+    FuncInplaceFloat<FFunc>(no_, output_line);
+  } else if (type_ == NT_POSCLIP) {
+    FuncInplaceFloat<ClipFFunc>(no_, output_line);
+  } else if (type_ == NT_SYMCLIP) {
+    FuncInplaceFloat<ClipGFunc>(no_, output_line);
+  } else if (type_ == NT_RELU) {
+    FuncInplaceFloat<Relu>(no_, output_line);
+  } else if (type_ == NT_SOFTMAX || type_ == NT_SOFTMAX_NO_CTC) {
+    SoftmaxInPlace(no_, output_line);
+  } else if (type_ != NT_LINEAR) {
+    ASSERT_HOST("Invalid fully-connected type!" == nullptr);
+  }
+}
+
 void FullyConnected::ForwardTimeStep(const double* d_input,
                                      int t, double* output_line) {
   // input is copied to source_ line-by-line for cache coherency.
@@ -209,11 +280,27 @@ void FullyConnected::ForwardTimeStep(const double* d_input,
   ForwardTimeStep(t, output_line);
 }
 
+void FullyConnected::ForwardTimeStepFloat(const float* d_input, int t,
+                                     float* output_line) {
+  // input is copied to source_ line-by-line for cache coherency.
+  if (IsTraining() && external_source_ == nullptr)
+    source_t_.WriteStrided(t, d_input);
+  weights_.MatrixDotVectorFloat(d_input, output_line);
+  ForwardTimeStepFloat(t, output_line);
+}
+
 void FullyConnected::ForwardTimeStep(const int8_t* i_input,
                                      int t, double* output_line) {
   // input is copied to source_ line-by-line for cache coherency.
   weights_.MatrixDotVector(i_input, output_line);
   ForwardTimeStep(t, output_line);
+}
+
+void FullyConnected::ForwardTimeStepFloat(const int8_t* i_input, int t,
+                                     float* output_line) {
+  // input is copied to source_ line-by-line for cache coherency.
+  weights_.MatrixDotVectorFloat(i_input, output_line);
+  ForwardTimeStepFloat(t, output_line);
 }
 
 // Runs backward propagation of errors on the deltas line.

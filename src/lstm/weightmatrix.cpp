@@ -180,6 +180,7 @@ bool WeightMatrix::DeSerialize(bool training, TFile* fp) {
     if (multiplier_ != nullptr) multiplier_->Init(wi_);
   } else {
     if (!wf_.DeSerialize(fp)) return false;
+    DoubleToFloat(wf_, &wf32_);
     if (training) {
       InitBackward();
       if (!updates_.DeSerialize(fp)) return false;
@@ -223,10 +224,21 @@ void WeightMatrix::MatrixDotVector(const double* u, double* v) const {
   MatrixDotVectorInternal(wf_, true, false, u, v);
 }
 
+void WeightMatrix::MatrixDotVectorFloat(const float* u, float* v) const {
+  ASSERT_HOST(!int_mode_);
+  MatrixDotVectorInternalFloat(wf32_, true, false, u, v);
+}
+
 void WeightMatrix::MatrixDotVector(const int8_t* u, double* v) const {
   ASSERT_HOST(int_mode_);
   ASSERT_HOST(multiplier_ != nullptr);
   multiplier_->MatrixDotVector(wi_, scales_, u, v);
+}
+
+void WeightMatrix::MatrixDotVectorFloat(const int8_t* u, float* v) const {
+  ASSERT_HOST(int_mode_);
+  ASSERT_HOST(multiplier_ != nullptr);
+  multiplier_->MatrixDotVectorFloat(wi_, scales_, u, v);
 }
 
 // MatrixDotVector for peep weights, MultiplyAccumulate adds the
@@ -386,6 +398,14 @@ double WeightMatrix::DotProduct(const double* u, const double* v, int n) {
   return total;
 }
 
+// Computes and returns the dot product of the two n-vectors u and v.
+/* static */
+float WeightMatrix::DotProductFloat(const float* u, const float* v, int n) {
+  float total = 0.0;
+  for (int k = 0; k < n; ++k) total += u[k] * v[k];
+  return total;
+}
+
 // Utility function converts an array of float to the corresponding array
 // of double.
 /* static */
@@ -398,6 +418,18 @@ void WeightMatrix::FloatToDouble(const GENERIC_2D_ARRAY<float>& wf,
     const float* wfi = wf[i];
     double* wdi = (*wd)[i];
     for (int j = 0; j < dim2; ++j) wdi[j] = static_cast<double>(wfi[j]);
+  }
+}
+
+void WeightMatrix::DoubleToFloat(GENERIC_2D_ARRAY<double>& wf,
+                                 GENERIC_2D_ARRAY<float>* wd) {
+  int dim1 = wf.dim1();
+  int dim2 = wf.dim2();
+  wd->ResizeNoInit(dim1, dim2);
+  for (int i = 0; i < dim1; ++i) {
+    double* wfi = wf[i];
+    float* wdi = (*wd)[i];
+    for (int j = 0; j < dim2; ++j) wdi[j] = static_cast<float>(wfi[j]);
   }
 }
 
@@ -418,6 +450,20 @@ void WeightMatrix::MatrixDotVectorInternal(const GENERIC_2D_ARRAY<double>& w,
   for (int i = 0; i < num_results; ++i) {
     const double* wi = w[i];
     double total = DotProduct(wi, u, extent);
+    if (add_bias_fwd) total += wi[extent];  // The bias value.
+    v[i] = total;
+  }
+}
+
+void WeightMatrix::MatrixDotVectorInternalFloat(const GENERIC_2D_ARRAY<float>& w,
+                                                bool add_bias_fwd,
+                                                bool skip_bias_back,
+                                                const float* u, float* v) {
+  int num_results = w.dim1() - skip_bias_back;
+  int extent = w.dim2() - add_bias_fwd;
+  for (int i = 0; i < num_results; ++i) {
+    const float* wi = w[i];
+    float total = DotProductFloat(wi, u, extent);
     if (add_bias_fwd) total += wi[extent];  // The bias value.
     v[i] = total;
   }

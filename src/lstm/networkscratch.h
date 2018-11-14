@@ -131,6 +131,46 @@ class NetworkScratch {
   // Class that acts like a fixed array of float, yet actually uses space
   // from a GenericVector<float> in the source NetworkScratch, and knows how
   // to unstack the borrowed vector on destruction.
+  class Float32Vec {
+   public:
+    // The array will have size elements in it, uninitialized.
+    Float32Vec(int size, NetworkScratch* scratch)
+      : vec_(nullptr), scratch_space_(scratch) {
+      Init(size, scratch);
+    }
+    // Default constructor is for arrays. Use Init to setup.
+    Float32Vec() : vec_(nullptr), data_(nullptr), scratch_space_(nullptr) {}
+    ~Float32Vec() {
+      if (scratch_space_ != nullptr) scratch_space_->vec_stack32_.Return(vec_);
+    }
+
+    void Init(int size, NetworkScratch* scratch) {
+      if (scratch_space_ != nullptr && vec_ != nullptr)
+        scratch_space_->vec_stack32_.Return(vec_);
+      scratch_space_ = scratch;
+      vec_ = scratch_space_->vec_stack32_.Borrow();
+      vec_->resize_no_init(size);
+      data_ = &(*vec_)[0];
+    }
+
+    // Use the cast operator instead of operator[] so the FloatVec can be used
+    // as a double* argument to a function call.
+    operator float*() const { return data_; }
+    float* get() { return data_; }
+
+   private:
+    // Vector borrowed from the scratch space. Use Return to free it.
+    GenericVector<float>* vec_;
+    // Short-cut pointer to the underlying array.
+    float* data_;
+    // The source scratch_space_. Borrowed pointer, used to free the
+    // vector. Don't delete!
+    NetworkScratch* scratch_space_;
+  };  // class Float32Vec
+
+  // Class that acts like a fixed array of float, yet actually uses space
+  // from a GenericVector<float> in the source NetworkScratch, and knows how
+  // to unstack the borrowed vector on destruction.
   class FloatVec {
    public:
     // The array will have size elements in it, uninitialized.
@@ -247,6 +287,7 @@ class NetworkScratch {
   Stack<NetworkIO> int_stack_;
   Stack<NetworkIO> float_stack_;
   Stack<GenericVector<double> > vec_stack_;
+  Stack<GenericVector<float> > vec_stack32_;
   Stack<TransposedArray> array_stack_;
 };
 

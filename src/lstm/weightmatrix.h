@@ -124,6 +124,8 @@ class WeightMatrix {
   // Asserts that the call matches what we have.
   void MatrixDotVector(const double* u, double* v) const;
   void MatrixDotVector(const int8_t* u, double* v) const;
+  void MatrixDotVectorFloat(const float* u, float* v) const;
+  void MatrixDotVectorFloat(const int8_t* u, float* v) const;
   // MatrixDotVector for peep weights, MultiplyAccumulate adds the
   // component-wise products of *this[0] and v to inout.
   void MultiplyAccumulate(const double* v, double* inout);
@@ -154,10 +156,14 @@ class WeightMatrix {
 
   // Computes and returns the dot product of the two n-vectors u and v.
   static double DotProduct(const double* u, const double* v, int n);
+  static float DotProductFloat(const float* u, const float* v, int n);
   // Utility function converts an array of float to the corresponding array
   // of double.
   static void FloatToDouble(const GENERIC_2D_ARRAY<float>& wf,
                             GENERIC_2D_ARRAY<double>* wd);
+
+  static void DoubleToFloat(GENERIC_2D_ARRAY<double>& wf,
+                            GENERIC_2D_ARRAY<float>* wd);
 
  private:
   // Computes matrix.vector v = Wu.
@@ -170,10 +176,15 @@ class WeightMatrix {
                                       bool add_bias_fwd, bool skip_bias_back,
                                       const double* u, double* v);
 
+  static void MatrixDotVectorInternalFloat(const GENERIC_2D_ARRAY<float>& w,
+                                           bool add_bias_fwd, bool skip_bias_back,
+                                           const float* u, float* v);
+
  private:
-  // Choice between float and 8 bit int implementations.
+  // Choice between float, double and 8 bit int implementations.
   GENERIC_2D_ARRAY<double> wf_;
   GENERIC_2D_ARRAY<int8_t> wi_;
+  GENERIC_2D_ARRAY<float> wf32_;
   // Transposed copy of wf_, used only for Backward, and set with each Update.
   TransposedArray wf_t_;
   // Which of wf_ and wi_ are we actually using.

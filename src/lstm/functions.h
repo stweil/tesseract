@@ -147,10 +147,25 @@ inline void FuncInplace(int n, double* inout) {
     inout[i] = f(inout[i]);
   }
 }
+template <class Func>
+inline void FuncInplaceFloat(int n, float* inout) {
+  Func f;
+  for (int i = 0; i < n; ++i) {
+    inout[i] = f(inout[i]);
+  }
+}
 // Applies Func to u and multiplies the result by v component-wise,
 // putting the product in out, all of size n.
 template <class Func>
 inline void FuncMultiply(const double* u, const double* v, int n, double* out) {
+  Func f;
+  for (int i = 0; i < n; ++i) {
+    out[i] = f(u[i]) * v[i];
+  }
+}
+template <class Func>
+inline void FuncMultiplyFloat(const float* u, const float* v, int n,
+                              float* out) {
   Func f;
   for (int i = 0; i < n; ++i) {
     out[i] = f(u[i]) * v[i];
@@ -185,6 +200,10 @@ inline void CopyVector(int n, const double* src, double* dest) {
   memcpy(dest, src, n * sizeof(dest[0]));
 }
 
+inline void CopyVectorFloat(int n, const float* src, float* dest) {
+  memcpy(dest, src, n * sizeof(dest[0]));
+}
+
 // Adds n values of the given src vector to dest.
 inline void AccumulateVector(int n, const double* src, double* dest) {
   for (int i = 0; i < n; ++i) dest[i] += src[i];
@@ -195,9 +214,20 @@ inline void MultiplyVectorsInPlace(int n, const double* src, double* inout) {
   for (int i = 0; i < n; ++i) inout[i] *= src[i];
 }
 
+inline void MultiplyVectorsInPlaceFloat(int n, const float* src, float* inout) {
+  for (int i = 0; i < n; ++i) inout[i] *= src[i];
+}
+
 // Multiplies n values of u by v, element-wise, accumulating to out.
 inline void MultiplyAccumulate(int n, const double* u, const double* v,
                                double* out) {
+  for (int i = 0; i < n; i++) {
+    out[i] += u[i] * v[i];
+  }
+}
+
+inline void MultiplyAccumulateFloat(int n, const float* u, const float* v,
+                                    float* out) {
   for (int i = 0; i < n; i++) {
     out[i] += u[i] * v[i];
   }
@@ -230,6 +260,22 @@ inline void CodeInBinary(int n, int nf, double* vec) {
   if (nf <= 0 || n < nf) return;
   int index = 0;
   double best_score = vec[0];
+  for (int i = 1; i < n; ++i) {
+    if (vec[i] > best_score) {
+      best_score = vec[i];
+      index = i;
+    }
+  }
+  int mask = 1;
+  for (int i = 0; i < nf; ++i, mask *= 2) {
+    vec[i] = (index & mask) ? 1.0 : 0.0;
+  }
+}
+
+inline void CodeInBinaryFloat(int n, int nf, float* vec) {
+  if (nf <= 0 || n < nf) return;
+  int index = 0;
+  float best_score = vec[0];
   for (int i = 1; i < n; ++i) {
     if (vec[i] > best_score) {
       best_score = vec[i];

@@ -184,7 +184,8 @@ class LSTMRecognizer {
   // will be used in a dictionary word.
   void RecognizeLine(const ImageData& image_data, bool invert, bool debug,
                      double worst_dict_cert, const TBOX& line_box,
-                     PointerVector<WERD_RES>* words, int lstm_choice_mode = 0);
+                     PointerVector<WERD_RES>* words, int lstm_choice_mode = 0,
+                     bool dotproduct_kahan_float_mode = false);
 
   // Helper computes min and mean best results in the output.
   void OutputStats(const NetworkIO& outputs,
@@ -200,7 +201,8 @@ class LSTMRecognizer {
   // inputs is filled with the used inputs to the network.
   bool RecognizeLine(const ImageData& image_data, bool invert, bool debug,
                      bool re_invert, bool upside_down, float* scale_factor,
-                     NetworkIO* inputs, NetworkIO* outputs);
+                     NetworkIO* inputs, NetworkIO* outputs,
+                     bool dotproduct_kahan_float_mode = false);
 
   // Converts an array of labels to utf-8, whether or not the labels are
   // augmented with character boundaries.

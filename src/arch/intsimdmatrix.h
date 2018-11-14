@@ -99,6 +99,10 @@ class IntSimdMatrix {
                        const GenericVector<double>& scales, const int8_t* u,
                        double* v) const;
 
+  void MatrixDotVectorFloat(const GENERIC_2D_ARRAY<int8_t>& w,
+                       const GenericVector<double>& scales, const int8_t* u,
+                       float* v) const;
+
  protected:
   // Function to compute part of a matrix.vector multiplication. The weights
   // are in a very specific order (see above) in w, which is multiplied by
@@ -109,6 +113,10 @@ class IntSimdMatrix {
   typedef void (*PartialFunc)(const int8_t* w, const double* scales,
                               const int8_t* u, int num_in, int num_out,
                               double* v);
+
+  typedef void (*PartialFuncFloat)(const int8_t* w, const double* scales,
+                              const int8_t* u, int num_in, int num_out,
+                              float* v);
 
   // Rounds the input up to a multiple of the given factor.
   static int Roundup(int input, int factor) {
@@ -129,6 +137,7 @@ class IntSimdMatrix {
   std::vector<int8_t> shaped_w_;
   // A series of functions to compute a partial result.
   std::vector<PartialFunc> partial_funcs_;
+  std::vector<PartialFuncFloat> partial_funcs_float_;
 };
 
 }  // namespace tesseract
