@@ -65,6 +65,37 @@ void Maxpool::Forward(bool debug, const NetworkIO& input,
     }
   } while (dest_index.Increment());
 }
+void Maxpool::ForwardFloat(bool debug, const NetworkIO& input,
+                      const TransposedArray* input_transpose,
+                      NetworkScratch* scratch, NetworkIO* output) {
+  output->ResizeScaled(input, x_scale_, y_scale_, no_);
+  maxes_.ResizeNoInit(output->Width(), ni_);
+  back_map_ = input.stride_map();
+
+  StrideMap::Index dest_index(output->stride_map());
+  do {
+    int out_t = dest_index.t();
+    StrideMap::Index src_index(input.stride_map(), dest_index.index(FD_BATCH),
+                               dest_index.index(FD_HEIGHT) * y_scale_,
+                               dest_index.index(FD_WIDTH) * x_scale_);
+    // Find the max input out of x_scale_ groups of y_scale_ inputs.
+    // Do it independently for each input dimension.
+    int* max_line = maxes_[out_t];
+    int in_t = src_index.t();
+    output->CopyTimeStepFrom(out_t, input, in_t);
+    for (int i = 0; i < ni_; ++i) {
+      max_line[i] = in_t;
+    }
+    for (int x = 0; x < x_scale_; ++x) {
+      for (int y = 0; y < y_scale_; ++y) {
+        StrideMap::Index src_xy(src_index);
+        if (src_xy.AddOffset(x, FD_WIDTH) && src_xy.AddOffset(y, FD_HEIGHT)) {
+          output->MaxpoolTimeStep(out_t, input, src_xy.t(), max_line);
+        }
+      }
+    }
+  } while (dest_index.Increment());
+}
 
 // Runs backward propagation of errors on the deltas line.
 // See NetworkCpp for a detailed discussion of the arguments.

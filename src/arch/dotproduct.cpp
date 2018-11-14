@@ -25,4 +25,10 @@ double DotProductNative(const double* u, const double* v, int n) {
   return total;
 }
 
+float DotProductNative(const float* u, const float* v, int n) {
+  float total = 0.0;
+  for (int k = 0; k < n; ++k) total += u[k] * v[k];
+  return total;
+}
+
 }  // namespace tesseract

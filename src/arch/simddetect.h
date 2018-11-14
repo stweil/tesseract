@@ -23,7 +23,9 @@ namespace tesseract {
 
 // Function pointer for best calculation of dot product.
 typedef double (*DotProductFunction)(const double* u, const double* v, int n);
+typedef float (*DotProductFloatFunction)(const float* u, const float* v, int n);
 extern DotProductFunction DotProduct;
+extern DotProductFloatFunction DotProductFloat;
 
 // Architecture detector. Add code here to detect any other architectures for
 // SIMD-based faster dot product functions. Intended to be a single static

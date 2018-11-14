@@ -436,6 +436,191 @@ void LSTM::Forward(bool debug, const NetworkIO& input,
   if (debug) DisplayForward(*output);
 }
 
+// Runs forward propagation of activations on the input line.
+// See NetworkCpp for a detailed discussion of the arguments.
+void LSTM::ForwardFloat(bool debug, const NetworkIO& input,
+                   const TransposedArray* input_transpose,
+                   NetworkScratch* scratch, NetworkIO* output) {
+  ASSERT_HOST(!input.int_mode());
+  input_map_ = input.stride_map();
+  input_width_ = input.Width();
+  if (softmax_ != nullptr)
+    output->ResizeFloat(input, no_);
+  else if (type_ == NT_LSTM_SUMMARY)
+    output->ResizeXTo1(input, no_);
+  else
+    output->Resize(input, no_);
+  ResizeForward(input);
+  // Temporary storage of forward computation for each gate.
+  NetworkScratch::Float32Vec temp_lines[WT_COUNT];
+  for (int i = 0; i < WT_COUNT; ++i) temp_lines[i].Init(ns_, scratch);
+  // Single timestep buffers for the current/recurrent output and state.
+  NetworkScratch::Float32Vec curr_state, curr_output;
+  curr_state.Init(ns_, scratch);
+  ZeroVector<float>(ns_, curr_state);
+  curr_output.Init(ns_, scratch);
+  ZeroVector<float>(ns_, curr_output);
+  // Rotating buffers of width buf_width allow storage of the state and output
+  // for the other dimension, used only when working in true 2D mode. The width
+  // is enough to hold an entire strip of the major direction.
+  int buf_width = Is2D() ? input_map_.Size(FD_WIDTH) : 1;
+  GenericVector<NetworkScratch::Float32Vec> states, outputs;
+  if (Is2D()) {
+    states.init_to_size(buf_width, NetworkScratch::Float32Vec());
+    outputs.init_to_size(buf_width, NetworkScratch::Float32Vec());
+    for (int i = 0; i < buf_width; ++i) {
+      states[i].Init(ns_, scratch);
+      ZeroVector<float>(ns_, states[i]);
+      outputs[i].Init(ns_, scratch);
+      ZeroVector<float>(ns_, outputs[i]);
+    }
+  }
+  // Used only if a softmax LSTM.
+  NetworkScratch::Float32Vec softmax_output;
+  NetworkScratch::IO int_output;
+  if (softmax_ != nullptr) {
+    softmax_output.Init(no_, scratch);
+    ZeroVector<float>(no_, softmax_output);
+    int rounded_softmax_inputs = gate_weights_[CI].RoundInputs(ns_);
+    softmax_->SetupForward(input, nullptr);
+  }
+  NetworkScratch::Float32Vec curr_input;
+  curr_input.Init(na_, scratch);
+  StrideMap::Index src_index(input_map_);
+  // Used only by NT_LSTM_SUMMARY.
+  StrideMap::Index dest_index(output->stride_map());
+  do {
+    int t = src_index.t();
+    // True if there is a valid old state for the 2nd dimension.
+    bool valid_2d = Is2D();
+    if (valid_2d) {
+      StrideMap::Index dim_index(src_index);
+      if (!dim_index.AddOffset(-1, FD_HEIGHT)) valid_2d = false;
+    }
+    // Index of the 2-D revolving buffers (outputs, states).
+    int mod_t = Modulo(t, buf_width);  // Current timestep.
+    // Setup the padded input in source.
+    source_.CopyTimeStepGeneral(t, 0, ni_, input, t, 0);
+    if (softmax_ != nullptr) {
+      source_.WriteTimeStepPart(t, ni_, nf_, softmax_output);
+    }
+    source_.WriteTimeStepPart(t, ni_ + nf_, ns_, curr_output);
+    if (Is2D())
+      source_.WriteTimeStepPart(t, ni_ + nf_ + ns_, ns_, outputs[mod_t]);
+    if (!source_.int_mode()) source_.ReadTimeStep(t, curr_input);
+    // Matrix multiply the inputs with the source.
+    PARALLEL_IF_OPENMP(GFS)
+    // It looks inefficient to create the threads on each t iteration, but the
+    // alternative of putting the parallel outside the t loop, a single around
+    // the t-loop and then tasks in place of the sections is a *lot* slower.
+    // Cell inputs.
+    if (source_.int_mode())
+      gate_weights_[CI].MatrixDotVector(source_.i(t), temp_lines[CI]);
+    else
+      gate_weights_[CI].MatrixDotVector(curr_input, temp_lines[CI]);
+    FuncInplace<GFunc>(ns_, temp_lines[CI]);
+
+    SECTION_IF_OPENMP
+    // Input Gates.
+    if (source_.int_mode())
+      gate_weights_[GI].MatrixDotVector(source_.i(t), temp_lines[GI]);
+    else
+      gate_weights_[GI].MatrixDotVector(curr_input, temp_lines[GI]);
+    FuncInplace<FFunc>(ns_, temp_lines[GI]);
+
+    SECTION_IF_OPENMP
+    // 1-D forget gates.
+    if (source_.int_mode())
+      gate_weights_[GF1].MatrixDotVector(source_.i(t), temp_lines[GF1]);
+    else
+      gate_weights_[GF1].MatrixDotVector(curr_input, temp_lines[GF1]);
+    FuncInplace<FFunc>(ns_, temp_lines[GF1]);
+
+    // 2-D forget gates.
+    if (Is2D()) {
+      if (source_.int_mode())
+        gate_weights_[GFS].MatrixDotVector(source_.i(t), temp_lines[GFS]);
+      else
+        gate_weights_[GFS].MatrixDotVector(curr_input, temp_lines[GFS]);
+      FuncInplace<FFunc>(ns_, temp_lines[GFS]);
+    }
+
+    SECTION_IF_OPENMP
+    // Output gates.
+    if (source_.int_mode())
+      gate_weights_[GO].MatrixDotVector(source_.i(t), temp_lines[GO]);
+    else
+      gate_weights_[GO].MatrixDotVector(curr_input, temp_lines[GO]);
+    FuncInplace<FFunc>(ns_, temp_lines[GO]);
+    END_PARALLEL_IF_OPENMP
+
+    // Apply forget gate to state.
+    MultiplyVectorsInPlace(ns_, temp_lines[GF1], curr_state);
+    if (Is2D()) {
+      // Max-pool the forget gates (in 2-d) instead of blindly adding.
+      int8_t* which_fg_col = which_fg_[t];
+      memset(which_fg_col, 1, ns_ * sizeof(which_fg_col[0]));
+      if (valid_2d) {
+        const float* stepped_state = states[mod_t];
+        for (int i = 0; i < ns_; ++i) {
+          if (temp_lines[GF1][i] < temp_lines[GFS][i]) {
+            curr_state[i] = temp_lines[GFS][i] * stepped_state[i];
+            which_fg_col[i] = 2;
+          }
+        }
+      }
+    }
+    MultiplyAccumulate(ns_, temp_lines[CI], temp_lines[GI], curr_state);
+    // Clip curr_state to a sane range.
+    ClipVector<float>(ns_, -kStateClip, kStateClip, curr_state);
+    if (IsTraining()) {
+      // Save the gate node values.
+      node_values_[CI].WriteTimeStep(t, temp_lines[CI]);
+      node_values_[GI].WriteTimeStep(t, temp_lines[GI]);
+      node_values_[GF1].WriteTimeStep(t, temp_lines[GF1]);
+      node_values_[GO].WriteTimeStep(t, temp_lines[GO]);
+      if (Is2D()) node_values_[GFS].WriteTimeStep(t, temp_lines[GFS]);
+    }
+    FuncMultiply<HFunc>(curr_state, temp_lines[GO], ns_, curr_output);
+    if (IsTraining()) state_.WriteTimeStep(t, curr_state);
+    if (softmax_ != nullptr) {
+      softmax_->ForwardTimeStep(curr_output, t, softmax_output);
+      output->WriteTimeStep(t, softmax_output);
+      if (type_ == NT_LSTM_SOFTMAX_ENCODED) {
+        CodeInBinary(no_, nf_, softmax_output);
+      }
+    } else if (type_ == NT_LSTM_SUMMARY) {
+      // Output only at the end of a row.
+      if (src_index.IsLast(FD_WIDTH)) {
+        output->WriteTimeStep(dest_index.t(), curr_output);
+        dest_index.Increment();
+      }
+    } else {
+      output->WriteTimeStep(t, curr_output);
+    }
+    // Save states for use by the 2nd dimension only if needed.
+    if (Is2D()) {
+      CopyVector(ns_, curr_state, states[mod_t]);
+      CopyVector(ns_, curr_output, outputs[mod_t]);
+    }
+    // Always zero the states at the end of every row, but only for the major
+    // direction. The 2-D state remains intact.
+    if (src_index.IsLast(FD_WIDTH)) {
+      ZeroVector<float>(ns_, curr_state);
+      ZeroVector<float>(ns_, curr_output);
+    }
+  } while (src_index.Increment());
+#if DEBUG_DETAIL > 0
+  tprintf("Source:%s\n", name_.string());
+  source_.Print(10);
+  tprintf("State:%s\n", name_.string());
+  state_.Print(10);
+  tprintf("Output:%s\n", name_.string());
+  output->Print(10);
+#endif
+  if (debug) DisplayForward(*output);
+}
+
 // Runs backward propagation of errors on the deltas line.
 // See NetworkCpp for a detailed discussion of the arguments.
 bool LSTM::Backward(bool debug, const NetworkIO& fwd_deltas,

@@ -528,6 +528,10 @@ Tesseract::Tesseract()
           "With 1 the alternative symbol choices per timestep are included. "
           "With 2 the alternative symbol choices are accumulated per character.",
           this->params()),
+      BOOL_MEMBER(dotproduct_kahan_float_mode, false,
+                  "Set the vectors used for the dotproduct from double to"
+                  "single precision.",
+                  this->params()),
 
       backup_config_file_(nullptr),
       pix_binary_(nullptr),

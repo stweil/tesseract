@@ -21,6 +21,7 @@ namespace tesseract {
 
 // Computes and returns the dot product of the n-vectors u and v.
 double DotProductNative(const double* u, const double* v, int n);
+float DotProductNative(const float* u, const float* v, int n);
 
 }  // namespace tesseract.
 

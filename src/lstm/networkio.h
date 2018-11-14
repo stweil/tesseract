@@ -193,16 +193,20 @@ class NetworkIO {
 
   // Reads a single timestep to floats in the range [-1, 1].
   void ReadTimeStep(int t, double* output) const;
+  void ReadTimeStep(int t, float* output) const;
   // Adds a single timestep to floats.
   void AddTimeStep(int t, double* inout) const;
   // Adds part of a single timestep to floats.
   void AddTimeStepPart(int t, int offset, int num_features, float* inout) const;
   // Writes a single timestep from floats in the range [-1, 1].
   void WriteTimeStep(int t, const double* input);
+  void WriteTimeStep(int t, const float* input);
   // Writes a single timestep from floats in the range [-1, 1] writing only
   // num_features elements of input to (*this)[t], starting at offset.
   void WriteTimeStepPart(int t, int offset, int num_features,
                          const double* input);
+  void WriteTimeStepPart(int t, int offset, int num_features,
+                              const float* input);
   // Maxpools a single time step from src.
   void MaxpoolTimeStep(int dest_t, const NetworkIO& src, int src_t,
                        int* max_line);

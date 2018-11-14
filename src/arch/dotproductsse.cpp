@@ -78,4 +78,11 @@ double DotProductSSE(const double* u, const double* v, int n) {
   return result;
 }
 
+//Placeholder for future Kahan implementation of SSE Dotproduct
+float DotProductSSE(const float* u, const float* v, int n) {
+  float total = 0.0;
+  for (int k = 0; k < n; ++k) total += u[k] * v[k];
+  return total;
+}
+
 }  // namespace tesseract.

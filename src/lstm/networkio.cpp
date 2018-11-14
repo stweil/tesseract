@@ -609,6 +609,20 @@ void NetworkIO::ReadTimeStep(int t, double* output) const {
   }
 }
 
+void NetworkIO::ReadTimeStep(int t, float* output) const {
+  if (int_mode_) {
+    const int8_t* line = i_[t];
+    for (int i = 0; i < i_.dim2(); ++i) {
+      output[i] = static_cast<float>(line[i]) / INT8_MAX;
+    }
+  } else {
+    const float* line = f_[t];
+    for (int i = 0; i < f_.dim2(); ++i) {
+      output[i] = line[i];
+    }
+  }
+}
+
 // Adds a single timestep to floats.
 void NetworkIO::AddTimeStep(int t, double* inout) const {
   int num_features = NumFeatures();
@@ -645,6 +659,9 @@ void NetworkIO::AddTimeStepPart(int t, int offset, int num_features,
 void NetworkIO::WriteTimeStep(int t, const double* input) {
   WriteTimeStepPart(t, 0, NumFeatures(), input);
 }
+void NetworkIO::WriteTimeStep(int t, const float* input) {
+  WriteTimeStepPart(t, 0, NumFeatures(), input);
+}
 
 // Writes a single timestep from floats in the range [-1, 1] writing only
 // num_features elements of input to (*this)[t], starting at offset.
@@ -660,6 +677,22 @@ void NetworkIO::WriteTimeStepPart(int t, int offset, int num_features,
     float* line = f_[t] + offset;
     for (int i = 0; i < num_features; ++i) {
       line[i] = static_cast<float>(input[i]);
+    }
+  }
+}
+
+void NetworkIO::WriteTimeStepPart(int t, int offset, int num_features,
+                                  const float* input) {
+  if (int_mode_) {
+    int8_t* line = i_[t] + offset;
+    for (int i = 0; i < num_features; ++i) {
+      line[i] = ClipToRange<int>(IntCastRounded(input[i] * INT8_MAX), -INT8_MAX,
+                                 INT8_MAX);
+    }
+  } else {
+    float* line = f_[t] + offset;
+    for (int i = 0; i < num_features; ++i) {
+      line[i] = input[i];
     }
   }
 }

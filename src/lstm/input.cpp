@@ -67,6 +67,12 @@ void Input::Forward(bool debug, const NetworkIO& input,
   *output = input;
 }
 
+void Input::ForwardFloat(bool debug, const NetworkIO& input,
+                         const TransposedArray* input_transpose,
+                         NetworkScratch* scratch, NetworkIO* output) {
+  *output = input;
+}
+
 // Runs backward propagation of errors on the deltas line.
 // See NetworkCpp for a detailed discussion of the arguments.
 bool Input::Backward(bool debug, const NetworkIO& fwd_deltas,

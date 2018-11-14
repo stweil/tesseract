@@ -123,6 +123,8 @@ class WeightMatrix {
   // Asserts that the call matches what we have.
   void MatrixDotVector(const double* u, double* v) const;
   void MatrixDotVector(const int8_t* u, double* v) const;
+  void MatrixDotVector(const float* u, float* v) const;
+  void MatrixDotVector(const int8_t* u, float* v) const;
   // MatrixDotVector for peep weights, MultiplyAccumulate adds the
   // component-wise products of *this[0] and v to inout.
   void MultiplyAccumulate(const double* v, double* inout);
@@ -151,15 +153,32 @@ class WeightMatrix {
 
   void Debug2D(const char* msg);
 
-  // Utility function converts an array of float to the corresponding array
-  // of double.
   static void FloatToDouble(const GENERIC_2D_ARRAY<float>& wf,
                             GENERIC_2D_ARRAY<double>* wd);
 
+  static void DoubleToFloat(GENERIC_2D_ARRAY<double>& wf,
+                            GENERIC_2D_ARRAY<float>* wd);
+
  private:
-  // Choice between float and 8 bit int implementations.
+  // Computes matrix.vector v = Wu.
+  // u is of size starts.back()+extents.back() and the output v is of size
+  // starts.size().
+  // The weight matrix w, is of size starts.size()xMAX(extents)+add_bias_fwd.
+  // If add_bias_fwd, an extra element at the end of w[i] is the bias weight
+  // and is added to v[i].
+  static void MatrixDotVectorInternal(const GENERIC_2D_ARRAY<double>& w,
+                                      bool add_bias_fwd, bool skip_bias_back,
+                                      const double* u, double* v);
+
+  static void MatrixDotVectorInternal(const GENERIC_2D_ARRAY<float>& w,
+                                           bool add_bias_fwd, bool skip_bias_back,
+                                           const float* u, float* v);
+
+ private:
+  // Choice between float, double and 8 bit int implementations.
   GENERIC_2D_ARRAY<double> wf_;
   GENERIC_2D_ARRAY<int8_t> wi_;
+  GENERIC_2D_ARRAY<float> wf32_;
   // Transposed copy of wf_, used only for Backward, and set with each Update.
   TransposedArray wf_t_;
   // Which of wf_ and wi_ are we actually using.

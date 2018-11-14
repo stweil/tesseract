@@ -2,7 +2,6 @@
 // File:        fullyconnected.cpp
 // Description: Simple feed-forward layer with various non-linearities.
 // Author:      Ray Smith
-// Created:     Wed Feb 26 14:49:15 PST 2014
 //
 // (C) Copyright 2014, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -169,6 +168,56 @@ void FullyConnected::Forward(bool debug, const NetworkIO& input,
   if (debug) DisplayForward(*output);
 }
 
+void FullyConnected::ForwardFloat(bool debug, const NetworkIO& input,
+                             const TransposedArray* input_transpose,
+                             NetworkScratch* scratch, NetworkIO* output) {
+  ASSERT_HOST(!input.int_mode());
+  int width = input.Width();
+  if (type_ == NT_SOFTMAX)
+    output->ResizeFloat(input, no_);
+  else
+    output->Resize(input, no_);
+  SetupForward(input, input_transpose);
+  GenericVector<NetworkScratch::Float32Vec> temp_lines;
+  temp_lines.init_to_size(kNumThreads, NetworkScratch::Float32Vec());
+  GenericVector<NetworkScratch::Float32Vec> curr_input;
+  curr_input.init_to_size(kNumThreads, NetworkScratch::Float32Vec());
+  for (int i = 0; i < kNumThreads; ++i) {
+    temp_lines[i].Init(no_, scratch);
+    curr_input[i].Init(ni_, scratch);
+  }
+#ifdef _OPENMP
+#  pragma omp parallel for num_threads(kNumThreads)
+  for (int t = 0; t < width; ++t) {
+    // Thread-local pointer to temporary storage.
+    int thread_id = omp_get_thread_num();
+#else
+  for (int t = 0; t < width; ++t) {
+    // Thread-local pointer to temporary storage.
+    int thread_id = 0;
+#endif
+    float* temp_line = temp_lines[thread_id];
+    input.ReadTimeStep(t, curr_input[thread_id]);
+    ForwardTimeStep(curr_input[thread_id], t, temp_line);
+    output->WriteTimeStep(t, temp_line);
+    if (IsTraining() && type_ != NT_SOFTMAX) {
+      acts_.CopyTimeStepFrom(t, *output, t);
+    }
+  }
+  // Zero all the elements that are in the padding around images that allows
+  // multiple different-sized images to exist in a single array.
+  // acts_ is only used if this is not a softmax op.
+  if (IsTraining() && type_ != NT_SOFTMAX) {
+    acts_.ZeroInvalidElements();
+  }
+  output->ZeroInvalidElements();
+#if DEBUG_DETAIL > 0
+  tprintf("F Output:%s\n", name_.string());
+  output->Print(10);
+#endif
+  if (debug) DisplayForward(*output);
+}
+
 // Components of Forward so FullyConnected can be reused inside LSTM.
 void FullyConnected::SetupForward(const NetworkIO& input,
                                   const TransposedArray* input_transpose) {
@@ -200,8 +249,35 @@ void FullyConnected::ForwardTimeStep(int t, double* output_line) {
   }
 }
 
+void FullyConnected::ForwardTimeStep(int t, float* output_line) {
+  if (type_ == NT_TANH) {
+    FuncInplace<GFunc>(no_, output_line);
+  } else if (type_ == NT_LOGISTIC) {
+    FuncInplace<FFunc>(no_, output_line);
+  } else if (type_ == NT_POSCLIP) {
+    FuncInplace<ClipFFunc>(no_, output_line);
+  } else if (type_ == NT_SYMCLIP) {
+    FuncInplace<ClipGFunc>(no_, output_line);
+  } else if (type_ == NT_RELU) {
+    FuncInplace<Relu>(no_, output_line);
+  } else if (type_ == NT_SOFTMAX || type_ == NT_SOFTMAX_NO_CTC) {
+    SoftmaxInPlace(no_, output_line);
+  } else if (type_ != NT_LINEAR) {
+    ASSERT_HOST("Invalid fully-connected type!" == nullptr);
+  }
+}
+
 void FullyConnected::ForwardTimeStep(const double* d_input,
                                      int t, double* output_line) {
+  // input is copied to source_ line-by-line for cache coherency.
+  if (IsTraining() && external_source_ == nullptr)
+    source_t_.WriteStrided(t, d_input);
+  weights_.MatrixDotVector(d_input, output_line);
+  ForwardTimeStep(t, output_line);
+}
+
+void FullyConnected::ForwardTimeStep(const float* d_input, int t,
+                                     float* output_line) {
   // input is copied to source_ line-by-line for cache coherency.
   if (IsTraining() && external_source_ == nullptr)
     source_t_.WriteStrided(t, d_input);

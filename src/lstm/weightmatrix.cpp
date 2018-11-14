@@ -202,6 +202,7 @@ bool WeightMatrix::DeSerialize(bool training, TFile* fp) {
     }
   } else {
     if (!wf_.DeSerialize(fp)) return false;
+    DoubleToFloat(wf_, &wf32_);
     if (training) {
       InitBackward();
       if (!updates_.DeSerialize(fp)) return false;
@@ -245,6 +246,11 @@ void WeightMatrix::MatrixDotVector(const double* u, double* v) const {
   MatrixDotVectorInternal(wf_, true, false, u, v);
 }
 
+void WeightMatrix::MatrixDotVector(const float* u, float* v) const {
+  ASSERT_HOST(!int_mode_);
+  MatrixDotVectorInternal(wf32_, true, false, u, v);
+}
+
 void WeightMatrix::MatrixDotVector(const int8_t* u, double* v) const {
   assert(int_mode_);
   if (IntSimdMatrix::intSimdMatrix) {
@@ -253,6 +259,10 @@ void WeightMatrix::MatrixDotVector(const int8_t* u, double* v) const {
   } else {
     IntSimdMatrix::MatrixDotVector(wi_, scales_, u, v);
   }
+}
+
+void WeightMatrix::MatrixDotVector(const int8_t* u, float* v) const {
+  ASSERT_HOST(!int_mode_);
 }
 
 // MatrixDotVector for peep weights, MultiplyAccumulate adds the
@@ -405,6 +415,56 @@ void WeightMatrix::FloatToDouble(const GENERIC_2D_ARRAY<float>& wf,
     const float* wfi = wf[i];
     double* wdi = (*wd)[i];
     for (int j = 0; j < dim2; ++j) wdi[j] = static_cast<double>(wfi[j]);
+  }
+}
+
+// Utility function converts an array of double to the corresponding array
+// of float.
+void WeightMatrix::DoubleToFloat(GENERIC_2D_ARRAY<double>& wf,
+                                 GENERIC_2D_ARRAY<float>* wd) {
+  int dim1 = wf.dim1();
+  int dim2 = wf.dim2();
+  wd->ResizeNoInit(dim1, dim2);
+  for (int i = 0; i < dim1; ++i) {
+    double* wfi = wf[i];
+    float* wdi = (*wd)[i];
+    for (int j = 0; j < dim2; ++j) wdi[j] = static_cast<float>(wfi[j]);
+  }
+}
+
+// Computes matrix.vector v = Wu.
+// u is of size W.dim2() - add_bias_fwd and the output v is of size
+// W.dim1() - skip_bias_back.
+// If add_bias_fwd, u is imagined to have an extra element at the end with value
+// 1, to implement the bias, weight.
+// If skip_bias_back, we are actullay performing the backwards product on a
+// transposed matrix, so we need to drop the v output corresponding to the last
+// element in dim1.
+void WeightMatrix::MatrixDotVectorInternal(const GENERIC_2D_ARRAY<double>& w,
+                                           bool add_bias_fwd,
+                                           bool skip_bias_back, const double* u,
+                                           double* v) {
+  int num_results = w.dim1() - skip_bias_back;
+  int extent = w.dim2() - add_bias_fwd;
+  for (int i = 0; i < num_results; ++i) {
+    const double* wi = w[i];
+    double total = DotProduct(wi, u, extent);
+    if (add_bias_fwd) total += wi[extent];  // The bias value.
+    v[i] = total;
+  }
+}
+
+void WeightMatrix::MatrixDotVectorInternal(const GENERIC_2D_ARRAY<float>& w,
+                                                bool add_bias_fwd,
+                                                bool skip_bias_back,
+                                                const float* u, float* v) {
+  int num_results = w.dim1() - skip_bias_back;
+  int extent = w.dim2() - add_bias_fwd;
+  for (int i = 0; i < num_results; ++i) {
+    const float* wi = w[i];
+    float total = DotProductFloat(wi, u, extent);
+    if (add_bias_fwd) total += wi[extent];  // The bias value.
+    v[i] = total;
   }
 }
 
