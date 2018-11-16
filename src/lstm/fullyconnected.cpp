@@ -198,10 +198,10 @@ void FullyConnected::ForwardFloat(bool debug, const NetworkIO& input,
 #endif
     float* temp_line = temp_lines[thread_id];
     if (input.int_mode()) {
-      ForwardTimeStepFloat(input.i(t), t, temp_line);
+      ForwardTimeStep(input.i(t), t, temp_line);
     } else {
       input.ReadTimeStepFloat(t, curr_input[thread_id]);
-      ForwardTimeStepFloat(curr_input[thread_id], t, temp_line);
+      ForwardTimeStep(curr_input[thread_id], t, temp_line);
     }
     output->WriteTimeStepFloat(t, temp_line);
     if (IsTraining() && type_ != NT_SOFTMAX) {
@@ -253,7 +253,7 @@ void FullyConnected::ForwardTimeStep(int t, double* output_line) {
   }
 }
 
-void FullyConnected::ForwardTimeStepFloat(int t, float* output_line) {
+void FullyConnected::ForwardTimeStep(int t, float* output_line) {
   if (type_ == NT_TANH) {
     FuncInplaceFloat<GFunc>(no_, output_line);
   } else if (type_ == NT_LOGISTIC) {
@@ -280,13 +280,13 @@ void FullyConnected::ForwardTimeStep(const double* d_input,
   ForwardTimeStep(t, output_line);
 }
 
-void FullyConnected::ForwardTimeStepFloat(const float* d_input, int t,
+void FullyConnected::ForwardTimeStep(const float* d_input, int t,
                                      float* output_line) {
   // input is copied to source_ line-by-line for cache coherency.
   if (IsTraining() && external_source_ == nullptr)
     source_t_.WriteStrided(t, d_input);
   weights_.MatrixDotVectorFloat(d_input, output_line);
-  ForwardTimeStepFloat(t, output_line);
+  ForwardTimeStep(t, output_line);
 }
 
 void FullyConnected::ForwardTimeStep(const int8_t* i_input,
@@ -296,11 +296,11 @@ void FullyConnected::ForwardTimeStep(const int8_t* i_input,
   ForwardTimeStep(t, output_line);
 }
 
-void FullyConnected::ForwardTimeStepFloat(const int8_t* i_input, int t,
+void FullyConnected::ForwardTimeStep(const int8_t* i_input, int t,
                                      float* output_line) {
   // input is copied to source_ line-by-line for cache coherency.
   weights_.MatrixDotVectorFloat(i_input, output_line);
-  ForwardTimeStepFloat(t, output_line);
+  ForwardTimeStep(t, output_line);
 }
 
 // Runs backward propagation of errors on the deltas line.
