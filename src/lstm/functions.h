@@ -200,7 +200,7 @@ inline void CopyVector(int n, const double* src, double* dest) {
   memcpy(dest, src, n * sizeof(dest[0]));
 }
 
-inline void CopyVectorFloat(int n, const float* src, float* dest) {
+inline void CopyVector(int n, const float* src, float* dest) {
   memcpy(dest, src, n * sizeof(dest[0]));
 }
 

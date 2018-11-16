@@ -606,8 +606,8 @@ void LSTM::ForwardFloat(bool debug, const NetworkIO& input,
     }
     // Save states for use by the 2nd dimension only if needed.
     if (Is2D()) {
-      CopyVectorFloat(ns_, curr_state, states[mod_t]);
-      CopyVectorFloat(ns_, curr_output, outputs[mod_t]);
+      CopyVector(ns_, curr_state, states[mod_t]);
+      CopyVector(ns_, curr_output, outputs[mod_t]);
     }
     // Always zero the states at the end of every row, but only for the major
     // direction. The 2-D state remains intact.
