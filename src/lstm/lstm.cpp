@@ -519,7 +519,7 @@ void LSTM::ForwardFloat(bool debug, const NetworkIO& input,
       gate_weights_[CI].MatrixDotVector(source_.i(t), temp_lines[CI]);
     else
       gate_weights_[CI].MatrixDotVector(curr_input, temp_lines[CI]);
-    FuncInplaceFloat<GFunc>(ns_, temp_lines[CI]);
+    FuncInplace<GFunc>(ns_, temp_lines[CI]);
 
     SECTION_IF_OPENMP
     // Input Gates.
@@ -527,7 +527,7 @@ void LSTM::ForwardFloat(bool debug, const NetworkIO& input,
       gate_weights_[GI].MatrixDotVector(source_.i(t), temp_lines[GI]);
     else
       gate_weights_[GI].MatrixDotVector(curr_input, temp_lines[GI]);
-    FuncInplaceFloat<FFunc>(ns_, temp_lines[GI]);
+    FuncInplace<FFunc>(ns_, temp_lines[GI]);
 
     SECTION_IF_OPENMP
     // 1-D forget gates.
@@ -535,7 +535,7 @@ void LSTM::ForwardFloat(bool debug, const NetworkIO& input,
       gate_weights_[GF1].MatrixDotVector(source_.i(t), temp_lines[GF1]);
     else
       gate_weights_[GF1].MatrixDotVector(curr_input, temp_lines[GF1]);
-    FuncInplaceFloat<FFunc>(ns_, temp_lines[GF1]);
+    FuncInplace<FFunc>(ns_, temp_lines[GF1]);
 
     // 2-D forget gates.
     if (Is2D()) {
@@ -543,7 +543,7 @@ void LSTM::ForwardFloat(bool debug, const NetworkIO& input,
         gate_weights_[GFS].MatrixDotVector(source_.i(t), temp_lines[GFS]);
       else
         gate_weights_[GFS].MatrixDotVector(curr_input, temp_lines[GFS]);
-      FuncInplaceFloat<FFunc>(ns_, temp_lines[GFS]);
+      FuncInplace<FFunc>(ns_, temp_lines[GFS]);
     }
 
     SECTION_IF_OPENMP
@@ -552,7 +552,7 @@ void LSTM::ForwardFloat(bool debug, const NetworkIO& input,
       gate_weights_[GO].MatrixDotVector(source_.i(t), temp_lines[GO]);
     else
       gate_weights_[GO].MatrixDotVector(curr_input, temp_lines[GO]);
-    FuncInplaceFloat<FFunc>(ns_, temp_lines[GO]);
+    FuncInplace<FFunc>(ns_, temp_lines[GO]);
     END_PARALLEL_IF_OPENMP
 
     // Apply forget gate to state.

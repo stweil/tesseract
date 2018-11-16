@@ -148,7 +148,7 @@ inline void FuncInplace(int n, double* inout) {
   }
 }
 template <class Func>
-inline void FuncInplaceFloat(int n, float* inout) {
+inline void FuncInplace(int n, float* inout) {
   Func f;
   for (int i = 0; i < n; ++i) {
     inout[i] = f(inout[i]);

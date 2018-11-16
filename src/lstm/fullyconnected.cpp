@@ -255,15 +255,15 @@ void FullyConnected::ForwardTimeStep(int t, double* output_line) {
 
 void FullyConnected::ForwardTimeStep(int t, float* output_line) {
   if (type_ == NT_TANH) {
-    FuncInplaceFloat<GFunc>(no_, output_line);
+    FuncInplace<GFunc>(no_, output_line);
   } else if (type_ == NT_LOGISTIC) {
-    FuncInplaceFloat<FFunc>(no_, output_line);
+    FuncInplace<FFunc>(no_, output_line);
   } else if (type_ == NT_POSCLIP) {
-    FuncInplaceFloat<ClipFFunc>(no_, output_line);
+    FuncInplace<ClipFFunc>(no_, output_line);
   } else if (type_ == NT_SYMCLIP) {
-    FuncInplaceFloat<ClipGFunc>(no_, output_line);
+    FuncInplace<ClipGFunc>(no_, output_line);
   } else if (type_ == NT_RELU) {
-    FuncInplaceFloat<Relu>(no_, output_line);
+    FuncInplace<Relu>(no_, output_line);
   } else if (type_ == NT_SOFTMAX || type_ == NT_SOFTMAX_NO_CTC) {
     SoftmaxInPlace(no_, output_line);
   } else if (type_ != NT_LINEAR) {
