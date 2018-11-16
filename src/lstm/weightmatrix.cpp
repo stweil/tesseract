@@ -228,7 +228,7 @@ void WeightMatrix::MatrixDotVector(const double* u, double* v) const {
 
 void WeightMatrix::MatrixDotVector(const float* u, float* v) const {
   ASSERT_HOST(!int_mode_);
-  MatrixDotVectorInternalFloat(wf32_, true, false, u, v);
+  MatrixDotVectorInternal(wf32_, true, false, u, v);
 }
 
 void WeightMatrix::MatrixDotVector(const int8_t* u, double* v) const {
@@ -475,10 +475,10 @@ void WeightMatrix::MatrixDotVectorInternal(const GENERIC_2D_ARRAY<double>& w,
   }
 }
 
-void WeightMatrix::MatrixDotVectorInternalFloat(const GENERIC_2D_ARRAY<float>& w,
-                                                bool add_bias_fwd,
-                                                bool skip_bias_back,
-                                                const float* u, float* v) {
+void WeightMatrix::MatrixDotVectorInternal(const GENERIC_2D_ARRAY<float>& w,
+                                           bool add_bias_fwd,
+                                           bool skip_bias_back,
+                                           const float* u, float* v) {
   int num_results = w.dim1() - skip_bias_back;
   int extent = w.dim2() - add_bias_fwd;
   for (int i = 0; i < num_results; ++i) {

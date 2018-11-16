@@ -187,9 +187,9 @@ class WeightMatrix {
                                       bool add_bias_fwd, bool skip_bias_back,
                                       const double* u, double* v);
 
-  static void MatrixDotVectorInternalFloat(const GENERIC_2D_ARRAY<float>& w,
-                                           bool add_bias_fwd, bool skip_bias_back,
-                                           const float* u, float* v);
+  static void MatrixDotVectorInternal(const GENERIC_2D_ARRAY<float>& w,
+                                      bool add_bias_fwd, bool skip_bias_back,
+                                      const float* u, float* v);
 
  private:
   // Choice between float, double and 8 bit int implementations.
