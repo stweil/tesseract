@@ -571,7 +571,7 @@ void LSTM::ForwardFloat(bool debug, const NetworkIO& input,
         }
       }
     }
-    MultiplyAccumulateFloat(ns_, temp_lines[CI], temp_lines[GI], curr_state);
+    MultiplyAccumulate(ns_, temp_lines[CI], temp_lines[GI], curr_state);
     // Clip curr_state to a sane range.
     ClipVector<float>(ns_, -kStateClip, kStateClip, curr_state);
     if (IsTraining()) {

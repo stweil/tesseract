@@ -225,8 +225,8 @@ inline void MultiplyAccumulate(int n, const double* u, const double* v,
   }
 }
 
-inline void MultiplyAccumulateFloat(int n, const float* u, const float* v,
-                                    float* out) {
+inline void MultiplyAccumulate(int n, const float* u, const float* v,
+                               float* out) {
   for (int i = 0; i < n; i++) {
     out[i] += u[i] * v[i];
   }
