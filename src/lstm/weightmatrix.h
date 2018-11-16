@@ -123,9 +123,9 @@ class WeightMatrix {
   // implement the bias, but it doesn't actually have it.
   // Asserts that the call matches what we have.
   void MatrixDotVector(const double* u, double* v) const;
+  void MatrixDotVector(const float* u, float* v) const;
   void MatrixDotVector(const int8_t* u, double* v) const;
-  void MatrixDotVectorFloat(const float* u, float* v) const;
-  void MatrixDotVectorFloat(const int8_t* u, float* v) const;
+  void MatrixDotVector(const int8_t* u, float* v) const;
   // MatrixDotVector for peep weights, MultiplyAccumulate adds the
   // component-wise products of *this[0] and v to inout.
   void MultiplyAccumulate(const double* v, double* inout);

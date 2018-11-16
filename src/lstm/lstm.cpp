@@ -516,42 +516,42 @@ void LSTM::ForwardFloat(bool debug, const NetworkIO& input,
     // the t-loop and then tasks in place of the sections is a *lot* slower.
     // Cell inputs.
     if (source_.int_mode())
-      gate_weights_[CI].MatrixDotVectorFloat(source_.i(t), temp_lines[CI]);
+      gate_weights_[CI].MatrixDotVector(source_.i(t), temp_lines[CI]);
     else
-      gate_weights_[CI].MatrixDotVectorFloat(curr_input, temp_lines[CI]);
+      gate_weights_[CI].MatrixDotVector(curr_input, temp_lines[CI]);
     FuncInplaceFloat<GFunc>(ns_, temp_lines[CI]);
 
     SECTION_IF_OPENMP
     // Input Gates.
     if (source_.int_mode())
-      gate_weights_[GI].MatrixDotVectorFloat(source_.i(t), temp_lines[GI]);
+      gate_weights_[GI].MatrixDotVector(source_.i(t), temp_lines[GI]);
     else
-      gate_weights_[GI].MatrixDotVectorFloat(curr_input, temp_lines[GI]);
+      gate_weights_[GI].MatrixDotVector(curr_input, temp_lines[GI]);
     FuncInplaceFloat<FFunc>(ns_, temp_lines[GI]);
 
     SECTION_IF_OPENMP
     // 1-D forget gates.
     if (source_.int_mode())
-      gate_weights_[GF1].MatrixDotVectorFloat(source_.i(t), temp_lines[GF1]);
+      gate_weights_[GF1].MatrixDotVector(source_.i(t), temp_lines[GF1]);
     else
-      gate_weights_[GF1].MatrixDotVectorFloat(curr_input, temp_lines[GF1]);
+      gate_weights_[GF1].MatrixDotVector(curr_input, temp_lines[GF1]);
     FuncInplaceFloat<FFunc>(ns_, temp_lines[GF1]);
 
     // 2-D forget gates.
     if (Is2D()) {
       if (source_.int_mode())
-        gate_weights_[GFS].MatrixDotVectorFloat(source_.i(t), temp_lines[GFS]);
+        gate_weights_[GFS].MatrixDotVector(source_.i(t), temp_lines[GFS]);
       else
-        gate_weights_[GFS].MatrixDotVectorFloat(curr_input, temp_lines[GFS]);
+        gate_weights_[GFS].MatrixDotVector(curr_input, temp_lines[GFS]);
       FuncInplaceFloat<FFunc>(ns_, temp_lines[GFS]);
     }
 
     SECTION_IF_OPENMP
     // Output gates.
     if (source_.int_mode())
-      gate_weights_[GO].MatrixDotVectorFloat(source_.i(t), temp_lines[GO]);
+      gate_weights_[GO].MatrixDotVector(source_.i(t), temp_lines[GO]);
     else
-      gate_weights_[GO].MatrixDotVectorFloat(curr_input, temp_lines[GO]);
+      gate_weights_[GO].MatrixDotVector(curr_input, temp_lines[GO]);
     FuncInplaceFloat<FFunc>(ns_, temp_lines[GO]);
     END_PARALLEL_IF_OPENMP
 

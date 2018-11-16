@@ -226,7 +226,7 @@ void WeightMatrix::MatrixDotVector(const double* u, double* v) const {
   MatrixDotVectorInternal(wf_, true, false, u, v);
 }
 
-void WeightMatrix::MatrixDotVectorFloat(const float* u, float* v) const {
+void WeightMatrix::MatrixDotVector(const float* u, float* v) const {
   ASSERT_HOST(!int_mode_);
   MatrixDotVectorInternalFloat(wf32_, true, false, u, v);
 }
@@ -237,10 +237,10 @@ void WeightMatrix::MatrixDotVector(const int8_t* u, double* v) const {
   multiplier_->MatrixDotVector(wi_, scales_, u, v);
 }
 
-void WeightMatrix::MatrixDotVectorFloat(const int8_t* u, float* v) const {
+void WeightMatrix::MatrixDotVector(const int8_t* u, float* v) const {
   ASSERT_HOST(int_mode_);
   ASSERT_HOST(multiplier_ != nullptr);
-  multiplier_->MatrixDotVectorFloat(wi_, scales_, u, v);
+  multiplier_->MatrixDotVector(wi_, scales_, u, v);
 }
 
 // MatrixDotVector for peep weights, MultiplyAccumulate adds the

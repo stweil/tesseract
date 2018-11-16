@@ -285,7 +285,7 @@ void FullyConnected::ForwardTimeStep(const float* d_input, int t,
   // input is copied to source_ line-by-line for cache coherency.
   if (IsTraining() && external_source_ == nullptr)
     source_t_.WriteStrided(t, d_input);
-  weights_.MatrixDotVectorFloat(d_input, output_line);
+  weights_.MatrixDotVector(d_input, output_line);
   ForwardTimeStep(t, output_line);
 }
 
@@ -299,7 +299,7 @@ void FullyConnected::ForwardTimeStep(const int8_t* i_input,
 void FullyConnected::ForwardTimeStep(const int8_t* i_input, int t,
                                      float* output_line) {
   // input is copied to source_ line-by-line for cache coherency.
-  weights_.MatrixDotVectorFloat(i_input, output_line);
+  weights_.MatrixDotVector(i_input, output_line);
   ForwardTimeStep(t, output_line);
 }
 
