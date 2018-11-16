@@ -556,7 +556,7 @@ void LSTM::ForwardFloat(bool debug, const NetworkIO& input,
     END_PARALLEL_IF_OPENMP
 
     // Apply forget gate to state.
-    MultiplyVectorsInPlaceFloat(ns_, temp_lines[GF1], curr_state);
+    MultiplyVectorsInPlace(ns_, temp_lines[GF1], curr_state);
     if (Is2D()) {
       // Max-pool the forget gates (in 2-d) instead of blindly adding.
       int8_t* which_fg_col = which_fg_[t];

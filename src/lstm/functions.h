@@ -213,7 +213,7 @@ inline void MultiplyVectorsInPlace(int n, const double* src, double* inout) {
   for (int i = 0; i < n; ++i) inout[i] *= src[i];
 }
 
-inline void MultiplyVectorsInPlaceFloat(int n, const float* src, float* inout) {
+inline void MultiplyVectorsInPlace(int n, const float* src, float* inout) {
   for (int i = 0; i < n; ++i) inout[i] *= src[i];
 }
 
