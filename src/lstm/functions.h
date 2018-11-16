@@ -271,7 +271,7 @@ inline void CodeInBinary(int n, int nf, double* vec) {
   }
 }
 
-inline void CodeInBinaryFloat(int n, int nf, float* vec) {
+inline void CodeInBinary(int n, int nf, float* vec) {
   if (nf <= 0 || n < nf) return;
   int index = 0;
   float best_score = vec[0];

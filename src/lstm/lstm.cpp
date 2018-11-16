@@ -593,7 +593,7 @@ void LSTM::ForwardFloat(bool debug, const NetworkIO& input,
       }
       output->WriteTimeStepFloat(t, softmax_output);
       if (type_ == NT_LSTM_SOFTMAX_ENCODED) {
-        CodeInBinaryFloat(no_, nf_, softmax_output);
+        CodeInBinary(no_, nf_, softmax_output);
       }
     } else if (type_ == NT_LSTM_SUMMARY) {
       // Output only at the end of a row.
