@@ -413,7 +413,7 @@ void WeightMatrix::assign_DP_mode() {
 
 // Computes and returns the dot product of the two n-vectors u and v.
 /* static */
-float WeightMatrix::DotProductFloat(const float* u, const float* v, int n) {
+float WeightMatrix::DotProduct(const float* u, const float* v, int n) {
   return WeightMatrix::DP_ptr(u, v, n);
 }
 
@@ -483,7 +483,7 @@ void WeightMatrix::MatrixDotVectorInternal(const GENERIC_2D_ARRAY<float>& w,
   int extent = w.dim2() - add_bias_fwd;
   for (int i = 0; i < num_results; ++i) {
     const float* wi = w[i];
-    float total = DotProductFloat(wi, u, extent);
+    float total = DotProduct(wi, u, extent);
     if (add_bias_fwd) total += wi[extent];  // The bias value.
     v[i] = total;
   }

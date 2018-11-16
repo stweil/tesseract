@@ -156,7 +156,7 @@ class WeightMatrix {
 
   // Computes and returns the dot product of the two n-vectors u and v.
   static double DotProduct(const double* u, const double* v, int n);
-  static float DotProductFloat(const float* u, const float* v, int n);
+  static float DotProduct(const float* u, const float* v, int n);
   // Utility function converts an array of float to the corresponding array
   // of double.
   static void FloatToDouble(const GENERIC_2D_ARRAY<float>& wf,
