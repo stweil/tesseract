@@ -99,7 +99,7 @@ class IntSimdMatrix {
                        const GenericVector<double>& scales, const int8_t* u,
                        double* v) const;
 
-  void MatrixDotVectorFloat(const GENERIC_2D_ARRAY<int8_t>& w,
+  void MatrixDotVector(const GENERIC_2D_ARRAY<int8_t>& w,
                        const GenericVector<double>& scales, const int8_t* u,
                        float* v) const;
 

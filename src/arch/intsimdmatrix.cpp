@@ -132,7 +132,7 @@ void IntSimdMatrix::MatrixDotVector(const GENERIC_2D_ARRAY<int8_t>& w,
   }
 }
 
-void IntSimdMatrix::MatrixDotVectorFloat(const GENERIC_2D_ARRAY<int8_t>& w,
+void IntSimdMatrix::MatrixDotVector(const GENERIC_2D_ARRAY<int8_t>& w,
                                     const GenericVector<double>& scales,
                                     const int8_t* u, float* v) const {
   int num_out = w.dim1();
