@@ -164,8 +164,7 @@ inline void FuncMultiply(const double* u, const double* v, int n, double* out) {
   }
 }
 template <class Func>
-inline void FuncMultiplyFloat(const float* u, const float* v, int n,
-                              float* out) {
+inline void FuncMultiply(const float* u, const float* v, int n, float* out) {
   Func f;
   for (int i = 0; i < n; ++i) {
     out[i] = f(u[i]) * v[i];

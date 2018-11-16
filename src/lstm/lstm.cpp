@@ -582,7 +582,7 @@ void LSTM::ForwardFloat(bool debug, const NetworkIO& input,
       node_values_[GO].WriteTimeStepFloat(t, temp_lines[GO]);
       if (Is2D()) node_values_[GFS].WriteTimeStepFloat(t, temp_lines[GFS]);
     }
-    FuncMultiplyFloat<HFunc>(curr_state, temp_lines[GO], ns_, curr_output);
+    FuncMultiply<HFunc>(curr_state, temp_lines[GO], ns_, curr_output);
     if (IsTraining()) state_.WriteTimeStepFloat(t, curr_state);
     if (softmax_ != nullptr) {
       if (input.int_mode()) {
