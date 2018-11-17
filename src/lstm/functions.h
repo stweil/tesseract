@@ -195,11 +195,7 @@ inline void SoftmaxInPlace(int n, T* inout) {
 }
 
 // Copies n values of the given src vector to dest.
-inline void CopyVector(int n, const double* src, double* dest) {
-  memcpy(dest, src, n * sizeof(dest[0]));
-}
-
-inline void CopyVector(int n, const float* src, float* dest) {
+template <class T> inline void CopyVector(int n, const T src, T dest) {
   memcpy(dest, src, n * sizeof(dest[0]));
 }
 
