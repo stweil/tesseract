@@ -210,8 +210,8 @@ class RecodeBeamSearch {
 
   // Generates debug output of the content of the beams after a Decode.
   void DebugBeams(const UNICHARSET& unicharset) const;
-  
-  // Stores the alternative characters of every timestep together with their 
+
+  // Stores the alternative characters of every timestep together with their
   // probability.
   std::vector< std::vector<std::pair<const char*, float>>> timesteps;
 
