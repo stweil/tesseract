@@ -618,13 +618,6 @@ void TessBaseAPI::SetSourceResolution(int ppi) {
  */
 void TessBaseAPI::SetImage(Pix* pix) {
   if (InternalSetImage()) {
-    if (pixGetSpp(pix) == 4 && pixGetInputFormat(pix) == IFF_PNG) {
-      // remove alpha channel from png
-      PIX* p1 = pixRemoveAlpha(pix);
-      pixSetSpp(p1, 3);
-      pix = pixCopy(nullptr, p1);
-      pixDestroy(&p1);
-    }
     thresholder_->SetImage(pix);
     SetInputImage(thresholder_->GetPixRect());
   }
@@ -1115,12 +1108,12 @@ bool TessBaseAPI::ProcessPagesInternal(const char* filename,
                                        TessResultRenderer* renderer) {
   PERF_COUNT_START("ProcessPages")
   bool stdInput = !strcmp(filename, "stdin") || !strcmp(filename, "-");
-  if (stdInput) {
 #ifdef WIN32
+  if (stdInput) {
     if (_setmode(_fileno(stdin), _O_BINARY) == -1)
       tprintf("ERROR: cin to binary: %s", strerror(errno));
-#endif  // WIN32
   }
+#endif  // WIN32
 
   if (stream_filelist) {
     return ProcessPagesFileList(stdin, nullptr, retry_config,
@@ -1133,15 +1126,15 @@ bool TessBaseAPI::ProcessPagesInternal(const char* filename,
   // seekable.
   std::string buf;
   const l_uint8 *data = nullptr;
+  FILE* file = nullptr;
   if (stdInput) {
     buf.assign((std::istreambuf_iterator<char>(std::cin)),
                (std::istreambuf_iterator<char>()));
     data = reinterpret_cast<const l_uint8 *>(buf.data());
   } else {
     // Check whether the input file can be read.
-    if (FILE* file = fopen(filename, "rb")) {
-      fclose(file);
-    } else {
+    file = fopen(filename, "rb");
+    if (file == nullptr) {
       fprintf(stderr, "Error, cannot read input file %s: %s\n",
               filename, strerror(errno));
       return false;
@@ -1150,9 +1143,13 @@ bool TessBaseAPI::ProcessPagesInternal(const char* filename,
 
   // Here is our autodetection
   int format;
-  int r = (stdInput) ?
-      findFileFormatBuffer(data, &format) :
-      findFileFormat(filename, &format);
+  int r;
+  if  (file != nullptr) {
+      r = findFileFormatStream(file, &format);
+      fclose(file);
+  } else {
+      r = findFileFormatBuffer(data, &format);
+  }
 
   // Maybe we have a filelist
   if (r != 0 || format == IFF_UNKNOWN) {
