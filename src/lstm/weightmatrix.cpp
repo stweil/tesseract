@@ -37,6 +37,8 @@ static inline double log2(double n) {
 const int kAdamCorrectionIterations = 200000;
 // Epsilon in Adam to prevent division by zero.
 const double kAdamEpsilon = 1e-8;
+// Function Pointer for the Dotproduct function, depending on available hardware
+WeightMatrix::DP_float_ptr WeightMatrix::DP_ptr;
 
 // Copies the whole input transposed, converted to double, into *this.
 void TransposedArray::Transpose(const GENERIC_2D_ARRAY<double>& input) {
@@ -398,12 +400,21 @@ double WeightMatrix::DotProduct(const double* u, const double* v, int n) {
   return total;
 }
 
+//Assigns the appropriate method for the dot product to the function pointer
+void WeightMatrix::assign_DP_mode() {
+  if (SIMDDetect::IsAVXAvailable()) {
+    WeightMatrix::DP_ptr = &DotProductAVXFloat;
+  } else if (SIMDDetect::IsSSEAvailable()) {
+    WeightMatrix::DP_ptr = &DotProductStandardFloat;
+  } else {
+    WeightMatrix::DP_ptr = &DotProductStandardFloat;
+  }
+}
+
 // Computes and returns the dot product of the two n-vectors u and v.
 /* static */
 float WeightMatrix::DotProductFloat(const float* u, const float* v, int n) {
-  float total = 0.0;
-  for (int k = 0; k < n; ++k) total += u[k] * v[k];
-  return total;
+  return WeightMatrix::DP_ptr(u, v, n);
 }
 
 // Utility function converts an array of float to the corresponding array
@@ -421,6 +432,8 @@ void WeightMatrix::FloatToDouble(const GENERIC_2D_ARRAY<float>& wf,
   }
 }
 
+// Utility function converts an array of double to the corresponding array
+// of float.
 void WeightMatrix::DoubleToFloat(GENERIC_2D_ARRAY<double>& wf,
                                  GENERIC_2D_ARRAY<float>* wd) {
   int dim1 = wf.dim1();
@@ -431,6 +444,13 @@ void WeightMatrix::DoubleToFloat(GENERIC_2D_ARRAY<double>& wf,
     float* wdi = (*wd)[i];
     for (int j = 0; j < dim2; ++j) wdi[j] = static_cast<float>(wfi[j]);
   }
+}
+
+// Dot product calculation used when AVX and SSE are not availlable
+float WeightMatrix::DotProductStandardFloat(const float* u, const float* v, int n) {
+  float total = 0.0;
+  for (int k = 0; k < n; ++k) total += u[k] * v[k];
+  return total;
 }
 
 // Computes matrix.vector v = Wu.

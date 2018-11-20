@@ -25,6 +25,8 @@ namespace tesseract {
 // Uses Intel AVX intrinsics to access the SIMD instruction set.
 double DotProductAVX(const double* u, const double* v, int n);
 
+float DotProductAVXFloat(const float* a, const float* b, int N);
+
 }  // namespace tesseract.
 
 #endif  // TESSERACT_ARCH_DOTPRODUCTAVX_H_
