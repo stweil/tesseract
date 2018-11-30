@@ -16,7 +16,7 @@
 ///////////////////////////////////////////////////////////////////////
 
 #ifdef HAVE_CONFIG_H
-#include "config_auto.h"
+#  include "config_auto.h"
 #endif
 
 #include <cstring>
@@ -30,10 +30,11 @@ namespace tesseract {
 /**********************************************************************
  * Base Renderer interface implementation
  **********************************************************************/
-TessResultRenderer::TessResultRenderer(const char *outputbase,
+TessResultRenderer::TessResultRenderer(const char* outputbase,
                                        const char* extension)
     : file_extension_(extension),
-      title_(""), imagenum_(-1),
+      title_(""),
+      imagenum_(-1),
       fout_(stdout),
       next_(nullptr),
       happy_(true) {
@@ -107,21 +108,15 @@ void TessResultRenderer::AppendData(const char* s, int len) {
   if (!tesseract::Serialize(fout_, s, len)) happy_ = false;
 }
 
-bool TessResultRenderer::BeginDocumentHandler() {
-  return happy_;
-}
+bool TessResultRenderer::BeginDocumentHandler() { return happy_; }
 
-bool TessResultRenderer::EndDocumentHandler() {
-  return happy_;
-}
-
+bool TessResultRenderer::EndDocumentHandler() { return happy_; }
 
 /**********************************************************************
  * UTF8 Text Renderer interface implementation
  **********************************************************************/
-TessTextRenderer::TessTextRenderer(const char *outputbase)
-    : TessResultRenderer(outputbase, "txt") {
-}
+TessTextRenderer::TessTextRenderer(const char* outputbase)
+    : TessResultRenderer(outputbase, "txt") {}
 
 bool TessTextRenderer::AddImageHandler(TessBaseAPI* api) {
   const std::unique_ptr<const char[]> utf8(api->GetUTF8Text());
@@ -142,14 +137,14 @@ bool TessTextRenderer::AddImageHandler(TessBaseAPI* api) {
 /**********************************************************************
  * HOcr Text Renderer interface implementation
  **********************************************************************/
-TessHOcrRenderer::TessHOcrRenderer(const char *outputbase)
+TessHOcrRenderer::TessHOcrRenderer(const char* outputbase)
     : TessResultRenderer(outputbase, "hocr") {
-    font_info_ = false;
+  font_info_ = false;
 }
 
-TessHOcrRenderer::TessHOcrRenderer(const char *outputbase, bool font_info)
+TessHOcrRenderer::TessHOcrRenderer(const char* outputbase, bool font_info)
     : TessResultRenderer(outputbase, "hocr") {
-    font_info_ = font_info;
+  font_info_ = font_info;
 }
 
 bool TessHOcrRenderer::BeginDocumentHandler() {
@@ -165,12 +160,10 @@ bool TessHOcrRenderer::BeginDocumentHandler() {
       "<meta http-equiv=\"Content-Type\" content=\"text/html;"
       "charset=utf-8\" />\n"
       "  <meta name='ocr-system' content='tesseract " PACKAGE_VERSION
-              "' />\n"
+      "' />\n"
       "  <meta name='ocr-capabilities' content='ocr_page ocr_carea ocr_par"
       " ocr_line ocrx_word ocrp_wconf");
-  if (font_info_)
-    AppendString(
-      " ocrp_lang ocrp_dir ocrp_font ocrp_fsize");
+  if (font_info_) AppendString(" ocrp_lang ocrp_dir ocrp_font ocrp_fsize");
   AppendString(
       "'/>\n"
       "</head>\n<body>\n");
@@ -228,9 +221,8 @@ bool TessTsvRenderer::AddImageHandler(TessBaseAPI* api) {
 /**********************************************************************
  * UNLV Text Renderer interface implementation
  **********************************************************************/
-TessUnlvRenderer::TessUnlvRenderer(const char *outputbase)
-    : TessResultRenderer(outputbase, "unlv") {
-}
+TessUnlvRenderer::TessUnlvRenderer(const char* outputbase)
+    : TessResultRenderer(outputbase, "unlv") {}
 
 bool TessUnlvRenderer::AddImageHandler(TessBaseAPI* api) {
   const std::unique_ptr<const char[]> unlv(api->GetUNLVText());
@@ -244,9 +236,8 @@ bool TessUnlvRenderer::AddImageHandler(TessBaseAPI* api) {
 /**********************************************************************
  * BoxText Renderer interface implementation
  **********************************************************************/
-TessBoxTextRenderer::TessBoxTextRenderer(const char *outputbase)
-    : TessResultRenderer(outputbase, "box") {
-}
+TessBoxTextRenderer::TessBoxTextRenderer(const char* outputbase)
+    : TessResultRenderer(outputbase, "box") {}
 
 bool TessBoxTextRenderer::AddImageHandler(TessBaseAPI* api) {
   const std::unique_ptr<const char[]> text(api->GetBoxText(imagenum()));
@@ -275,6 +266,6 @@ bool TessOsdRenderer::AddImageHandler(TessBaseAPI* api) {
   return true;
 }
 
-#endif // ndef DISABLED_LEGACY_ENGINE
+#endif  // ndef DISABLED_LEGACY_ENGINE
 
 }  // namespace tesseract

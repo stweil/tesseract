@@ -19,10 +19,10 @@
 
 // Include automatically generated configuration file if running autoconf
 #ifdef HAVE_CONFIG_H
-#include "config_auto.h"
+#  include "config_auto.h"
 #endif
 
-#include <cerrno>               // for errno
+#include <cerrno>  // for errno
 #include <iostream>
 
 #include "allheaders.h"
@@ -34,17 +34,16 @@
 #include "renderer.h"
 #include "simddetect.h"
 #include "strngs.h"
-#include "tprintf.h"            // for tprintf
+#include "tprintf.h"  // for tprintf
 
 #if defined(_WIN32)
-#include <fcntl.h>
-#include <io.h>
-#if defined(HAVE_TIFFIO_H)
+#  include <fcntl.h>
+#  include <io.h>
+#  if defined(HAVE_TIFFIO_H)
 
-#include <tiffio.h>
+#    include <tiffio.h>
 
-static void Win32ErrorHandler(const char* module, const char* fmt,
-                              va_list ap) {
+static void Win32ErrorHandler(const char* module, const char* fmt, va_list ap) {
   if (module != nullptr) {
     fprintf(stderr, "%s: ", module);
   }
@@ -62,7 +61,7 @@ static void Win32WarningHandler(const char* module, const char* fmt,
   fprintf(stderr, ".\n");
 }
 
-#endif /* HAVE_TIFFIO_H */
+#  endif /* HAVE_TIFFIO_H */
 #endif   // _WIN32
 
 static void PrintVersionInfo() {
@@ -169,7 +168,8 @@ static void PrintHelpExtra(const char* program) {
       "--version\n"
       "  %s --list-langs [--tessdata-dir PATH]\n"
       "  %s --print-parameters [options...] [configfile...]\n"
-      "  %s imagename|imagelist|stdin outputbase|stdout [options...] [configfile...]\n"
+      "  %s imagename|imagelist|stdin outputbase|stdout [options...] "
+      "[configfile...]\n"
       "\n"
       "OCR options:\n"
       "  --tessdata-dir PATH   Specify the location of tessdata path.\n"
@@ -185,8 +185,7 @@ static void PrintHelpExtra(const char* program) {
 #endif
       "NOTE: These options must occur before any configfile.\n"
       "\n",
-      program, program, program, program
-  );
+      program, program, program, program);
 
   PrintHelpForPSM();
 #ifndef DISABLED_LEGACY_ENGINE
@@ -205,8 +204,7 @@ static void PrintHelpExtra(const char* program) {
 #endif
       "  -v, --version         Show version information.\n"
       "  --list-langs          List available languages for tesseract engine.\n"
-      "  --print-parameters    Print tesseract parameters.\n"
-  );
+      "  --print-parameters    Print tesseract parameters.\n");
 }
 
 static void PrintHelpMessage(const char* program) {
@@ -224,9 +222,9 @@ static void PrintHelpMessage(const char* program) {
       "  --help                Show this help message.\n"
       "  --help-extra          Show extra help for advanced users.\n"
       "  --version             Show version information.\n"
-      "  --list-langs          List available languages for tesseract engine.\n",
-      program, program, program
-  );
+      "  --list-langs          List available languages for tesseract "
+      "engine.\n",
+      program, program, program);
 }
 
 static void SetVariablesFromCLArgs(tesseract::TessBaseAPI* api, int argc,
@@ -291,7 +289,8 @@ static void FixPageSegMode(tesseract::TessBaseAPI* api,
 
 static void checkArgValues(int arg, const char* mode, int count) {
   if (arg >= count || arg < 0) {
-    printf("Invalid %s value, please enter a number between 0-%d\n", mode, count - 1);
+    printf("Invalid %s value, please enter a number between 0-%d\n", mode,
+           count - 1);
     exit(EXIT_SUCCESS);
   }
 }
@@ -310,7 +309,8 @@ static void ParseArgs(const int argc, char** argv, const char** lang,
     if (*image != nullptr && *outputbase == nullptr) {
       // outputbase follows image, don't allow options at that position.
       *outputbase = argv[i];
-    } else if ((strcmp(argv[i], "-h") == 0) || (strcmp(argv[i], "--help") == 0)) {
+    } else if ((strcmp(argv[i], "-h") == 0) ||
+               (strcmp(argv[i], "--help") == 0)) {
       PrintHelpMessage(argv[0]);
       noocr = true;
     } else if (strcmp(argv[i], "--help-extra") == 0) {
@@ -349,7 +349,7 @@ static void ParseArgs(const int argc, char** argv, const char** lang,
       noocr = true;
       *list_langs = true;
     } else if (strcmp(argv[i], "--psm") == 0 && i + 1 < argc) {
-      checkArgValues(atoi(argv[i+1]), "PSM", tesseract::PSM_COUNT);
+      checkArgValues(atoi(argv[i + 1]), "PSM", tesseract::PSM_COUNT);
       *pagesegmode = static_cast<tesseract::PageSegMode>(atoi(argv[i + 1]));
       ++i;
     } else if (strcmp(argv[i], "--oem") == 0 && i + 1 < argc) {
@@ -421,15 +421,15 @@ static void PreloadRenderers(
 
     api->GetBoolVariable("tessedit_create_alto", &b);
     if (b) {
-        tesseract::TessAltoRenderer* renderer =
-                new tesseract::TessAltoRenderer(outputbase);
-        if (renderer->happy()) {
-            renderers->push_back(renderer);
-        } else {
-            delete renderer;
-            tprintf("Error, could not create ALTO output file: %s\n",
-                    strerror(errno));
-        }
+      tesseract::TessAltoRenderer* renderer =
+          new tesseract::TessAltoRenderer(outputbase);
+      if (renderer->happy()) {
+        renderers->push_back(renderer);
+      } else {
+        delete renderer;
+        tprintf("Error, could not create ALTO output file: %s\n",
+                strerror(errno));
+      }
     }
 
     api->GetBoolVariable("tessedit_create_tsv", &b);
@@ -449,15 +449,14 @@ static void PreloadRenderers(
 
     api->GetBoolVariable("tessedit_create_pdf", &b);
     if (b) {
-      #ifdef WIN32
-        if (_setmode(_fileno(stdout), _O_BINARY) == -1)
-          tprintf("ERROR: cin to binary: %s", strerror(errno));
-      #endif  // WIN32
+#ifdef WIN32
+      if (_setmode(_fileno(stdout), _O_BINARY) == -1)
+        tprintf("ERROR: cin to binary: %s", strerror(errno));
+#endif  // WIN32
       bool textonly;
       api->GetBoolVariable("textonly_pdf", &textonly);
-      tesseract::TessPDFRenderer* renderer =
-        new tesseract::TessPDFRenderer(outputbase, api->GetDatapath(),
-                                       textonly);
+      tesseract::TessPDFRenderer* renderer = new tesseract::TessPDFRenderer(
+          outputbase, api->GetDatapath(), textonly);
       if (renderer->happy()) {
         renderers->push_back(renderer);
       } else {
@@ -471,7 +470,7 @@ static void PreloadRenderers(
     if (b) {
       api->SetVariable("unlv_tilde_crunching", "true");
       tesseract::TessUnlvRenderer* renderer =
-        new tesseract::TessUnlvRenderer(outputbase);
+          new tesseract::TessUnlvRenderer(outputbase);
       if (renderer->happy()) {
         renderers->push_back(renderer);
       } else {
@@ -484,7 +483,7 @@ static void PreloadRenderers(
     api->GetBoolVariable("tessedit_create_boxfile", &b);
     if (b) {
       tesseract::TessBoxTextRenderer* renderer =
-        new tesseract::TessBoxTextRenderer(outputbase);
+          new tesseract::TessBoxTextRenderer(outputbase);
       if (renderer->happy()) {
         renderers->push_back(renderer);
       } else {
@@ -497,7 +496,7 @@ static void PreloadRenderers(
     api->GetBoolVariable("tessedit_create_txt", &b);
     if (b || renderers->empty()) {
       tesseract::TessTextRenderer* renderer =
-        new tesseract::TessTextRenderer(outputbase);
+          new tesseract::TessTextRenderer(outputbase);
       if (renderer->happy()) {
         renderers->push_back(renderer);
       } else {
@@ -517,7 +516,6 @@ static void PreloadRenderers(
     }
   }
 }
-
 
 /**********************************************************************
  *  main()
@@ -554,7 +552,7 @@ int main(int argc, char** argv) {
   /* Show libtiff errors and warnings on console (not in GUI). */
   TIFFSetErrorHandler(Win32ErrorHandler);
   TIFFSetWarningHandler(Win32WarningHandler);
-#endif // HAVE_TIFFIO_H && _WIN32
+#endif  // HAVE_TIFFIO_H && _WIN32
 
   ParseArgs(argc, argv, &lang, &image, &outputbase, &datapath, &dpi,
             &list_langs, &print_parameters, &vars_vec, &vars_values, &arg_i,
@@ -565,8 +563,7 @@ int main(int argc, char** argv) {
     lang = "eng";
   }
 
-  if (image == nullptr && !list_langs && !print_parameters)
-    return EXIT_SUCCESS;
+  if (image == nullptr && !list_langs && !print_parameters) return EXIT_SUCCESS;
 
   PERF_COUNT_START("Tesseract:main")
 
@@ -580,8 +577,9 @@ int main(int argc, char** argv) {
 
   api.SetOutputName(outputbase);
 
-  const int init_failed = api.Init(datapath, lang, enginemode, &(argv[arg_i]),
-                             argc - arg_i, &vars_vec, &vars_values, false);
+  const int init_failed =
+      api.Init(datapath, lang, enginemode, &(argv[arg_i]), argc - arg_i,
+               &vars_vec, &vars_values, false);
 
   SetVariablesFromCLArgs(&api, argc, argv);
 
@@ -657,19 +655,22 @@ int main(int argc, char** argv) {
   auto osd_warning = std::string("");
   if (cur_psm == tesseract::PSM_OSD_ONLY) {
     const char* disabled_osd_msg =
-        "\nERROR: The page segmentation mode 0 (OSD Only) is currently disabled.\n\n";
-    fprintf(stderr, "%s",  disabled_osd_msg);
+        "\nERROR: The page segmentation mode 0 (OSD Only) is currently "
+        "disabled.\n\n";
+    fprintf(stderr, "%s", disabled_osd_msg);
     return EXIT_FAILURE;
   } else if (cur_psm == tesseract::PSM_AUTO_OSD) {
-      api.SetPageSegMode(tesseract::PSM_AUTO);
-      osd_warning +=
-          "\nWarning: The page segmentation mode 1 (Auto+OSD) is currently disabled. "
-          "Using PSM 3 (Auto) instead.\n\n";
+    api.SetPageSegMode(tesseract::PSM_AUTO);
+    osd_warning +=
+        "\nWarning: The page segmentation mode 1 (Auto+OSD) is currently "
+        "disabled. "
+        "Using PSM 3 (Auto) instead.\n\n";
   } else if (cur_psm == tesseract::PSM_SPARSE_TEXT_OSD) {
-      api.SetPageSegMode(tesseract::PSM_SPARSE_TEXT);
-      osd_warning +=
-          "\nWarning: The page segmentation mode 12 (Sparse text + OSD) is currently disabled. "
-          "Using PSM 11 (Sparse text) instead.\n\n";
+    api.SetPageSegMode(tesseract::PSM_SPARSE_TEXT);
+    osd_warning +=
+        "\nWarning: The page segmentation mode 12 (Sparse text + OSD) is "
+        "currently disabled. "
+        "Using PSM 11 (Sparse text) instead.\n\n";
   }
 #endif  // def DISABLED_LEGACY_ENGINE
 
@@ -692,7 +693,7 @@ int main(int argc, char** argv) {
     if (banner) PrintBanner();
 #ifdef DISABLED_LEGACY_ENGINE
     if (!osd_warning.empty()) {
-      fprintf(stderr, "%s",osd_warning.c_str());
+      fprintf(stderr, "%s", osd_warning.c_str());
     }
 #endif
     bool succeed = api.ProcessPages(image, nullptr, 0, renderers[0]);
