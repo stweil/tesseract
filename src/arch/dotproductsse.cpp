@@ -47,12 +47,13 @@ namespace tesseract {
 // Computes and returns the dot product of the n-vectors u and v.
 // Uses Intel SSE intrinsics to access the SIMD instruction set.
 double DotProductSSE(const double* u, const double* v, int n) {
+  double result = 0.0;
   int max_offset = n - 2;
   int offset = 0;
   // Accumulate a set of 2 sums in sum, by loading pairs of 2 values from u and
   // v, and multiplying them together in parallel.
-  __m128d sum = _mm_setzero_pd();
   if (offset <= max_offset) {
+    __m128d sum = _mm_setzero_pd();
     offset = 2;
     // Aligned load is reputedly faster but requires 16 byte aligned input.
     if ((reinterpret_cast<uintptr_t>(u) & 15) == 0 &&
@@ -83,11 +84,11 @@ double DotProductSSE(const double* u, const double* v, int n) {
         sum = _mm_add_pd(sum, floats1);
       }
     }
+    // Add the 2 sums in sum horizontally.
+    sum = _mm_hadd_pd(sum, sum);
+    // Extract the low result.
+    result = _mm_cvtsd_f64(sum);
   }
-  // Add the 2 sums in sum horizontally.
-  sum = _mm_hadd_pd(sum, sum);
-  // Extract the low result.
-  double result = _mm_cvtsd_f64(sum);
   // Add on any left-over products.
   while (offset < n) {
     result += u[offset] * v[offset];
@@ -99,12 +100,13 @@ double DotProductSSE(const double* u, const double* v, int n) {
 // Computes and returns the dot product of the n-vectors u and v.
 // Uses Intel SSE intrinsics to access the SIMD instruction set.
 int32_t IntDotProductSSE(const int8_t* u, const int8_t* v, int n) {
+  int32_t result = 0;
   int max_offset = n - 8;
   int offset = 0;
   // Accumulate a set of 4 32-bit sums in sum, by loading 8 pairs of 8-bit
   // values, extending to 16 bit, multiplying to make 32 bit results.
-  __m128i sum = _mm_setzero_si128();
   if (offset <= max_offset) {
+    __m128i sum = _mm_setzero_si128();
     offset = 8;
     __m128i packed1 = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(u));
     __m128i packed2 = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(v));
@@ -123,11 +125,11 @@ int32_t IntDotProductSSE(const int8_t* u, const int8_t* v, int n) {
       packed1 = _mm_madd_epi16(packed1, packed2);
       sum = _mm_add_epi32(sum, packed1);
     }
+    // Sum the 4 packed 32 bit sums and extract the low result.
+    sum = _mm_hadd_epi32(sum, sum);
+    sum = _mm_hadd_epi32(sum, sum);
+    result = _mm_cvtsi128_si32(sum);
   }
-  // Sum the 4 packed 32 bit sums and extract the low result.
-  sum = _mm_hadd_epi32(sum, sum);
-  sum = _mm_hadd_epi32(sum, sum);
-  int32_t result = _mm_cvtsi128_si32(sum);
   while (offset < n) {
     result += u[offset] * v[offset];
     ++offset;
