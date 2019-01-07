@@ -8,17 +8,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Double precision is a default of spreadsheets
-// cl_khr_fp64: Khronos extension
-// cl_amd_fp64: AMD extension
-
 /////////////////////////////////////////////
-
-#ifdef KHR_DP_EXTENSION
-#pragma OPENCL EXTENSION cl_khr_fp64 : enable
-#elif AMD_DP_EXTENSION
-#pragma OPENCL EXTENSION cl_amd_fp64 : enable
-#endif
 
 __kernel void composeRGBPixel(__global uint *tiffdata, int w, int h, int wpl,
                               __global uint *output) {
@@ -902,6 +892,7 @@ kernel_ThresholdRectToPix(__global const uchar4 *imageData, int height,
   }
 }
 
+#undef CHAR_VEC_WIDTH
 #define CHAR_VEC_WIDTH 8
 #define PIXELS_PER_WORD 32
 #define PIXELS_PER_BURST 8
@@ -957,3 +948,15 @@ kernel_ThresholdRectToPix_OneChan(__global const uchar8 *imageData, int height,
     pix[w] = word;
   }
 }
+
+#if (__OPENCL_C_VERSION__ >= 200) || 1
+__kernel void dotproduct(__global const double* u, __global const double* v,
+                         int n, __global double* result) {
+  double sum = 0.0;
+  for (int i = 0; i < n; i++) {
+    sum += u[i] * v[i];
+    //~ sum += dot(u[i], v[i]);
+  }
+  *result = sum;
+}
+#endif
