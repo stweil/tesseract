@@ -205,7 +205,6 @@ struct OpenCLEnv {
   cl_device_id mpOclDevsID;
   cl_command_queue mpOclCmdQueue;
 };
-typedef int (*cl_kernel_function)(void** userdata, KernelEnv* kenv);
 
 #define CHECK_OPENCL(status, name)                                    \
   if (status != CL_SUCCESS) {                                         \
@@ -220,14 +219,9 @@ struct GPUEnv {
   cl_device_id* mpArryDevsID;
   cl_device_id mpDevID;
   cl_command_queue mpCmdQueue;
-  cl_kernel mpArryKernels[MAX_CLFILE_NUM];
   cl_program mpArryPrograms[MAX_CLFILE_NUM];  // one program object maps one
                                               // kernel source file
-  char mArryKnelSrcFile[MAX_CLFILE_NUM]
-                       [256],  // the max len of kernel file name is 256
-      mArrykernelNames[MAX_CLKERNEL_NUM][MAX_KERNEL_STRING_LEN + 1];
-  cl_kernel_function mpArryKnelFuncs[MAX_CLKERNEL_NUM];
-  int mnKernelCount, mnFileCount,  // only one kernel file
+  int mnKernelCount,    // only one kernel file
       mnIsUserCreated;  // 1: created , 0:no create and needed to create by
                         // opencl wrapper
   int mnKhrFp64Flag;
@@ -280,18 +274,12 @@ class OpenclDevice {
   // int RunKernel( const char *kernelName, void **userdata );
   // int ConvertToString( const char *filename, char **source );
   // int CheckKernelName( KernelEnv *envInfo, const char *kernelName );
-  // int RegisterKernelWrapper( const char *kernelName, cl_kernel_function
-  // function ); int RunKernelWrapper( cl_kernel_function function, const char *
-  // kernelName, void **usrdata ); int GetKernelEnvAndFunc( const char
-  // *kernelName, KernelEnv *env, cl_kernel_function *function );
 
   static int LoadOpencl();
 #ifdef WIN32
   // static int OpenclInite();
   static void FreeOpenclDll();
 #endif
-
-  inline static int AddKernelConfig(int kCount, const char* kName);
 
   /* for binarization */
   static int HistogramRectOCL(void* imagedata, int bytes_per_pixel,
