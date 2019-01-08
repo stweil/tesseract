@@ -949,7 +949,7 @@ kernel_ThresholdRectToPix_OneChan(__global const uchar8 *imageData, int height,
   }
 }
 
-#if (__OPENCL_C_VERSION__ >= 200) || 1
+#if defined(HAS_DOUBLE)
 __kernel void dotproduct(__global const double* u, __global const double* v,
                          int n, __global double* result) {
   double sum = 0.0;
