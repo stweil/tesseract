@@ -554,7 +554,6 @@ static ds_status writeProfileToFile(ds_profile* profile,
 
 // substitute invalid characters in device name with _
 static void legalizeFileName(char* fileName) {
-  // tprintf("fileName: %s\n", fileName);
   const char* invalidChars =
       "/\?:*\"><| ";  // space is valid but can cause headaches
   // for each invalid char
@@ -562,16 +561,9 @@ static void legalizeFileName(char* fileName) {
     char invalidStr[4];
     invalidStr[0] = invalidChars[i];
     invalidStr[1] = '\0';
-    // tprintf("eliminating %s\n", invalidStr);
-    // char *pos = strstr(fileName, invalidStr);
-    // initial ./ is valid for present directory
-    // if (*pos == '.') pos++;
-    // if (*pos == '/') pos++;
     for (char* pos = strstr(fileName, invalidStr); pos != nullptr;
          pos = strstr(pos + 1, invalidStr)) {
-      // tprintf("\tfound: %s, ", pos);
       pos[0] = '_';
-      // tprintf("fileName: %s\n", fileName);
     }
   }
 }
@@ -756,7 +748,7 @@ int OpenclDevice::InitOpenclRunEnv_DeviceSelection(int argc) {
       // for selected device\n");
       populateGPUEnvFromDevice(&gpuEnv, bestDevice);
       // PERF_COUNT_SUB("populate gpuEnv")
-      CompileKernelFile(&gpuEnv, "");
+      CompileKernelFile(&gpuEnv);
       // PERF_COUNT_SUB("CompileKernelFile")
     } else {
       // tprintf("[DS] InitOpenclRunEnv_DS::Skipping populateGPUEnvFromDevice()
@@ -805,24 +797,10 @@ int OpenclDevice::ReleaseOpenclEnv(GPUEnv* gpuInfo) {
   return 1;
 }
 
-bool OpenclDevice::BinaryGenerated(const char* clFileName, FILE** fhandle) {
-  unsigned int i = 0;
-  cl_int clStatus;
-  FILE* fd = nullptr;
-  char fileName[256] = {0}, cl_name[128] = {0};
-  char deviceName[1024];
-  clStatus = clGetDeviceInfo(gpuEnv.mpArryDevsID[i], CL_DEVICE_NAME,
-                             sizeof(deviceName), deviceName, nullptr);
-  CHECK_OPENCL(clStatus, "clGetDeviceInfo");
-  const char* str = strstr(clFileName, ".cl");
-  memcpy(cl_name, clFileName, str - clFileName);
-  cl_name[str - clFileName] = '\0';
-  sprintf(fileName, "%s-%s.bin", cl_name, deviceName);
-  legalizeFileName(fileName);
-  fd = fopen(fileName, "rb");
-  bool status = (fd != nullptr);
+bool OpenclDevice::BinaryGenerated(const char* fileName, FILE** fhandle) {
+  FILE* fd = fopen(fileName, "rb");
   *fhandle = fd;
-  return status;
+  return fd != nullptr;
 }
 
 int OpenclDevice::WriteBinaryToFile(const char* fileName, const char* binary,
@@ -840,7 +818,7 @@ int OpenclDevice::WriteBinaryToFile(const char* fileName, const char* binary,
 }
 
 int OpenclDevice::GeneratBinFromKernelSource(cl_program program,
-                                             const char* clFileName) {
+                                             const char* fileName) {
   unsigned int i = 0;
   cl_int clStatus;
   cl_uint numDevices;
@@ -884,19 +862,7 @@ int OpenclDevice::GeneratBinFromKernelSource(cl_program program,
 
   /* dump out each binary into its own separate file. */
   for (i = 0; i < numDevices; i++) {
-    char fileName[256] = {0}, cl_name[128] = {0};
-
     if (binarySizes[i] != 0) {
-      char deviceName[1024];
-      clStatus = clGetDeviceInfo(mpArryDevsID[i], CL_DEVICE_NAME,
-                                 sizeof(deviceName), deviceName, nullptr);
-      CHECK_OPENCL(clStatus, "clGetDeviceInfo");
-
-      const char* str = strstr(clFileName, ".cl");
-      memcpy(cl_name, clFileName, str - clFileName);
-      cl_name[str - clFileName] = '\0';
-      sprintf(fileName, "%s-%s.bin", cl_name, deviceName);
-      legalizeFileName(fileName);
       if (!WriteBinaryToFile(fileName, binaries[i], binarySizes[i])) {
         tprintf("[OD] write binary[%s] failed\n", fileName);
         return 0;
@@ -913,17 +879,26 @@ int OpenclDevice::GeneratBinFromKernelSource(cl_program program,
   return 1;
 }
 
-int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo, const char* buildOption) {
+int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo) {
   // PERF_COUNT_START("CompileKernelFile")
-  cl_int clStatus = 0;
+  cl_int clStatus;
   FILE *fd;
-  const char* filename = "kernel.cl";
+  const char* filename = "oclkernels.cl";
   fprintf(stderr, "[OD] CompileKernelFile ... \n");
 
   int idx = 0;
 
+  char binFileName[256];
+  char deviceName[1024];
+  clStatus = clGetDeviceInfo(gpuEnv.mpArryDevsID[0], CL_DEVICE_NAME,
+                             sizeof(deviceName), deviceName, nullptr);
+  CHECK_OPENCL(clStatus, "clGetDeviceInfo");
+  const char* str = strstr(filename, ".cl");
+  sprintf(binFileName, "%1.*s-%s.bin", static_cast<int>(str - filename), filename, deviceName);
+  legalizeFileName(binFileName);
+
   bool binaryExisted = BinaryGenerated(
-      filename, &fd);  // don't check for binary during microbenchmark
+      binFileName, &fd);  // don't check for binary during microbenchmark
                        // PERF_COUNT_SUB("BinaryGenerated")
   if (binaryExisted) {
     cl_uint numDevices;
@@ -968,7 +943,7 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo, const char* buildOption) {
     // PERF_COUNT_SUB("binaryExisted")
   } else {
     // create a CL program using the kernel source
-    std::ifstream infile("oclkernels.cl", std::ifstream::binary);
+    std::ifstream infile(filename, std::ifstream::binary);
     fprintf(stderr, "[OD] Create kernel from source\n");
     if (infile.good()) {
       std::string source((std::istreambuf_iterator<char>(infile)),
@@ -979,7 +954,7 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo, const char* buildOption) {
           gpuInfo->mpContext, 1, &source_data, &source_size, &clStatus);
       CHECK_OPENCL(clStatus, "clCreateProgramWithSource");
     } else {
-      fprintf(stderr, "Failed to read %s\n", "oclkernels.cl");
+      fprintf(stderr, "Failed to read %s\n", filename);
     }
     // PERF_COUNT_SUB("!binaryExisted")
   }
@@ -988,19 +963,29 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo, const char* buildOption) {
     return 0;
   }
 
-  // char options[512];
+  cl_device_fp_config double_fp_config;
+  clStatus = clGetDeviceInfo(gpuInfo->mpDevID, CL_DEVICE_DOUBLE_FP_CONFIG,
+                             sizeof(double_fp_config), &double_fp_config,
+                             nullptr);
+  CHECK_OPENCL(clStatus, "clGetDeviceInfo CL_DEVICE_DOUBLE_FP_CONFIG");
+
+  std::string options;
+  if (double_fp_config != 0) {
+    options = "-D HAS_DOUBLE";
+  }
+
   // create a cl program executable for all the devices specified
   tprintf("[OD] BuildProgram.\n");
   PERF_COUNT_START("OD::CompileKernel::clBuildProgram")
   if (!gpuInfo->mnIsUserCreated) {
     clStatus =
         clBuildProgram(gpuInfo->mpArryPrograms[idx], 1, gpuInfo->mpArryDevsID,
-                       buildOption, nullptr, nullptr);
+                       &options[0], nullptr, nullptr);
     // PERF_COUNT_SUB("clBuildProgram notUserCreated")
   } else {
     clStatus =
         clBuildProgram(gpuInfo->mpArryPrograms[idx], 1, &(gpuInfo->mpDevID),
-                       buildOption, nullptr, nullptr);
+                       &options[0], nullptr, nullptr);
     // PERF_COUNT_SUB("clBuildProgram isUserCreated")
   }
   PERF_COUNT_END
@@ -1048,7 +1033,7 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo, const char* buildOption) {
 
   // PERF_COUNT_SUB("strcpy")
   if (!binaryExisted) {
-    GeneratBinFromKernelSource(gpuInfo->mpArryPrograms[idx], filename);
+    GeneratBinFromKernelSource(gpuInfo->mpArryPrograms[idx], binFileName);
     PERF_COUNT_SUB("GenerateBinFromKernelSource")
   }
 
@@ -1621,7 +1606,7 @@ int OpenclDevice::HistogramRectOCL(void* imageData,
   cl_uint numCUs;
   clStatus = clGetDeviceInfo(gpuEnv.mpDevID, CL_DEVICE_MAX_COMPUTE_UNITS,
                              sizeof(numCUs), &numCUs, nullptr);
-  CHECK_OPENCL(clStatus, "clCreateBuffer imageBuffer");
+  CHECK_OPENCL(clStatus, "clGetDeviceInfo CL_DEVICE_MAX_COMPUTE_UNITS");
 
   int requestedOccupancy = 10;
   int numWorkGroups = numCUs * requestedOccupancy;
@@ -2417,7 +2402,7 @@ static ds_status evaluateScoreForDevice(ds_device* device, void* inputData) {
     // tprintf("[DS] populating tmp GPUEnv from device\n");
     populateGPUEnvFromDevice(env, device->oclDeviceID);
     // tprintf("[DS] compiling kernels for tmp GPUEnv\n");
-    OpenclDevice::CompileKernelFile(env, "");
+    OpenclDevice::CompileKernelFile(env);
   }
 
   TessScoreEvaluationInputData* input =

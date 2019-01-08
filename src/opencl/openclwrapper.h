@@ -242,12 +242,12 @@ class OpenclDevice {
   static int RegistOpenclKernel();
   static int ReleaseOpenclRunEnv();
   static int ReleaseOpenclEnv(GPUEnv* gpuInfo);
-  static int CompileKernelFile(GPUEnv* gpuInfo, const char* buildOption);
+  static int CompileKernelFile(GPUEnv* gpuInfo);
   static int GeneratBinFromKernelSource(cl_program program,
-                                        const char* clFileName);
+                                        const char* fileName);
   static int WriteBinaryToFile(const char* fileName, const char* birary,
                                size_t numBytes);
-  static bool BinaryGenerated(const char* clFileName, FILE** fhandle);
+  static bool BinaryGenerated(const char* fileName, FILE** fhandle);
   static l_uint32* pixReadFromTiffKernel(l_uint32* tiffdata, l_int32 w,
                                          l_int32 h, l_int32 wpl,
                                          l_uint32* line);
