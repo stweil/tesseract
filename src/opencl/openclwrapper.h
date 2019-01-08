@@ -243,8 +243,6 @@ class OpenclDevice {
   static int ReleaseOpenclRunEnv();
   static int ReleaseOpenclEnv(GPUEnv* gpuInfo);
   static int CompileKernelFile(GPUEnv* gpuInfo, const char* buildOption);
-  static int CachedOfKernerPrg(const GPUEnv* gpuEnvCached,
-                               const char* clFileName);
   static int GeneratBinFromKernelSource(cl_program program,
                                         const char* clFileName);
   static int WriteBinaryToFile(const char* fileName, const char* birary,

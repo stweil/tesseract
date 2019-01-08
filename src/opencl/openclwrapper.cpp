@@ -825,19 +825,7 @@ bool OpenclDevice::BinaryGenerated(const char* clFileName, FILE** fhandle) {
   return status;
 }
 
-int OpenclDevice::CachedOfKernerPrg(const GPUEnv* gpuEnvCached,
-                                    const char* clFileName) {
-  int i;
-  for (i = 0; i < 1; i++) {
-    if (gpuEnvCached->mpArryPrograms[i] != nullptr) {
-      return 1;
-    }
-  }
-
-  return 0;
-}
-
-int OpenclDevice::WriteBinaryToFile(const char* fileName, const char* birary,
+int OpenclDevice::WriteBinaryToFile(const char* fileName, const char* binary,
                                     size_t numBytes) {
   FILE* output = nullptr;
   output = fopen(fileName, "wb");
@@ -845,7 +833,7 @@ int OpenclDevice::WriteBinaryToFile(const char* fileName, const char* birary,
     return 0;
   }
 
-  fwrite(birary, sizeof(char), numBytes, output);
+  fwrite(binary, sizeof(char), numBytes, output);
   fclose(output);
 
   return 1;
@@ -931,9 +919,6 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo, const char* buildOption) {
   FILE *fd;
   const char* filename = "kernel.cl";
   fprintf(stderr, "[OD] CompileKernelFile ... \n");
-  if (CachedOfKernerPrg(gpuInfo, filename) == 1) {
-    return 1;
-  }
 
   int idx = 0;
 
