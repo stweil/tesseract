@@ -949,14 +949,30 @@ kernel_ThresholdRectToPix_OneChan(__global const uchar8 *imageData, int height,
   }
 }
 
-#if defined(HAS_DOUBLE)
-__kernel void dotproduct(__global const double* u, __global const double* v,
-                         int n, __global double* result) {
-  double sum = 0.0;
+__kernel void dotproductFloat(__global const float* u, __global const float* v,
+                         int n, __global float* result) {
+  //~ printf("dotproductFloat %p, %p, %d, %p\n", u, v, n, result);
+  float sum = 0.0;
   for (int i = 0; i < n; i++) {
+    //~ printf("%f * %f\n", u[i], v[i]);
     sum += u[i] * v[i];
     //~ sum += dot(u[i], v[i]);
   }
+  //~ printf("sum = %f\n", sum);
+  *result = sum;
+}
+
+#if defined(HAS_DOUBLE)
+__kernel void dotproductDouble(__global const double* u, __global const double* v,
+                         int n, __global double* result) {
+  //~ printf("dotproductDouble %p, %p, %d, %p\n", u, v, n, result);
+  double sum = 0.0;
+  for (int i = 0; i < n; i++) {
+    //~ printf("%f * %f\n", u[i], v[i]);
+    sum += u[i] * v[i];
+    //~ sum += dot(u[i], v[i]);
+  }
+  //~ printf("sum = %f\n", sum);
   *result = sum;
 }
 #endif
