@@ -742,12 +742,6 @@ int OpenclDevice::initMorphCLAllocations(l_int32 wpl, l_int32 h, Pix* pixs) {
 int OpenclDevice::InitEnv() {
 // PERF_COUNT_START("OD::InitEnv")
   tprintf("[OD] OpenclDevice::InitEnv()\n");
-#ifdef SAL_WIN32
-  while (1) {
-    if (1 == LoadOpencl()) break;
-  }
-  PERF_COUNT_SUB("LoadOpencl")
-#endif
   // sets up environment, compiles programs
 
   InitOpenclRunEnv_DeviceSelection(0);
@@ -758,9 +752,6 @@ int OpenclDevice::InitEnv() {
 
 int OpenclDevice::ReleaseOpenclRunEnv() {
   ReleaseOpenclEnv(&gpuEnv);
-#ifdef SAL_WIN32
-  FreeOpenclDll();
-#endif
   return 1;
 }
 
