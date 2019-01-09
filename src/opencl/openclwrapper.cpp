@@ -50,8 +50,7 @@ struct GPUEnv {
   cl_device_id* mpArryDevsID;
   cl_device_id mpDevID;
   cl_command_queue mpCmdQueue;
-  cl_program mpArryPrograms[MAX_CLFILE_NUM];  // one program object maps one
-                                              // kernel source file
+  cl_program program;
   int mnIsUserCreated;  // 1: created , 0:no create and needed to create by
                         // opencl wrapper
 };
@@ -655,7 +654,7 @@ int OpenclDevice::LoadOpencl() {
 void OpenclDevice::SetKernelEnv(KernelEnv* envInfo) {
   envInfo->mpkContext = gpuEnv.mpContext;
   envInfo->mpkCmdQueue = gpuEnv.mpCmdQueue;
-  envInfo->mpkProgram = gpuEnv.mpArryPrograms[0];
+  envInfo->mpkProgram = gpuEnv.program;
 }
 
 static cl_mem allocateZeroCopyBuffer(const KernelEnv& rEnv,
@@ -794,19 +793,16 @@ OpenclDevice::~OpenclDevice() {
 }
 
 int OpenclDevice::ReleaseOpenclEnv(GPUEnv* gpuInfo) {
-  int i = 0;
   int clStatus = 0;
 
   if (!isInited) {
     return 1;
   }
 
-  for (i = 0; i < 1; i++) {
-    if (gpuEnv.mpArryPrograms[i]) {
-      clStatus = clReleaseProgram(gpuEnv.mpArryPrograms[i]);
-      CHECK_OPENCL(clStatus, "clReleaseProgram");
-      gpuEnv.mpArryPrograms[i] = nullptr;
-    }
+  if (gpuEnv.program) {
+    clStatus = clReleaseProgram(gpuEnv.program);
+    CHECK_OPENCL(clStatus, "clReleaseProgram");
+    gpuEnv.program = nullptr;
   }
   if (gpuEnv.mpCmdQueue) {
     clReleaseCommandQueue(gpuEnv.mpCmdQueue);
@@ -911,8 +907,6 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo) {
   const char* filename = "oclkernels.cl";
   fprintf(stderr, "[OD] CompileKernelFile ... \n");
 
-  int idx = 0;
-
   char binFileName[256];
   char deviceName[1024];
   clStatus = clGetDeviceInfo(gpuEnv.mpArryDevsID[0], CL_DEVICE_NAME,
@@ -926,6 +920,7 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo) {
       binFileName, &fd);  // don't check for binary during microbenchmark
                        // PERF_COUNT_SUB("BinaryGenerated")
   if (binaryExisted) {
+    // Create program from binary.
     cl_uint numDevices;
     clStatus = clGetContextInfo(gpuInfo->mpContext, CL_CONTEXT_NUM_DEVICES,
                                 sizeof(numDevices), &numDevices, nullptr);
@@ -960,7 +955,7 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo) {
     fprintf(stderr, "[OD] Create kernel from binary\n");
     const uint8_t* c_binary = &binary[0];
     int binary_status;
-    gpuInfo->mpArryPrograms[idx] = clCreateProgramWithBinary(
+    gpuInfo->program = clCreateProgramWithBinary(
         gpuInfo->mpContext, numDevices, &mpArryDevsID[0], &length, &c_binary,
         &binary_status, &clStatus);
     CHECK_OPENCL(clStatus, "clCreateProgramWithBinary");
@@ -975,7 +970,7 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo) {
                          std::istreambuf_iterator<char>());
       size_t source_size = source.size();
       const char* source_data = source.data();
-      gpuInfo->mpArryPrograms[idx] = clCreateProgramWithSource(
+      gpuInfo->program = clCreateProgramWithSource(
           gpuInfo->mpContext, 1, &source_data, &source_size, &clStatus);
       CHECK_OPENCL(clStatus, "clCreateProgramWithSource");
     } else {
@@ -984,7 +979,7 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo) {
     // PERF_COUNT_SUB("!binaryExisted")
   }
 
-  if (gpuInfo->mpArryPrograms[idx] == nullptr) {
+  if (gpuInfo->program == nullptr) {
     return 0;
   }
 
@@ -999,49 +994,33 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo) {
     options = "-D HAS_DOUBLE";
   }
 
+  cl_device_id* dev;
+  if (gpuInfo->mnIsUserCreated) {
+    dev = &(gpuInfo->mpDevID);
+  } else {
+    dev = gpuInfo->mpArryDevsID;
+  }
+
   // create a cl program executable for all the devices specified
   tprintf("[OD] BuildProgram.\n");
   PERF_COUNT_START("OD::CompileKernel::clBuildProgram")
-  if (!gpuInfo->mnIsUserCreated) {
-    clStatus =
-        clBuildProgram(gpuInfo->mpArryPrograms[idx], 1, gpuInfo->mpArryDevsID,
-                       &options[0], nullptr, nullptr);
-    // PERF_COUNT_SUB("clBuildProgram notUserCreated")
-  } else {
-    clStatus =
-        clBuildProgram(gpuInfo->mpArryPrograms[idx], 1, &(gpuInfo->mpDevID),
-                       &options[0], nullptr, nullptr);
-    // PERF_COUNT_SUB("clBuildProgram isUserCreated")
-  }
+  clStatus = clBuildProgram(gpuInfo->program, 1, dev,
+                            &options[0], nullptr, nullptr);
+  CHECK_OPENCL(clStatus, "clBuildProgram");
+  // PERF_COUNT_SUB(")
   PERF_COUNT_END
-  if (clStatus != CL_SUCCESS) {
-    tprintf("BuildProgram error!\n");
-  }
   size_t length;
-  if (!gpuInfo->mnIsUserCreated) {
-    clStatus = clGetProgramBuildInfo(
-        gpuInfo->mpArryPrograms[idx], gpuInfo->mpArryDevsID[0],
-        CL_PROGRAM_BUILD_LOG, 0, nullptr, &length);
-  } else {
-    clStatus =
-        clGetProgramBuildInfo(gpuInfo->mpArryPrograms[idx], gpuInfo->mpDevID,
-                              CL_PROGRAM_BUILD_LOG, 0, nullptr, &length);
-  }
+  clStatus = clGetProgramBuildInfo(gpuInfo->program, dev[0],
+                                   CL_PROGRAM_BUILD_LOG, 0, nullptr, &length);
   if (clStatus != CL_SUCCESS) {
     tprintf("opencl create build log fail\n");
     return 0;
   }
   if (length > 0) {
     std::vector<char> buildLog(length);
-    if (!gpuInfo->mnIsUserCreated) {
-      clStatus = clGetProgramBuildInfo(
-          gpuInfo->mpArryPrograms[idx], gpuInfo->mpArryDevsID[0],
-          CL_PROGRAM_BUILD_LOG, length, &buildLog[0], &length);
-    } else {
-      clStatus = clGetProgramBuildInfo(gpuInfo->mpArryPrograms[idx],
-                                       gpuInfo->mpDevID, CL_PROGRAM_BUILD_LOG,
-                                       length, &buildLog[0], &length);
-    }
+    clStatus = clGetProgramBuildInfo(
+        gpuInfo->program, dev[0],
+        CL_PROGRAM_BUILD_LOG, length, &buildLog[0], &length);
     if (clStatus != CL_SUCCESS) {
       tprintf("opencl program build info fail\n");
       return 0;
@@ -1056,9 +1035,69 @@ int OpenclDevice::CompileKernelFile(GPUEnv* gpuInfo) {
     // PERF_COUNT_SUB("build error log")
   }
 
+  //~ cl_kernel dot_kernel = clCreateKernel(gpuInfo->program, "dotproductDouble", &clStatus);
+  //~ CHECK_OPENCL(clStatus, "clCreateKernel dotproductDouble");
+  //~ double u[2], v[2], result;
+  cl_kernel dot_kernel = clCreateKernel(gpuInfo->program, "dotproductFloat", &clStatus);
+  CHECK_OPENCL(clStatus, "clCreateKernel dotproductFloat");
+  //~ clCreateBuffer
+  cl_command_queue queue = clCreateCommandQueueWithProperties(
+      gpuInfo->mpContext, gpuInfo->mpDevID, nullptr, &clStatus);
+  CHECK_OPENCL(clStatus, "clCreateCommandQueueWithProperties");
+
+  float u[] = { 1.0f, 2.0f, 3.0f };
+  float v[] = { 3.0f, 4.0f, 5.0f };
+  float result;
+  int n = 3;
+
+  cl_mem u_buffer = clCreateBuffer(gpuInfo->mpContext,
+                                   CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                                   sizeof(u), u, &clStatus);
+  CHECK_OPENCL(clStatus, "clCreateBuffer u");
+  cl_mem v_buffer = clCreateBuffer(gpuInfo->mpContext,
+                                   CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                                   sizeof(v), v, &clStatus);
+  CHECK_OPENCL(clStatus, "clCreateBuffer v");
+  cl_mem r_buffer = clCreateBuffer(gpuInfo->mpContext,
+                                   CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR,
+                                   sizeof(result), &result, &clStatus);
+  CHECK_OPENCL(clStatus, "clCreateBuffer result");
+
+  clStatus = clSetKernelArg(dot_kernel, 0, sizeof(cl_mem), &u_buffer);
+  CHECK_OPENCL(clStatus, "clSetKernelArg 0");
+  clStatus = clSetKernelArg(dot_kernel, 1, sizeof(cl_mem), &v_buffer);
+  CHECK_OPENCL(clStatus, "clSetKernelArg 1");
+  clStatus = clSetKernelArg(dot_kernel, 2, sizeof(int), &n);
+  CHECK_OPENCL(clStatus, "clSetKernelArg 2");
+  clStatus = clSetKernelArg(dot_kernel, 3, sizeof(cl_mem), &r_buffer);
+  CHECK_OPENCL(clStatus, "clSetKernelArg 3");
+
+  size_t global_size = 1;
+  size_t local_size = 1;
+  clStatus = clEnqueueNDRangeKernel(queue, dot_kernel, 1, nullptr,
+                                    &global_size, &local_size, 0,
+                                    nullptr, nullptr);
+  CHECK_OPENCL(clStatus, "clEnqueueNDRangeKernel");
+  clStatus = clEnqueueReadBuffer(queue, r_buffer, CL_TRUE, 0,
+                                 sizeof(result), &result, 0, nullptr, nullptr);
+  printf("Result = %f\n", result);
+  CHECK_OPENCL(clStatus, "clEnqueueReadBuffer");
+  clStatus = clReleaseMemObject(r_buffer);
+  CHECK_OPENCL(clStatus, "clReleaseMemObject");
+  clStatus = clReleaseMemObject(v_buffer);
+  CHECK_OPENCL(clStatus, "clReleaseMemObject");
+  clStatus = clReleaseMemObject(u_buffer);
+  CHECK_OPENCL(clStatus, "clReleaseMemObject");
+  clStatus = clReleaseCommandQueue(queue);
+  CHECK_OPENCL(clStatus, "clReleaseCommandQueue");
+  clStatus = clReleaseKernel(dot_kernel);
+  CHECK_OPENCL(clStatus, "clReleaseKernel");
+  //~ clStatus = clReleaseProgram(gpuInfo->program);
+  //~ CHECK_OPENCL(clStatus, "clReleaseProgram");
+
   // PERF_COUNT_SUB("strcpy")
   if (!binaryExisted) {
-    GeneratBinFromKernelSource(gpuInfo->mpArryPrograms[idx], binFileName);
+    GeneratBinFromKernelSource(gpuInfo->program, binFileName);
     PERF_COUNT_SUB("GenerateBinFromKernelSource")
   }
 
