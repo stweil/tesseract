@@ -191,46 +191,11 @@ struct ds_device {
 #define GROUPSIZE_HMORX 256
 #define GROUPSIZE_HMORY 1
 
-struct KernelEnv {
-  cl_context mpkContext;
-  cl_command_queue mpkCmdQueue;
-  cl_program mpkProgram;
-  cl_kernel mpkKernel;
-  char mckKernelName[150];
-};
-
-struct OpenCLEnv {
-  cl_platform_id mpOclPlatformID;
-  cl_context mpOclContext;
-  cl_device_id mpOclDevsID;
-  cl_command_queue mpOclCmdQueue;
-};
-
-#define CHECK_OPENCL(status, name)                                    \
-  if (status != CL_SUCCESS) {                                         \
-    tprintf("OpenCL error code is %d at   when %s .\n", status, name); \
-  }
-
-struct GPUEnv {
-  // share vb in all modules in hb library
-  cl_platform_id mpPlatformID;
-  cl_device_type mDevType;
-  cl_context mpContext;
-  cl_device_id* mpArryDevsID;
-  cl_device_id mpDevID;
-  cl_command_queue mpCmdQueue;
-  cl_program mpArryPrograms[MAX_CLFILE_NUM];  // one program object maps one
-                                              // kernel source file
-  int mnKernelCount,    // only one kernel file
-      mnIsUserCreated;  // 1: created , 0:no create and needed to create by
-                        // opencl wrapper
-  int mnKhrFp64Flag;
-  int mnAmdFp64Flag;
-};
+struct GPUEnv;
+struct KernelEnv;
 
 class OpenclDevice {
  public:
-  static GPUEnv gpuEnv;
   static int isInited;
   OpenclDevice();
   ~OpenclDevice();
@@ -265,9 +230,8 @@ class OpenclDevice {
                             l_int32 open_hsize, l_int32 open_vsize,
                             l_int32 line_hsize, l_int32 line_vsize);
 
-  // int InitOpenclAttr( OpenCLEnv * env );
   // int ReleaseKernel( KernelEnv * env );
-  static int SetKernelEnv(KernelEnv* envInfo);
+  static void SetKernelEnv(KernelEnv* envInfo);
   // int CreateKernel( char * kernelname, KernelEnv * env );
   // int RunKernel( const char *kernelName, void **userdata );
   // int ConvertToString( const char *filename, char **source );
@@ -297,4 +261,5 @@ class OpenclDevice {
   static bool selectedDeviceIsOpenCL();
 };
 
+#endif // USE_OPENCL
 #endif  // TESSERACT_OPENCL_OPENCLWRAPPER_H_

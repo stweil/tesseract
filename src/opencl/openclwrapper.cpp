@@ -35,7 +35,36 @@
 
 #include "errcode.h"  // for ASSERT_HOST
 
-GPUEnv OpenclDevice::gpuEnv;
+#define CHECK_OPENCL(status, name)                                    \
+  if (status != CL_SUCCESS) {                                         \
+    tprintf("OpenCL error code is %d at   when %s .\n", status, name); \
+  }
+
+struct GPUEnv {
+  // share vb in all modules in hb library
+  cl_platform_id mpPlatformID;
+#if defined(DEBUG)
+  cl_device_type mDevType;
+#endif
+  cl_context mpContext;
+  cl_device_id* mpArryDevsID;
+  cl_device_id mpDevID;
+  cl_command_queue mpCmdQueue;
+  cl_program mpArryPrograms[MAX_CLFILE_NUM];  // one program object maps one
+                                              // kernel source file
+  int mnIsUserCreated;  // 1: created , 0:no create and needed to create by
+                        // opencl wrapper
+};
+
+struct KernelEnv {
+  cl_context mpkContext;
+  cl_command_queue mpkCmdQueue;
+  cl_program mpkProgram;
+  cl_kernel mpkKernel;
+  char mckKernelName[150];
+};
+
+static GPUEnv gpuEnv;
 
 bool OpenclDevice::deviceIsSelected = false;
 ds_device OpenclDevice::selectedDevice;
@@ -576,9 +605,11 @@ static void populateGPUEnvFromDevice(GPUEnv* gpuInfo, cl_device_id device) {
   gpuInfo->mpDevID = device;
   gpuInfo->mpArryDevsID = new cl_device_id[1];
   gpuInfo->mpArryDevsID[0] = gpuInfo->mpDevID;
+#if defined(DEBUG)
   clStatus = clGetDeviceInfo(gpuInfo->mpDevID, CL_DEVICE_TYPE,
                              sizeof(cl_device_type), &gpuInfo->mDevType, &size);
   CHECK_OPENCL(clStatus, "populateGPUEnv::getDeviceInfo(TYPE)");
+#endif
   // platform
   clStatus =
       clGetDeviceInfo(gpuInfo->mpDevID, CL_DEVICE_PLATFORM,
@@ -593,10 +624,15 @@ static void populateGPUEnvFromDevice(GPUEnv* gpuInfo, cl_device_id device) {
       clCreateContext(props, 1, &gpuInfo->mpDevID, nullptr, nullptr, &clStatus);
   CHECK_OPENCL(clStatus, "populateGPUEnv::createContext");
   // queue
-  cl_command_queue_properties queueProperties = 0;
+#if 1
+  gpuInfo->mpCmdQueue = clCreateCommandQueueWithProperties(
+      gpuInfo->mpContext, gpuInfo->mpDevID, nullptr, &clStatus);
+  CHECK_OPENCL(clStatus, "populateGPUEnv::clCreateCommandQueueWithProperties");
+#else
   gpuInfo->mpCmdQueue = clCreateCommandQueue(
-      gpuInfo->mpContext, gpuInfo->mpDevID, queueProperties, &clStatus);
+      gpuInfo->mpContext, gpuInfo->mpDevID, 0, &clStatus);
   CHECK_OPENCL(clStatus, "populateGPUEnv::createCommandQueue");
+#endif
 }
 
 int OpenclDevice::LoadOpencl() {
@@ -616,12 +652,10 @@ int OpenclDevice::LoadOpencl() {
   return 1;
 }
 
-int OpenclDevice::SetKernelEnv(KernelEnv* envInfo) {
+void OpenclDevice::SetKernelEnv(KernelEnv* envInfo) {
   envInfo->mpkContext = gpuEnv.mpContext;
   envInfo->mpkCmdQueue = gpuEnv.mpCmdQueue;
   envInfo->mpkProgram = gpuEnv.mpArryPrograms[0];
-
-  return 1;
 }
 
 static cl_mem allocateZeroCopyBuffer(const KernelEnv& rEnv,
@@ -1611,8 +1645,8 @@ int OpenclDevice::HistogramRectOCL(void* imageData,
   int requestedOccupancy = 10;
   int numWorkGroups = numCUs * requestedOccupancy;
   int numThreads = block_size * numWorkGroups;
-  size_t local_work_size[] = {static_cast<size_t>(block_size)};
-  size_t global_work_size[] = {static_cast<size_t>(numThreads)};
+  size_t local_work_size[] = {block_size};
+  size_t global_work_size[] = {numThreads};
   size_t red_global_work_size[] = {
       static_cast<size_t>(block_size * kHistogramSize * bytes_per_pixel)};
 
@@ -1765,7 +1799,7 @@ int OpenclDevice::ThresholdRectToPixOCL(unsigned char* imageData,
 
   /* setup work group size parameters */
   int block_size = 256;
-  cl_uint numCUs = 6;
+  cl_uint numCUs;
   clStatus = clGetDeviceInfo(gpuEnv.mpDevID, CL_DEVICE_MAX_COMPUTE_UNITS,
                              sizeof(numCUs), &numCUs, nullptr);
   CHECK_OPENCL(clStatus, "clCreateBuffer imageBuffer");
@@ -1997,7 +2031,7 @@ static double composeRGBPixelMicroBench(GPUEnv* env,
     clock_gettime(CLOCK_MONOTONIC, &time_funct_start);
 #endif
 
-    OpenclDevice::gpuEnv = *env;
+    gpuEnv = *env;
     int wpl = pixGetWpl(input.pix);
     OpenclDevice::pixReadFromTiffKernel(tiffdata, input.width, input.height,
                                         wpl, nullptr);
@@ -2085,7 +2119,7 @@ static double histogramRectMicroBench(GPUEnv* env,
     clock_gettime(CLOCK_MONOTONIC, &time_funct_start);
 #endif
 
-    OpenclDevice::gpuEnv = *env;
+    gpuEnv = *env;
     int retVal = OpenclDevice::HistogramRectOCL(
         input.imageData, input.numChannels, bytes_per_line, left, top,
         input.width, input.height, kHistogramSize, histogramAllChannels);
@@ -2209,7 +2243,7 @@ static double thresholdRectToPixMicroBench(GPUEnv* env,
     clock_gettime(CLOCK_MONOTONIC, &time_funct_start);
 #endif
 
-    OpenclDevice::gpuEnv = *env;
+    gpuEnv = *env;
     int hi_values[4];
     int retVal = OpenclDevice::ThresholdRectToPixOCL(
         input.imageData, input.numChannels, bytes_per_line, thresholds,
@@ -2297,7 +2331,7 @@ static double getLineMasksMorphMicroBench(GPUEnv* env,
 #else
     clock_gettime(CLOCK_MONOTONIC, &time_funct_start);
 #endif
-    OpenclDevice::gpuEnv = *env;
+    gpuEnv = *env;
     OpenclDevice::initMorphCLAllocations(wpl, input.height, input.pix);
     Pix *pix_vline = nullptr, *pix_hline = nullptr, *pix_closed = nullptr;
     OpenclDevice::pixGetLinesCL(nullptr, input.pix, &pix_vline, &pix_hline,
@@ -2397,7 +2431,7 @@ static ds_status evaluateScoreForDevice(ds_device* device, void* inputData) {
          device->type == DS_DEVICE_OPENCL_DEVICE ? "OpenCL" : "Native");
   GPUEnv* env = nullptr;
   if (device->type == DS_DEVICE_OPENCL_DEVICE) {
-    env = &OpenclDevice::gpuEnv;
+    env = &gpuEnv;
     memset(env, 0, sizeof(*env));
     // tprintf("[DS] populating tmp GPUEnv from device\n");
     populateGPUEnvFromDevice(env, device->oclDeviceID);
