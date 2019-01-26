@@ -1,6 +1,6 @@
 ; (C) Copyright 2010, Sergey Bronnikov
 ; (C) Copyright 2010-2012, Zdenko Podobný
-; (C) Copyright 2015 Stefan Weil
+; (C) Copyright 2015-2019 Stefan Weil
 ;
 ; Licensed under the Apache License, Version 2.0 (the "License");
 ; you may not use this file except in compliance with the License.
@@ -12,10 +12,12 @@
 ; See the License for the specific language governing permissions and
 ; limitations under the License.
 
+; Links to NSIS documentation:
+; https://nsis.sourceforge.io/Docs/Modern%20UI%202/Readme.html
+
 ; TODO:
 ; * Fix PreventMultipleInstances.
 ; * Add Tesseract icon and images for installer.
-; * Add support for 64 bit Tesseract.
 
 SetCompressor /FINAL /SOLID lzma
 SetCompressorDictSize 32
@@ -87,7 +89,7 @@ BrandingText /TRIMCENTER "(c) 2010-2015 ${PRODUCT_NAME}"
 !define MUI_FINISHPAGE_LINK "View Tesseract on GitHub"
 !define MUI_FINISHPAGE_LINK_LOCATION "https://github.com/tesseract-ocr/tesseract"
 !define MUI_FINISHPAGE_NOAUTOCLOSE
-!define MUI_FINISHPAGE_SHOWREADME "wordpad $INSTDIR\doc\README"
+!define MUI_FINISHPAGE_SHOWREADME "$INSTDIR\doc\README.md"
 !define MUI_FINISHPAGE_SHOWREADME_FUNCTION ShowReadme
 !define MUI_FINISHPAGE_SHOWREADME_TEXT "Show README"
 !define MUI_LICENSEPAGE_CHECKBOX
@@ -119,7 +121,7 @@ Var OLD_KEY
 
 # Installer pages
 !insertmacro MUI_PAGE_WELCOME
-!insertmacro MUI_PAGE_LICENSE "${SRCDIR}\COPYING"
+!insertmacro MUI_PAGE_LICENSE "${SRCDIR}\LICENSE"
 !insertmacro MULTIUSER_PAGE_INSTALLMODE
 !ifdef VERSION
   Page custom PageReinstall PageLeaveReinstall
@@ -237,17 +239,15 @@ Section -Main SEC0000
   CreateDirectory "$INSTDIR\doc"
   SetOutPath "$INSTDIR\doc"
   File ${SRCDIR}\AUTHORS
-  File ${SRCDIR}\COPYING
+  File ${SRCDIR}\LICENSE
+  File ${SRCDIR}\README.md
 ##  File ${SRCDIR}\ReleaseNotes
 SectionEnd
 
 Section "ScrollView" SecScrollView
   SectionIn 1
-  CreateDirectory "$INSTDIR\java"
-  SetOutPath "$INSTDIR\java"
-  File ..\java\ScrollView.jar
-  File ..\java\piccolo2d-core-3.0.jar
-  File ..\java\piccolo2d-extras-3.0.jar
+  SetOutPath "$INSTDIR\tessdata"
+  File ${PREFIX}/share/tessdata/*.jar
 SectionEnd
 
 Section "Training Tools" SecTr
@@ -1442,7 +1442,7 @@ Function .onInstFailed
 FunctionEnd
 
 Function ShowReadme
-  Exec "wordpad.exe $INSTDIR\doc\README"
+  Exec "wordpad $INSTDIR\doc\README.md"
   ;BringToFront
 FunctionEnd
 
