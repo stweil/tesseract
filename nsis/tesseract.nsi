@@ -55,6 +55,13 @@ SetCompressorDictSize 32
 !define SETUP "tesseract-ocr-w32-setup"
 !endif
 
+# Name of program and file
+!ifdef VERSION
+OutFile ${SETUP}-${VERSION}.exe
+!else
+OutFile ${SETUP}.exe
+!endif
+
 !define PREFIX "../usr/${ARCH}-w64-mingw32"
 !define TRAININGDIR "${PREFIX}/bin"
 
@@ -62,7 +69,7 @@ SetCompressorDictSize 32
 Name "${PRODUCT_NAME}"
 Caption "${PRODUCT_NAME} ${VERSION}"
 !ifndef CROSSBUILD
-BrandingText /TRIMCENTER "(c) 2010-2015 ${PRODUCT_NAME}"
+BrandingText /TRIMCENTER "(c) 2010-2019 ${PRODUCT_NAME}"
 !endif
 
 !define REGKEY "SOFTWARE\${PRODUCT_NAME}"
@@ -71,7 +78,8 @@ BrandingText /TRIMCENTER "(c) 2010-2015 ${PRODUCT_NAME}"
 !define env_hkcu 'HKCU "Environment"'
 
 # MultiUser Symbol Definitions
-!define MULTIUSER_EXECUTIONLEVEL Admin
+# https://nsis.sourceforge.io/Docs/MultiUser/Readme.html
+!define MULTIUSER_EXECUTIONLEVEL Highest
 !define MULTIUSER_MUI
 !define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_KEY "${REGKEY}"
 !define MULTIUSER_INSTALLMODE_DEFAULT_REGISTRY_VALUENAME MultiUserInstallMode
@@ -79,6 +87,9 @@ BrandingText /TRIMCENTER "(c) 2010-2015 ${PRODUCT_NAME}"
 !define MULTIUSER_INSTALLMODE_INSTDIR ${PRODUCT_NAME}
 !define MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_KEY "${REGKEY}"
 !define MULTIUSER_INSTALLMODE_INSTDIR_REGISTRY_VALUE "Path"
+!ifdef W64
+!define MULTIUSER_USE_PROGRAMFILES64
+!endif
 
 # MUI Symbol Definitions
 !define MUI_ABORTWARNING
@@ -89,10 +100,10 @@ BrandingText /TRIMCENTER "(c) 2010-2015 ${PRODUCT_NAME}"
 !define MUI_FINISHPAGE_LINK "View Tesseract on GitHub"
 !define MUI_FINISHPAGE_LINK_LOCATION "https://github.com/tesseract-ocr/tesseract"
 !define MUI_FINISHPAGE_NOAUTOCLOSE
-!define MUI_FINISHPAGE_SHOWREADME "$INSTDIR\doc\README.md"
-!define MUI_FINISHPAGE_SHOWREADME_FUNCTION ShowReadme
-!define MUI_FINISHPAGE_SHOWREADME_TEXT "Show README"
-!define MUI_LICENSEPAGE_CHECKBOX
+; Showing the README does not work.
+;!define MUI_FINISHPAGE_SHOWREADME "$INSTDIR\doc\README.md"
+;!define MUI_FINISHPAGE_SHOWREADME_FUNCTION ShowReadme
+;!define MUI_FINISHPAGE_SHOWREADME_TEXT "Show README"
 !define MUI_STARTMENUPAGE_REGISTRY_ROOT HKLM
 !define MUI_STARTMENUPAGE_REGISTRY_KEY ${REGKEY}
 !define MUI_STARTMENUPAGE_REGISTRY_VALUENAME StartMenuGroup
@@ -105,17 +116,11 @@ BrandingText /TRIMCENTER "(c) 2010-2015 ${PRODUCT_NAME}"
 !include MultiUser.nsh
 !include Sections.nsh
 !include MUI2.nsh
-!ifdef REGISTRY_SETTINGS
-!include EnvVarUpdate.nsh
-!endif ; REGISTRY_SETTINGS
 !include LogicLib.nsh
 !include winmessages.nsh # include for some of the windows messages defines
 
 # Variables
 Var StartMenuGroup
-!ifdef REGISTRY_SETTINGS
-Var PathKey
-!endif ; REGISTRY_SETTINGS
 ; Define user variables
 Var OLD_KEY
 
@@ -152,57 +157,6 @@ SpaceTexts
 CRCCheck on
 InstProgressFlags smooth colored
 CRCCheck On  # Do a CRC check before installing
-!ifdef W64
-InstallDir "$PROGRAMFILES64\Tesseract-OCR"
-!else
-InstallDir "$PROGRAMFILES\Tesseract-OCR"
-!endif
-# Name of program and file
-!ifdef VERSION
-OutFile ${SETUP}-${VERSION}.exe
-!else
-OutFile ${SETUP}.exe
-!endif
-
-!ifdef REGISTRY_SETTINGS
-!macro AddToPath
-  # TODO(zdenop): Check if $INSTDIR is in path. If yes, do not append it.
-  # append bin path to user PATH environment variable
-  StrCpy $PathKey "HKLM"
-  StrCmp $MultiUser.InstallMode "AllUsers" +2
-    StrCpy $PathKey "HKCU"
-  DetailPrint "Setting PATH to $INSTDIR at $PathKey"
-  ${EnvVarUpdate} $0 "PATH" "A" "$PathKey" "$INSTDIR"
-  ; make sure windows knows about the change
-  SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
-!macroend
-
-!macro RemoveTessdataPrefix
-  ReadRegStr $R2 ${env_hklm} 'TESSDATA_PREFIX'
-  StrCmp $R2 "" Next1 0
-    DetailPrint "Removing $R2 from HKLM Environment..."
-    DeleteRegValue ${env_hklm} "TESSDATA_PREFIX"
-  Next1:
-  ReadRegStr $R2 ${env_hkcu} 'TESSDATA_PREFIX'
-  StrCmp $R2 "" Next2 0
-    DetailPrint "Removing $R2 from HKCU Environment..."
-    DeleteRegValue ${env_hkcu} "TESSDATA_PREFIX"
-  Next2:
-  # make sure windows knows about the change
-  SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
-!macroend
-
-!macro SetTESSDATA
-  !insertmacro RemoveTessdataPrefix
-  StrCpy $PathKey "HKLM"
-  StrCmp $MultiUser.InstallMode "AllUsers" +2
-    StrCpy $PathKey "HKCU"
-  DetailPrint "Setting TESSDATA_PREFIX at $PathKey"
-  ${EnvVarUpdate} $0 "TESSDATA_PREFIX" "A" "$PathKey" "$INSTDIR\"
-  # make sure windows knows about the change
-  SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
-!macroend
-!endif ; REGISTRY_SETTINGS
 
 !macro Download_Lang_Data Lang
   ; Download traineddata file.
@@ -260,12 +214,16 @@ SectionEnd
 !define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 
 Section -post SEC0001
+!ifdef W64
+  SetRegView 64
+!endif
   ;Store installation folder - we always use HKLM!
   WriteRegStr HKLM "${REGKEY}" "Path" "$INSTDIR"
   WriteRegStr HKLM "${REGKEY}" "Mode" $MultiUser.InstallMode
   WriteRegStr HKLM "${REGKEY}" "InstallDir" "$INSTDIR"
   WriteRegStr HKLM "${REGKEY}" "CurrentVersion" "${VERSION}"
   WriteRegStr HKLM "${REGKEY}" "Uninstaller" "${UNINST_EXE}"
+  ;WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\App Paths\tesseract.exe" "$INSTDIR\tesseract.exe"
   ;WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Run" "Tesseract-OCR" "$INSTDIR\tesseract.exe"
   ; Register to Add/Remove program in control panel
   WriteRegStr HKLM "${UNINST_KEY}" "DisplayName" "${PRODUCT_NAME} - open source OCR engine"
@@ -295,17 +253,6 @@ Section "Shortcuts creation" SecCS
   ;CreateShortCut "$DESKTOP\Tesseract-OCR.lnk" "$INSTDIR\tesseract.exe" "" "$INSTDIR\tesseract.exe" 0
   ;CreateShortCut "$QUICKLAUNCH\.lnk" "$INSTDIR\tesseract.exe" "" "$INSTDIR\tesseract.exe" 0
 SectionEnd
-
-!ifdef REGISTRY_SETTINGS ; disabled because of bad behaviour with long PATH
-SectionGroup "Registry settings" SecRS
-    Section /o "Add to Path" SecRS_path
-        !insertmacro AddToPath
-    SectionEnd
-    Section /o "Set TESSDATA_PREFIX variable" SecRS_tessdata
-        !insertmacro SetTESSDATA
-    SectionEnd
-SectionGroupEnd
-!endif ; REGISTRY_SETTINGS
 
 ; Language files
 SectionGroup "Language data" SecGrp_LD
@@ -1175,17 +1122,15 @@ SectionGroupEnd
 
 ;Section /o -un.Main UNSEC0000
 Section -un.Main UNSEC0000
+!ifdef W64
+  SetRegView 64
+!endif
   DetailPrint "Removing everything"
   Delete "$SMPROGRAMS\${PRODUCT_NAME}\*.*"
   RMDir  "$SMPROGRAMS\${PRODUCT_NAME}"
   DetailPrint "Removing registry info"
   DeleteRegKey HKLM "Software\Tesseract-OCR"
   SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
-!ifdef REGISTRY_SETTINGS
-  ${un.EnvVarUpdate} $0 "PATH" "R" HKLM $INSTDIR
-  SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
-  !insertmacro RemoveTessdataPrefix
-!endif ; REGISTRY_SETTINGS
 
   # remove the Add/Remove information
   DeleteRegKey HKLM "${UNINST_KEY}"
@@ -1213,6 +1158,9 @@ FunctionEnd
 !macroend
 
 Function .onInit
+!ifdef W64
+  SetRegView 64
+!endif
   Call PreventMultipleInstances
   !insertmacro MUI_LANGDLL_DISPLAY
   ;RequestExecutionLevel admin
@@ -1442,7 +1390,7 @@ Function .onInstFailed
 FunctionEnd
 
 Function ShowReadme
-  Exec "wordpad $INSTDIR\doc\README.md"
+  Exec '"wordpad" "doc\README.md"'
   ;BringToFront
 FunctionEnd
 
