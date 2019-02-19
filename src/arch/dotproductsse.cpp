@@ -35,51 +35,30 @@ namespace tesseract {
 
 // Implementation using double.
 double DotProductSSE(const double* u, const double* v, int n) {
-  int max_offset = n - 2;
-  int offset = 0;
-  // Accumulate a set of 2 sums in sum, by loading pairs of 2 values from u and
-  // v, and multiplying them together in parallel.
-  __m128d sum = _mm_setzero_pd();
-  if (offset <= max_offset) {
-    offset = 2;
-    // Aligned load is reputedly faster but requires 16 byte aligned input.
-    if ((reinterpret_cast<uintptr_t>(u) & 15) == 0 &&
-        (reinterpret_cast<uintptr_t>(v) & 15) == 0) {
-      // Use aligned load.
-      sum = _mm_load_pd(u);
-      __m128d floats2 = _mm_load_pd(v);
-      // Multiply.
-      sum = _mm_mul_pd(sum, floats2);
-      while (offset <= max_offset) {
-        __m128d floats1 = _mm_load_pd(u + offset);
-        floats2 = _mm_load_pd(v + offset);
-        offset += 2;
-        floats1 = _mm_mul_pd(floats1, floats2);
-        sum = _mm_add_pd(sum, floats1);
-      }
-    } else {
-      // Use unaligned load.
-      sum = _mm_loadu_pd(u);
-      __m128d floats2 = _mm_loadu_pd(v);
-      // Multiply.
-      sum = _mm_mul_pd(sum, floats2);
-      while (offset <= max_offset) {
-        __m128d floats1 = _mm_loadu_pd(u + offset);
-        floats2 = _mm_loadu_pd(v + offset);
-        offset += 2;
-        floats1 = _mm_mul_pd(floats1, floats2);
-        sum = _mm_add_pd(sum, floats1);
-      }
-    }
+  const unsigned quot = n / 4;
+  const unsigned rem = n % 4;
+  __m128d t0 = _mm_setzero_pd();
+  __m128d t1 = _mm_setzero_pd();
+  for (unsigned k = 0; k < quot; k++) {
+    __m128d f0 = _mm_loadu_pd(u);
+    __m128d f1 = _mm_loadu_pd(v);
+    f0 = _mm_mul_pd(f0, f1);
+    t0 = _mm_add_pd(t0, f0);
+    u += 2;
+    v += 2;
+    __m128d f2 = _mm_loadu_pd(u);
+    __m128d f3 = _mm_loadu_pd(v);
+    f2 = _mm_mul_pd(f2, f3);
+    t1 = _mm_add_pd(t1, f2);
+    u += 2;
+    v += 2;
   }
-  // Add the 2 sums in sum horizontally.
-  sum = _mm_hadd_pd(sum, sum);
-  // Extract the low result.
-  double result = _mm_cvtsd_f64(sum);
-  // Add on any left-over products.
-  while (offset < n) {
-    result += u[offset] * v[offset];
-    ++offset;
+  t0 = _mm_hadd_pd(t0, t1);
+  double tmp[2];
+  _mm_store_pd(tmp, t0);
+  double result = tmp[0] + tmp[1];
+  for (unsigned k = 0; k < rem; k++) {
+    result += *u++ * *v++;
   }
   return result;
 }
