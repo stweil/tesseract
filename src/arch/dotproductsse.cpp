@@ -24,10 +24,16 @@
 #include <cstdint>
 #include "dotproductsse.h"
 
+// TODO:
+// Use _mm_dp_pd, _mm_dp_ps?
+
 namespace tesseract {
 
 // Computes and returns the dot product of the n-vectors u and v.
 // Uses Intel SSE intrinsics to access the SIMD instruction set.
+// See https://software.intel.com/sites/landingpage/IntrinsicsGuide/.
+
+// Implementation using double.
 double DotProductSSE(const double* u, const double* v, int n) {
   int max_offset = n - 2;
   int offset = 0;
@@ -78,11 +84,34 @@ double DotProductSSE(const double* u, const double* v, int n) {
   return result;
 }
 
-//Placeholder for future Kahan implementation of SSE Dotproduct
+// Implementation using float.
 float DotProductSSE(const float* u, const float* v, int n) {
-  float total = 0.0;
-  for (int k = 0; k < n; ++k) total += u[k] * v[k];
-  return total;
+  const unsigned quot = n / 8;
+  const unsigned rem = n % 8;
+  __m128 t0 = _mm_setzero_ps();
+  __m128 t1 = _mm_setzero_ps();
+  for (unsigned k = 0; k < quot; k++) {
+    __m128 f0 = _mm_loadu_ps(u);
+    __m128 f1 = _mm_loadu_ps(v);
+    f0 = _mm_mul_ps(f0, f1);
+    t0 = _mm_add_ps(t0, f0);
+    u += 4;
+    v += 4;
+    __m128 f2 = _mm_loadu_ps(u);
+    __m128 f3 = _mm_loadu_ps(v);
+    f2 = _mm_mul_ps(f2, f3);
+    t1 = _mm_add_ps(t1, f2);
+    u += 4;
+    v += 4;
+  }
+  t0 = _mm_hadd_ps(t0, t1);
+  float tmp[4];
+  _mm_store_ps(tmp, t0);
+  float result = tmp[0] + tmp[1] + tmp[2] + tmp[3];
+  for (unsigned k = 0; k < rem; k++) {
+    result += *u++ * *v++;
+  }
+  return result;
 }
 
 }  // namespace tesseract.
