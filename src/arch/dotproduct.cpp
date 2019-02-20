@@ -20,15 +20,48 @@ namespace tesseract {
 
 // Computes and returns the dot product of the two n-vectors u and v.
 double DotProductNative(const double* u, const double* v, int n) {
-  double total = 0.0;
-  for (int k = 0; k < n; ++k) total += u[k] * v[k];
-  return total;
+  double t0 = 0.0;
+  double t1 = 0.0;
+  double t2 = 0.0;
+  double t3 = 0.0;
+  const unsigned quot = n / 4;
+  const unsigned rem = n % 4;
+  for (unsigned k = 0; k < quot; ++k) {
+    t0 += *u++ * *v++;
+    t1 += *u++ * *v++;
+    t2 += *u++ * *v++;
+    t3 += *u++ * *v++;
+  }
+  t0 += t1;
+  t2 += t3;
+  t0 += t2;
+  for (unsigned k = 0; k < rem; ++k) {
+    t0 += *u++ * *v++;
+  }
+  return t0;
 }
 
+// Computes and returns the dot product of the two n-vectors u and v.
 float DotProductNative(const float* u, const float* v, int n) {
-  float total = 0.0;
-  for (int k = 0; k < n; ++k) total += u[k] * v[k];
-  return total;
+  float t0 = 0.0f;
+  float t1 = 0.0f;
+  float t2 = 0.0f;
+  float t3 = 0.0f;
+  const unsigned quot = n / 4;
+  const unsigned rem = n % 4;
+  for (unsigned k = 0; k < quot; ++k) {
+    t0 += *u++ * *v++;
+    t1 += *u++ * *v++;
+    t2 += *u++ * *v++;
+    t3 += *u++ * *v++;
+  }
+  t0 += t1;
+  t2 += t3;
+  t0 += t2;
+  for (unsigned k = 0; k < rem; ++k) {
+    t0 += *u++ * *v++;
+  }
+  return t0;
 }
 
 }  // namespace tesseract
