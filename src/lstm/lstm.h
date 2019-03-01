@@ -2,7 +2,6 @@
 // File:        lstm.h
 // Description: Long-term-short-term-memory Recurrent neural network.
 // Author:      Ray Smith
-// Created:     Wed May 01 17:33:06 PST 2013
 //
 // (C) Copyright 2013, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -97,10 +96,6 @@ class LSTM : public Network {
                const TransposedArray* input_transpose, NetworkScratch* scratch,
                NetworkIO* output) override;
 
-  void ForwardFloat(bool debug, const NetworkIO& input,
-               const TransposedArray* input_transpose, NetworkScratch* scratch,
-               NetworkIO* output) override;
-
   // Runs backward propagation of errors on the deltas line.
   // See Network for a detailed discussion of the arguments.
   bool Backward(bool debug, const NetworkIO& fwd_deltas,
@@ -125,6 +120,10 @@ class LSTM : public Network {
   }
 
  private:
+  void ForwardFloat(bool debug, const NetworkIO& input,
+                    const TransposedArray* input_transpose,
+                    NetworkScratch* scratch, NetworkIO* output);
+
   // Resizes forward data to cope with an input image of the given width.
   void ResizeForward(const NetworkIO& input);
 

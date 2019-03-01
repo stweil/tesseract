@@ -2,7 +2,6 @@
 // File:        lstm.cpp
 // Description: Long-term-short-term-memory Recurrent neural network.
 // Author:      Ray Smith
-// Created:     Wed May 01 17:43:06 PST 2013
 //
 // (C) Copyright 2013, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -250,6 +249,10 @@ bool LSTM::DeSerialize(TFile* fp) {
 void LSTM::Forward(bool debug, const NetworkIO& input,
                    const TransposedArray* input_transpose,
                    NetworkScratch* scratch, NetworkIO* output) {
+  if (!input.int_mode() && input.float_mode()) {
+    ForwardFloat(debug, input, input_transpose, scratch, output);
+    return;
+  }
   input_map_ = input.stride_map();
   input_width_ = input.Width();
   if (softmax_ != nullptr)
@@ -439,9 +442,8 @@ void LSTM::Forward(bool debug, const NetworkIO& input,
 // Runs forward propagation of activations on the input line.
 // See NetworkCpp for a detailed discussion of the arguments.
 void LSTM::ForwardFloat(bool debug, const NetworkIO& input,
-                   const TransposedArray* input_transpose,
-                   NetworkScratch* scratch, NetworkIO* output) {
-  ASSERT_HOST(!input.int_mode());
+                        const TransposedArray* input_transpose,
+                        NetworkScratch* scratch, NetworkIO* output) {
   input_map_ = input.stride_map();
   input_width_ = input.Width();
   if (softmax_ != nullptr)

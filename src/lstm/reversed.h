@@ -2,7 +2,6 @@
 // File:        reversed.h
 // Description: Runs a single network on time-reversed input, reversing output.
 // Author:      Ray Smith
-// Created:     Thu May 02 08:38:06 PST 2013
 //
 // (C) Copyright 2013, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -72,10 +71,6 @@ class Reversed : public Plumbing {
   void Forward(bool debug, const NetworkIO& input,
                const TransposedArray* input_transpose,
                NetworkScratch* scratch, NetworkIO* output) override;
-
-  void ForwardFloat(bool debug, const NetworkIO& input,
-                    const TransposedArray* input_transpose,
-                    NetworkScratch* scratch, NetworkIO* output) override;
 
   // Runs backward propagation of errors on the deltas line.
   // See Network for a detailed discussion of the arguments.

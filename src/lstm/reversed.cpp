@@ -61,16 +61,6 @@ void Reversed::Forward(bool debug, const NetworkIO& input,
   ReverseData(*rev_output, output);
 }
 
-void Reversed::ForwardFloat(bool debug, const NetworkIO& input,
-                            const TransposedArray* input_transpose,
-                            NetworkScratch* scratch, NetworkIO* output) {
-  NetworkScratch::IO rev_input(input, scratch);
-  ReverseData(input, rev_input);
-  NetworkScratch::IO rev_output(input, scratch);
-  stack_[0]->ForwardFloat(debug, *rev_input, nullptr, scratch, rev_output);
-  ReverseData(*rev_output, output);
-}
-
 // Runs backward propagation of errors on the deltas line.
 // See NetworkCpp for a detailed discussion of the arguments.
 bool Reversed::Backward(bool debug, const NetworkIO& fwd_deltas,

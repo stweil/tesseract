@@ -2,7 +2,6 @@
 // File:        lstmrecognizer.cpp
 // Description: Top-level line recognizer class for LSTM-based networks.
 // Author:      Ray Smith
-// Created:     Thu May 02 10:59:06 PST 2013
 //
 // (C) Copyright 2013, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -178,8 +177,10 @@ void LSTMRecognizer::RecognizeLine(const ImageData& image_data, bool invert,
   NetworkIO outputs;
   float scale_factor;
   NetworkIO inputs;
+  inputs.set_float_mode(dotproduct_kahan_float_mode);
+  inputs.set_int_mode(IsIntMode());
   if (!RecognizeLine(image_data, invert, debug, false, false, &scale_factor,
-                     &inputs, &outputs, dotproduct_kahan_float_mode))
+                     &inputs, &outputs))
     return;
   if (search_ == nullptr) {
     search_ =
@@ -221,8 +222,7 @@ void LSTMRecognizer::OutputStats(const NetworkIO& outputs, float* min_output,
 bool LSTMRecognizer::RecognizeLine(const ImageData& image_data, bool invert,
                                    bool debug, bool re_invert, bool upside_down,
                                    float* scale_factor, NetworkIO* inputs,
-                                   NetworkIO* outputs,
-                                   bool dotproduct_kahan_float_mode) {
+                                   NetworkIO* outputs) {
   // Maximum width of image to train on.
   const int kMaxImageWidth = 2560;
   // This ensures consistent recognition results.
@@ -243,31 +243,22 @@ bool LSTMRecognizer::RecognizeLine(const ImageData& image_data, bool invert,
   if (upside_down) pixRotate180(pix, pix);
   // Reduction factor from image to coords.
   *scale_factor = min_width / *scale_factor;
-  inputs->set_int_mode(IsIntMode());
   SetRandomSeed();
   Input::PreparePixInput(network_->InputShape(), pix, &randomizer_, inputs);
-  if(dotproduct_kahan_float_mode && !IsIntMode()) {
-    network_->ForwardFloat(debug, *inputs, nullptr, &scratch_space_, outputs);
-  } else {
-    network_->Forward(debug, *inputs, nullptr, &scratch_space_, outputs);
-  }
+  network_->Forward(debug, *inputs, nullptr, &scratch_space_, outputs);
   float pos_min, pos_mean, pos_sd;
   OutputStats(*outputs, &pos_min, &pos_mean, &pos_sd);
   if (invert && pos_min < 0.5) {
     // Run again inverted and see if it is any better.
     NetworkIO inv_inputs, inv_outputs;
+    inv_inputs.set_float_mode(inputs->float_mode());
     inv_inputs.set_int_mode(IsIntMode());
     SetRandomSeed();
     pixInvert(pix, pix);
     Input::PreparePixInput(network_->InputShape(), pix, &randomizer_,
                            &inv_inputs);
-    if (dotproduct_kahan_float_mode && !IsIntMode()) {
-      network_->ForwardFloat(debug, inv_inputs, nullptr, &scratch_space_,
-                             &inv_outputs);
-    } else {
-      network_->Forward(debug, inv_inputs, nullptr, &scratch_space_,
-                        &inv_outputs);
-    }
+    network_->Forward(debug, inv_inputs, nullptr, &scratch_space_,
+                      &inv_outputs);
     float inv_min, inv_mean, inv_sd;
     OutputStats(inv_outputs, &inv_min, &inv_mean, &inv_sd);
     if (inv_min > pos_min && inv_mean > pos_mean && inv_sd < pos_sd) {
@@ -282,11 +273,7 @@ bool LSTMRecognizer::RecognizeLine(const ImageData& image_data, bool invert,
       // Inverting was not an improvement, so undo and run again, so the
       // outputs match the best forward result.
       SetRandomSeed();
-      if (dotproduct_kahan_float_mode && !IsIntMode()) {
-        network_->ForwardFloat(debug, *inputs, nullptr, &scratch_space_, outputs);
-      } else {
-        network_->Forward(debug, *inputs, nullptr, &scratch_space_, outputs);
-      }
+      network_->Forward(debug, *inputs, nullptr, &scratch_space_, outputs);
     }
   }
   pixDestroy(&pix);

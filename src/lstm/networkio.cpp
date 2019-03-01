@@ -2,7 +2,6 @@
 // File:        networkio.cpp
 // Description: Network input/output data, allowing float/int implementations.
 // Author:      Ray Smith
-// Created:     Thu Jun 19 13:01:31 PST 2014
 //
 // (C) Copyright 2014, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");

@@ -2,7 +2,6 @@
 // File:        linerec.cpp
 // Description: Top-level line-based recognition module for Tesseract.
 // Author:      Ray Smith
-// Created:     Thu May 02 09:47:06 PST 2013
 //
 // (C) Copyright 2013, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");

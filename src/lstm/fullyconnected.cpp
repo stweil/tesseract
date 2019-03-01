@@ -124,84 +124,85 @@ void FullyConnected::Forward(bool debug, const NetworkIO& input,
   else
     output->Resize(input, no_);
   SetupForward(input, input_transpose);
-  GenericVector<NetworkScratch::FloatVec> temp_lines;
-  temp_lines.init_to_size(kNumThreads, NetworkScratch::FloatVec());
-  GenericVector<NetworkScratch::FloatVec> curr_input;
-  curr_input.init_to_size(kNumThreads, NetworkScratch::FloatVec());
-  for (int i = 0; i < kNumThreads; ++i) {
-    temp_lines[i].Init(no_, scratch);
-    curr_input[i].Init(ni_, scratch);
-  }
+  if (input.int_mode()) {
+    GenericVector<NetworkScratch::FloatVec> temp_lines;
+    temp_lines.init_to_size(kNumThreads, NetworkScratch::FloatVec());
+    GenericVector<NetworkScratch::FloatVec> curr_input;
+    curr_input.init_to_size(kNumThreads, NetworkScratch::FloatVec());
+    for (int i = 0; i < kNumThreads; ++i) {
+      temp_lines[i].Init(no_, scratch);
+      curr_input[i].Init(ni_, scratch);
+    }
 #ifdef _OPENMP
 #pragma omp parallel for num_threads(kNumThreads)
-  for (int t = 0; t < width; ++t) {
-    // Thread-local pointer to temporary storage.
-    int thread_id = omp_get_thread_num();
+    for (int t = 0; t < width; ++t) {
+      // Thread-local pointer to temporary storage.
+      int thread_id = omp_get_thread_num();
 #else
-  for (int t = 0; t < width; ++t) {
-    // Thread-local pointer to temporary storage.
-    int thread_id = 0;
+    for (int t = 0; t < width; ++t) {
+      // Thread-local pointer to temporary storage.
+      int thread_id = 0;
 #endif
-    double* temp_line = temp_lines[thread_id];
-    if (input.int_mode()) {
+      double* temp_line = temp_lines[thread_id];
       ForwardTimeStep(input.i(t), t, temp_line);
-    } else {
+      output->WriteTimeStep(t, temp_line);
+      if (IsTraining() && type_ != NT_SOFTMAX) {
+        acts_.CopyTimeStepFrom(t, *output, t);
+      }
+    }
+  } else if (input.float_mode()) {
+    GenericVector<NetworkScratch::Float32Vec> temp_lines;
+    temp_lines.init_to_size(kNumThreads, NetworkScratch::Float32Vec());
+    GenericVector<NetworkScratch::Float32Vec> curr_input;
+    curr_input.init_to_size(kNumThreads, NetworkScratch::Float32Vec());
+    for (int i = 0; i < kNumThreads; ++i) {
+      temp_lines[i].Init(no_, scratch);
+      curr_input[i].Init(ni_, scratch);
+    }
+#ifdef _OPENMP
+#pragma omp parallel for num_threads(kNumThreads)
+    for (int t = 0; t < width; ++t) {
+      // Thread-local pointer to temporary storage.
+      int thread_id = omp_get_thread_num();
+#else
+    for (int t = 0; t < width; ++t) {
+      // Thread-local pointer to temporary storage.
+      int thread_id = 0;
+#endif
+      float* temp_line = temp_lines[thread_id];
       input.ReadTimeStep(t, curr_input[thread_id]);
       ForwardTimeStep(curr_input[thread_id], t, temp_line);
+      output->WriteTimeStep(t, temp_line);
+      if (IsTraining() && type_ != NT_SOFTMAX) {
+        acts_.CopyTimeStepFrom(t, *output, t);
+      }
     }
-    output->WriteTimeStep(t, temp_line);
-    if (IsTraining() && type_ != NT_SOFTMAX) {
-      acts_.CopyTimeStepFrom(t, *output, t);
+  } else {
+    GenericVector<NetworkScratch::FloatVec> temp_lines;
+    temp_lines.init_to_size(kNumThreads, NetworkScratch::FloatVec());
+    GenericVector<NetworkScratch::FloatVec> curr_input;
+    curr_input.init_to_size(kNumThreads, NetworkScratch::FloatVec());
+    for (int i = 0; i < kNumThreads; ++i) {
+      temp_lines[i].Init(no_, scratch);
+      curr_input[i].Init(ni_, scratch);
     }
-  }
-  // Zero all the elements that are in the padding around images that allows
-  // multiple different-sized images to exist in a single array.
-  // acts_ is only used if this is not a softmax op.
-  if (IsTraining() && type_ != NT_SOFTMAX) {
-    acts_.ZeroInvalidElements();
-  }
-  output->ZeroInvalidElements();
-#if DEBUG_DETAIL > 0
-  tprintf("F Output:%s\n", name_.string());
-  output->Print(10);
-#endif
-  if (debug) DisplayForward(*output);
-}
-
-void FullyConnected::ForwardFloat(bool debug, const NetworkIO& input,
-                             const TransposedArray* input_transpose,
-                             NetworkScratch* scratch, NetworkIO* output) {
-  ASSERT_HOST(!input.int_mode());
-  int width = input.Width();
-  if (type_ == NT_SOFTMAX)
-    output->ResizeFloat(input, no_);
-  else
-    output->Resize(input, no_);
-  SetupForward(input, input_transpose);
-  GenericVector<NetworkScratch::Float32Vec> temp_lines;
-  temp_lines.init_to_size(kNumThreads, NetworkScratch::Float32Vec());
-  GenericVector<NetworkScratch::Float32Vec> curr_input;
-  curr_input.init_to_size(kNumThreads, NetworkScratch::Float32Vec());
-  for (int i = 0; i < kNumThreads; ++i) {
-    temp_lines[i].Init(no_, scratch);
-    curr_input[i].Init(ni_, scratch);
-  }
 #ifdef _OPENMP
-#  pragma omp parallel for num_threads(kNumThreads)
-  for (int t = 0; t < width; ++t) {
-    // Thread-local pointer to temporary storage.
-    int thread_id = omp_get_thread_num();
+#pragma omp parallel for num_threads(kNumThreads)
+    for (int t = 0; t < width; ++t) {
+      // Thread-local pointer to temporary storage.
+      int thread_id = omp_get_thread_num();
 #else
-  for (int t = 0; t < width; ++t) {
-    // Thread-local pointer to temporary storage.
-    int thread_id = 0;
+    for (int t = 0; t < width; ++t) {
+      // Thread-local pointer to temporary storage.
+      int thread_id = 0;
 #endif
-    float* temp_line = temp_lines[thread_id];
-    input.ReadTimeStep(t, curr_input[thread_id]);
-    ForwardTimeStep(curr_input[thread_id], t, temp_line);
-    output->WriteTimeStep(t, temp_line);
-    if (IsTraining() && type_ != NT_SOFTMAX) {
-      acts_.CopyTimeStepFrom(t, *output, t);
+      double* temp_line = temp_lines[thread_id];
+      input.ReadTimeStep(t, curr_input[thread_id]);
+      ForwardTimeStep(curr_input[thread_id], t, temp_line);
+      output->WriteTimeStep(t, temp_line);
+      if (IsTraining() && type_ != NT_SOFTMAX) {
+        acts_.CopyTimeStepFrom(t, *output, t);
+      }
     }
   }
   // Zero all the elements that are in the padding around images that allows

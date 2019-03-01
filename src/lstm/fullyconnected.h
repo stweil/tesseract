@@ -2,7 +2,6 @@
 // File:        fullyconnected.h
 // Description: Simple feed-forward layer with various non-linearities.
 // Author:      Ray Smith
-// Created:     Wed Feb 26 14:46:06 PST 2014
 //
 // (C) Copyright 2014, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -88,9 +87,6 @@ class FullyConnected : public Network {
   void Forward(bool debug, const NetworkIO& input,
                const TransposedArray* input_transpose, NetworkScratch* scratch,
                NetworkIO* output) override;
-  void ForwardFloat(bool debug, const NetworkIO& input,
-                    const TransposedArray* input_transpose, NetworkScratch* scratch,
-                    NetworkIO* output) override;
   // Components of Forward so FullyConnected can be reused inside LSTM.
   void SetupForward(const NetworkIO& input,
                     const TransposedArray* input_transpose);

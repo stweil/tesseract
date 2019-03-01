@@ -2,7 +2,6 @@
 // File:        networkio.h
 // Description: Network input/output data, allowing float/int implementations.
 // Author:      Ray Smith
-// Created:     Tue Jun 17 08:43:11 PST 2014
 //
 // (C) Copyright 2014, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +37,7 @@ namespace tesseract {
 // enough calculating functions to hide the detail of the implementation.
 class NetworkIO {
  public:
-  NetworkIO() : int_mode_(false) {}
+  NetworkIO() : int_mode_(false), float_mode_(false) {}
   // Resizes the array (and stride), avoiding realloc if possible, to the given
   // size from various size specs:
   // Same stride size, but given number of features.
@@ -129,6 +128,12 @@ class NetworkIO {
   }
   void set_int_mode(bool is_quantized) {
     int_mode_ = is_quantized;
+  }
+  bool float_mode() const {
+    return float_mode_;
+  }
+  void set_float_mode(bool float_mode) {
+    float_mode_ = float_mode;
   }
   const StrideMap& stride_map() const {
     return stride_map_;
@@ -340,6 +345,8 @@ class NetworkIO {
   GENERIC_2D_ARRAY<int8_t> i_;
   // Which of f_ and i_ are we actually using.
   bool int_mode_;
+  // Use float instead of double for calculations.
+  bool float_mode_;
   // Stride for 2d input data.
   StrideMap stride_map_;
 };

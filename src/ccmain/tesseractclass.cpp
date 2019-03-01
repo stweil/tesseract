@@ -19,7 +19,6 @@
 //              training-related code, but they don't interfere with normal
 //              recognition operation.
 // Author:      Ray Smith
-// Created:     Fri Mar 07 08:17:01 PST 2008
 //
 // (C) Copyright 2008, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");

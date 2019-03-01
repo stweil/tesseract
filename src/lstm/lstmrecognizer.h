@@ -2,7 +2,6 @@
 // File:        lstmrecognizer.h
 // Description: Top-level line recognizer class for LSTM-based networks.
 // Author:      Ray Smith
-// Created:     Thu May 02 08:57:06 PST 2013
 //
 // (C) Copyright 2013, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -201,8 +200,7 @@ class LSTMRecognizer {
   // inputs is filled with the used inputs to the network.
   bool RecognizeLine(const ImageData& image_data, bool invert, bool debug,
                      bool re_invert, bool upside_down, float* scale_factor,
-                     NetworkIO* inputs, NetworkIO* outputs,
-                     bool dotproduct_kahan_float_mode = false);
+                     NetworkIO* inputs, NetworkIO* outputs);
 
   // Converts an array of labels to utf-8, whether or not the labels are
   // augmented with character boundaries.

@@ -2,7 +2,6 @@
 // File:        maxpool.h
 // Description: Standard Max-Pooling layer.
 // Author:      Ray Smith
-// Created:     Tue Mar 18 16:28:18 PST 2014
 //
 // (C) Copyright 2014, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -47,10 +46,6 @@ class Maxpool : public Reconfig {
   void Forward(bool debug, const NetworkIO& input,
                const TransposedArray* input_transpose,
                NetworkScratch* scratch, NetworkIO* output) override;
-
-  void ForwardFloat(bool debug, const NetworkIO& input,
-               const TransposedArray* input_transpose, NetworkScratch* scratch,
-               NetworkIO* output) override;
 
   // Runs backward propagation of errors on the deltas line.
   // See Network for a detailed discussion of the arguments.

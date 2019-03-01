@@ -56,6 +56,7 @@ class NetworkScratch {
         scratch_space_(scratch) {
       network_io_ = int_mode_ ? scratch_space_->int_stack_.Borrow()
                               : scratch_space_->float_stack_.Borrow();
+      network_io_->set_float_mode(src.float_mode());
     }
     // Default constructor for arrays. Use one of the Resize functions
     // below to initialize and size.
