@@ -753,9 +753,9 @@ SectionGroup "Additional language data (download)" SecGrp_ALD
     !insertmacro Download_Lang_Data jpn
   SectionEnd
 
-  Section /o "Japanese (vertical)" SecLang_jpn-vert
+  Section /o "Japanese (vertical)" SecLang_jpn_vert
     AddSize 2900
-    !insertmacro Download_Lang_Data jpn-vert
+    !insertmacro Download_Lang_Data jpn_vert
   SectionEnd
 
   Section /o "Kannada" SecLang_kan
@@ -793,9 +793,9 @@ SectionGroup "Additional language data (download)" SecGrp_ALD
     !insertmacro Download_Lang_Data kor
   SectionEnd
 
-  Section /o "Kurdish (Arabic)" SecLang_kur-ara
+  Section /o "Kurdish (Kurmanji)" SecLang_kmr
     AddSize 3400
-    !insertmacro Download_Lang_Data kur-ara
+    !insertmacro Download_Lang_Data kmr
   SectionEnd
 
   Section /o "Lao" SecLang_lao
