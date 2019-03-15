@@ -6,6 +6,8 @@ git tag -a v$TAG -m "Tesseract $TAG"
 
 ARCHS="i686 x86_64 x86_64"
 
+./autogen.sh
+
 for ARCH in $ARCHS; do
   HOST=$ARCH-w64-mingw32
 
