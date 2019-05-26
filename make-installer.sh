@@ -1,6 +1,6 @@
 #!/bin/sh
 
-TAG=4.1.0.$(date +%Y%m%d)
+TAG=5.0.0.$(date +%Y%m%d)
 
 git tag -a v$TAG -m "Tesseract $TAG"
 
@@ -16,6 +16,6 @@ for ARCH in $ARCHS; do
   (
   cd bin/ndebug/$HOST
   ../../../configure --host=$HOST --prefix=/usr/$HOST CXXFLAGS="-fno-math-errno -Wall -Wextra -Wpedantic -g -O2"
-  make install-jars install training-install winsetup prefix=$PWD/usr/$HOST
+  make install-jars install training-install html winsetup prefix=$PWD/usr/$HOST
   )
 done
