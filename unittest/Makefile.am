@@ -108,12 +108,14 @@ AM_CPPFLAGS +=   -isystem $(top_srcdir)/googletest/googletest/include \
 check_PROGRAMS = apiexample_test
 check_PROGRAMS += applybox_test
 check_PROGRAMS += baseapi_test
+# TODO: needs ThreadPool.
 # check_PROGRAMS += baseapi_thread_test
 check_PROGRAMS += bitvector_test
 check_PROGRAMS += cleanapi_test
 check_PROGRAMS += colpartition_test
 check_PROGRAMS += dawg_test
 check_PROGRAMS += denorm_test
+# TODO: needs /usr/include/tensorflow/core/lib/gtl/map_util.h
 # check_PROGRAMS += equationdetect_test
 check_PROGRAMS += fileio_test
 check_PROGRAMS += heap_test
@@ -128,11 +130,11 @@ check_PROGRAMS += linlsq_test
 check_PROGRAMS += loadlang_test
 check_PROGRAMS += mastertrainer_test
 check_PROGRAMS += matrix_test
+# TODO: needs Array2D.
 # check_PROGRAMS += networkio_test
 check_PROGRAMS += nthitem_test
 check_PROGRAMS += osd_test
 # check_PROGRAMS += pagesegmode_test
-# check_PROGRAMS += pango_font_info_test
 check_PROGRAMS += paragraphs_test
 check_PROGRAMS += params_model_test
 check_PROGRAMS += progress_test
@@ -142,12 +144,14 @@ check_PROGRAMS += rect_test
 check_PROGRAMS += resultiterator_test
 check_PROGRAMS += scanutils_test
 check_PROGRAMS += shapetable_test
+# TODO: needs Array2D.
 # check_PROGRAMS += stridemap_test
 check_PROGRAMS += stats_test
 check_PROGRAMS += stringrenderer_test
 check_PROGRAMS += tablefind_test
 check_PROGRAMS += tablerecog_test
 check_PROGRAMS += tabvector_test
+# TODO: needs UnicodeText.
 # check_PROGRAMS += tatweel_test
 check_PROGRAMS += textlineprojection_test
 check_PROGRAMS += tfile_test
@@ -159,6 +163,8 @@ check_PROGRAMS += lstm_squashed_test
 check_PROGRAMS += lstm_test
 check_PROGRAMS += lstmtrainer_test
 check_PROGRAMS += normstrngs_test
+# TODO: needs UnicodeText.
+# check_PROGRAMS += pango_font_info_test
 check_PROGRAMS += unichar_test
 check_PROGRAMS += unicharcompress_test
 check_PROGRAMS += unicharset_test
@@ -190,8 +196,8 @@ applybox_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS) $(LEPTONICA_LIBS)
 baseapi_test_SOURCES = baseapi_test.cc
 baseapi_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TESS_LIBS) $(LEPTONICA_LIBS)
 
-#baseapi_thread_test_SOURCES = baseapi_thread_test.cc
-#baseapi_thread_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TESS_LIBS)
+baseapi_thread_test_SOURCES = baseapi_thread_test.cc
+baseapi_thread_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TESS_LIBS)
 
 bitvector_test_SOURCES = bitvector_test.cc
 bitvector_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
@@ -210,6 +216,9 @@ dawg_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
 
 denorm_test_SOURCES = denorm_test.cc
 denorm_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
+
+equationdetect_test_SOURCES = equationdetect_test.cc
+equationdetect_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
 
 fileio_test_SOURCES = fileio_test.cc
 fileio_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TESS_LIBS)
@@ -272,6 +281,9 @@ mastertrainer_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TRAINING_LIBS)
 matrix_test_SOURCES = matrix_test.cc
 matrix_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
 
+networkio_test_SOURCES = networkio_test.cc
+networkio_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
+
 normstrngs_test_SOURCES = normstrngs_test.cc
 normstrngs_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
 
@@ -289,6 +301,9 @@ params_model_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
 
 osd_test_SOURCES = osd_test.cc
 osd_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS) $(LEPTONICA_LIBS)
+
+pango_font_info_test_SOURCES = pango_font_info_test.cc
+pango_font_info_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS) $(LEPTONICA_LIBS)
 
 progress_test_SOURCES = progress_test.cc
 progress_test_LDFLAGS = $(OPENCL_LDFLAGS) $(LEPTONICA_LIBS)
