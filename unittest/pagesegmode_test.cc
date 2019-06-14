@@ -1,28 +1,32 @@
+// (C) Copyright 2017, Google Inc.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <string>
-#include "leptonica/include/allheaders.h"
-#include "tesseract/api/baseapi.h"
-#include "tesseract/ccutil/helpers.h"
+#include "allheaders.h"
+#include "baseapi.h"
+#include "helpers.h"
+#include "include_gunit.h"
 
 namespace {
 
 // The fixture for testing Tesseract.
 class PageSegModeTest : public testing::Test {
  protected:
-  string TestDataNameToPath(const string& name) {
-    return file::JoinPath(FLAGS_test_srcdir, "testdata/" + name);
-  }
-  string TessdataPath() {
-    return file::JoinPath(FLAGS_test_srcdir, "tessdata");
-  }
-
   PageSegModeTest() { src_pix_ = nullptr; }
   ~PageSegModeTest() { pixDestroy(&src_pix_); }
 
   void SetImage(const char* filename) {
     pixDestroy(&src_pix_);
-    src_pix_ = pixRead(TestDataNameToPath(filename).c_str());
-    api_.Init(TessdataPath().c_str(), "eng", tesseract::OEM_TESSERACT_ONLY);
+    src_pix_ = pixRead(file::JoinPath(TESTING_DIR, filename).c_str());
+    api_.Init(TESSDATA_DIR, "eng", tesseract::OEM_TESSERACT_ONLY);
     api_.SetImage(src_pix_);
   }
 
@@ -51,7 +55,7 @@ class PageSegModeTest : public testing::Test {
   }
 
   Pix* src_pix_;
-  string ocr_text_;
+  std::string ocr_text_;
   tesseract::TessBaseAPI api_;
 };
 
