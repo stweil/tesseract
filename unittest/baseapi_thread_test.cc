@@ -12,23 +12,26 @@
 
 #include <memory>
 #include <string>
-#include "leptonica/include/allheaders.h"
-#include "tesseract/api/baseapi.h"
-#include "thread/threadpool.h"
+#include "allheaders.h"
+#include "include_gunit.h"
+#include "baseapi.h"
+#include "commandlineflags.h"
+#include "log.h"
+#include "threadpool.h"
 
 // Run with Tesseract instances.
-DEFINE_bool(test_tesseract, true, "Test tesseract instances");
+BOOL_PARAM_FLAG(test_tesseract, true, "Test tesseract instances");
 // Run with Cube instances.
 // Note that with TSAN, Cube typically takes much longer to test. Ignoring
 // std::string operations using the associated tess_tsan.ignore file when
 // testing Cube significantly reduces testing time.
-DEFINE_bool(test_cube, true, "Test Cube instances");
+BOOL_PARAM_FLAG(test_cube, true, "Test Cube instances");
 
 // When used with TSAN, having more repetitions can help in finding hidden
 // thread-safety violations at the expense of increased testing time.
-DEFINE_int32(reps, 1, "Num of parallel test repetitions to run.");
+INT_PARAM_FLAG(reps, 1, "Num of parallel test repetitions to run.");
 
-DEFINE_int32(max_concurrent_instances, 0,
+INT_PARAM_FLAG(max_concurrent_instances, 0,
              "Maximum number of instances to run in parallel at any given "
              "instant. The number of concurrent instances cannot exceed "
              "reps * number_of_langs_tested, which is also the default value.");
@@ -51,10 +54,10 @@ const char* kCubeTruthText[] = {
 class BaseapiThreadTest : public ::testing::Test {
  protected:
   static void SetUpTestCase() {
-    CHECK(FLAGS_test_tesseract || FLAGS_test_cube)
-        << "Need to test at least one of Tesseract/Cube!";
+    // << "Need to test at least one of Tesseract/Cube!";
+    CHECK(FLAGS_test_tesseract || FLAGS_test_cube);
     // Form a list of langs/gt_text/image_files we will work with.
-    std::vector<string> image_files;
+    std::vector<std::string> image_files;
     if (FLAGS_test_tesseract) {
       int i = 0;
       while (kTessLangs[i] && kTessTruthText[i] && kTessImages[i]) {
@@ -83,7 +86,7 @@ class BaseapiThreadTest : public ::testing::Test {
     // and so entirely disallow concurrent access of a Pix instance.
     const int n = num_langs_ * FLAGS_reps;
     for (int i = 0; i < n; ++i) {
-      string path =
+      std::string path =
           FLAGS_test_srcdir + "/testdata/" + image_files[i % num_langs_];
       Pix* new_pix = pixRead(path.c_str());
       QCHECK(new_pix != nullptr) << "Could not read " << path;
@@ -111,25 +114,25 @@ class BaseapiThreadTest : public ::testing::Test {
   std::unique_ptr<ThreadPool> pool_;
   static int pool_size_;
   static std::vector<Pix*> pix_;
-  static std::vector<string> langs_;
-  static std::vector<string> gt_text_;
+  static std::vector<std::string> langs_;
+  static std::vector<std::string> gt_text_;
   static int num_langs_;
 };
 
 // static member variable declarations.
 int BaseapiThreadTest::pool_size_;
 std::vector<Pix*> BaseapiThreadTest::pix_;
-std::vector<string> BaseapiThreadTest::langs_;
-std::vector<string> BaseapiThreadTest::gt_text_;
+std::vector<std::string> BaseapiThreadTest::langs_;
+std::vector<std::string> BaseapiThreadTest::gt_text_;
 int BaseapiThreadTest::num_langs_;
 
-void InitTessInstance(TessBaseAPI* tess, const string& lang) {
+void InitTessInstance(TessBaseAPI* tess, const std::string& lang) {
   CHECK(tess != nullptr);
-  const string kTessdataPath = file::JoinPath(FLAGS_test_srcdir, "tessdata");
+  const std::string kTessdataPath = file::JoinPath(FLAGS_test_srcdir, "tessdata");
   EXPECT_EQ(0, tess->Init(kTessdataPath.c_str(), lang.c_str()));
 }
 
-void GetCleanedText(TessBaseAPI* tess, Pix* pix, string* ocr_text) {
+void GetCleanedText(TessBaseAPI* tess, Pix* pix, std::string* ocr_text) {
   tess->SetImage(pix);
   char* result = tess->GetUTF8Text();
   *ocr_text = result;
@@ -137,8 +140,8 @@ void GetCleanedText(TessBaseAPI* tess, Pix* pix, string* ocr_text) {
   absl::StripAsciiWhitespace(ocr_text);
 }
 
-void VerifyTextResult(TessBaseAPI* tess, Pix* pix, const string& lang,
-                      const string& expected_text) {
+void VerifyTextResult(TessBaseAPI* tess, Pix* pix, const std::string& lang,
+                      const std::string& expected_text) {
   TessBaseAPI* tess_local = nullptr;
   if (tess) {
     tess_local = tess;
@@ -146,7 +149,7 @@ void VerifyTextResult(TessBaseAPI* tess, Pix* pix, const string& lang,
     tess_local = new TessBaseAPI;
     InitTessInstance(tess_local, lang);
   }
-  string ocr_text;
+  std::string ocr_text;
   GetCleanedText(tess_local, pix, &ocr_text);
   EXPECT_STREQ(expected_text.c_str(), ocr_text.c_str());
   if (tess_local != tess) delete tess_local;
@@ -158,7 +161,7 @@ TEST_F(BaseapiThreadTest, TestBasicSanity) {
   for (int i = 0; i < num_langs_; ++i) {
     TessBaseAPI tess;
     InitTessInstance(&tess, langs_[i]);
-    string ocr_text;
+    std::string ocr_text;
     GetCleanedText(&tess, pix_[i], &ocr_text);
     CHECK_STREQ(gt_text_[i].c_str(), ocr_text.c_str())
         << "Failed with lang = " << langs_[i];
