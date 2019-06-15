@@ -1,5 +1,6 @@
-#include "tesseract/lstm/networkio.h"
-#include "tesseract/lstm/stridemap.h"
+#include "include_gunit.h"
+#include "networkio.h"
+#include "stridemap.h"
 
 using tesseract::FD_BATCH;
 using tesseract::FD_HEIGHT;
