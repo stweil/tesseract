@@ -1,11 +1,11 @@
 
-#include "tesseract/ccmain/equationdetect.h"
 #include <memory>
 #include <string>
 #include <utility>
-#include "leptonica/include/allheaders.h"
-#include "tesseract/ccmain/tesseractclass.h"
-#include "tesseract/textord/colpartitiongrid.h"
+#include "allheaders.h"
+#include "equationdetect.h"
+#include "tesseractclass.h"
+#include "colpartitiongrid.h"
 #include "util/gtl/map_util.h"
 #include "util/gtl/stl_util.h"
 
