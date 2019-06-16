@@ -1,9 +1,19 @@
-//
-// Unit test to run Tesseract and Cube instances in parallel threads and verify
+// (C) Copyright 2017, Google Inc.
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+// http://www.apache.org/licenses/LICENSE-2.0
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Unit test to run Tesseract instances in parallel threads and verify
 // the OCR result.
 
 // Note that success of running this test as-is does NOT verify
-// thread-safety. For that, you need to run the this binary under TSAN using the
+// thread-safety. For that, you need to run this binary under TSAN using the
 // associated baseapi_thread_test_with_tsan.sh script.
 //
 // The tests are partitioned by instance to allow running Tesseract/Cube/both
@@ -12,6 +22,7 @@
 
 #include <memory>
 #include <string>
+#include "absl/strings/ascii.h"         // for absl::StripAsciiWhitespace
 #include "allheaders.h"
 #include "include_gunit.h"
 #include "baseapi.h"
@@ -86,8 +97,7 @@ class BaseapiThreadTest : public ::testing::Test {
     // and so entirely disallow concurrent access of a Pix instance.
     const int n = num_langs_ * FLAGS_reps;
     for (int i = 0; i < n; ++i) {
-      std::string path =
-          FLAGS_test_srcdir + "/testdata/" + image_files[i % num_langs_];
+      std::string path = TESTDATA_DIR + image_files[i % num_langs_];
       Pix* new_pix = pixRead(path.c_str());
       QCHECK(new_pix != nullptr) << "Could not read " << path;
       pix_.push_back(new_pix);
@@ -128,8 +138,7 @@ int BaseapiThreadTest::num_langs_;
 
 void InitTessInstance(TessBaseAPI* tess, const std::string& lang) {
   CHECK(tess != nullptr);
-  const std::string kTessdataPath = file::JoinPath(FLAGS_test_srcdir, "tessdata");
-  EXPECT_EQ(0, tess->Init(kTessdataPath.c_str(), lang.c_str()));
+  EXPECT_EQ(0, tess->Init(TESSDATA_DIR, lang.c_str()));
 }
 
 void GetCleanedText(TessBaseAPI* tess, Pix* pix, std::string* ocr_text) {
