@@ -109,7 +109,7 @@ check_PROGRAMS = apiexample_test
 check_PROGRAMS += applybox_test
 check_PROGRAMS += baseapi_test
 # TODO: needs ThreadPool.
-# check_PROGRAMS += baseapi_thread_test
+##check_PROGRAMS += baseapi_thread_test
 check_PROGRAMS += bitvector_test
 check_PROGRAMS += cleanapi_test
 check_PROGRAMS += colpartition_test
