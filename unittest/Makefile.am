@@ -35,13 +35,12 @@ AM_CPPFLAGS += -I$(top_srcdir)/src/dict
 AM_CPPFLAGS += -I$(top_srcdir)/src/display
 AM_CPPFLAGS += -I$(top_srcdir)/src/lstm
 AM_CPPFLAGS += -I$(top_srcdir)/src/textord
-AM_CPPFLAGS += -I$(top_srcdir)/unittest/base
-AM_CPPFLAGS += -I$(top_srcdir)/unittest/util
 if ENABLE_TRAINING
 AM_CPPFLAGS += -I$(top_srcdir)/src/training
 endif
 AM_CPPFLAGS += -I$(top_srcdir)/src/viewer
 AM_CPPFLAGS += -I$(top_srcdir)/src/wordrec
+AM_CPPFLAGS += -I$(top_srcdir)/unittest
 AM_CPPFLAGS += -I$(top_srcdir)/abseil
 
 # Build googletest:
@@ -151,8 +150,7 @@ check_PROGRAMS += stringrenderer_test
 check_PROGRAMS += tablefind_test
 check_PROGRAMS += tablerecog_test
 check_PROGRAMS += tabvector_test
-# TODO: needs UnicodeText.
-# check_PROGRAMS += tatweel_test
+check_PROGRAMS += tatweel_test
 check_PROGRAMS += textlineprojection_test
 check_PROGRAMS += tfile_test
 
@@ -163,8 +161,7 @@ check_PROGRAMS += lstm_squashed_test
 check_PROGRAMS += lstm_test
 check_PROGRAMS += lstmtrainer_test
 check_PROGRAMS += normstrngs_test
-# TODO: needs UnicodeText.
-# check_PROGRAMS += pango_font_info_test
+check_PROGRAMS += pango_font_info_test
 check_PROGRAMS += unichar_test
 check_PROGRAMS += unicharcompress_test
 check_PROGRAMS += unicharset_test
@@ -284,20 +281,11 @@ matrix_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
 networkio_test_SOURCES = networkio_test.cc
 networkio_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
 
-normstrngs_test_SOURCES = normstrngs_test.cc
+normstrngs_test_SOURCES = normstrngs_test.cc third_party/utf/rune.c util/utf8/unilib.cc
 normstrngs_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
 
 nthitem_test_SOURCES = nthitem_test.cc
 nthitem_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
-
-#pango_font_info_test_SOURCES = pango_font_info_test.cc
-#pango_font_info_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
-
-paragraphs_test_SOURCES = paragraphs_test.cc
-paragraphs_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TESS_LIBS)
-
-params_model_test_SOURCES = params_model_test.cc
-params_model_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
 
 osd_test_SOURCES = osd_test.cc
 osd_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS) $(LEPTONICA_LIBS)
@@ -305,8 +293,17 @@ osd_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS) $(LEPTONICA_LIBS)
 pagesegmode_test_SOURCES = pagesegmode_test.cc
 pagesegmode_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
 
-pango_font_info_test_SOURCES = pango_font_info_test.cc
-pango_font_info_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS) $(LEPTONICA_LIBS)
+pango_font_info_test_SOURCES = pango_font_info_test.cc third_party/utf/rune.c util/utf8/unicodetext.cc util/utf8/unilib.cc
+pango_font_info_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TRAINING_LIBS) $(LEPTONICA_LIBS)
+pango_font_info_test_LDADD += $(ICU_I18N_LIBS) -lfontconfig
+pango_font_info_test_LDADD += -lpangocairo-1.0 -lpangoft2-1.0
+pango_font_info_test_LDADD += $(cairo_LIBS) $(pango_LIBS)
+
+paragraphs_test_SOURCES = paragraphs_test.cc
+paragraphs_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TESS_LIBS)
+
+params_model_test_SOURCES = params_model_test.cc
+params_model_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
 
 progress_test_SOURCES = progress_test.cc
 progress_test_LDFLAGS = $(OPENCL_LDFLAGS) $(LEPTONICA_LIBS)
@@ -316,13 +313,13 @@ qrsequence_test_SOURCES = qrsequence_test.cc
 qrsequence_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TESS_LIBS)
 
 recodebeam_test_SOURCES = recodebeam_test.cc
-recodebeam_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
+recodebeam_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TRAINING_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS) $(cairo_LIBS)
 
 rect_test_SOURCES = rect_test.cc
 rect_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
 
 resultiterator_test_SOURCES = resultiterator_test.cc
-resultiterator_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TRAINING_LIBS) $(LEPTONICA_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS)
+resultiterator_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TRAINING_LIBS) $(LEPTONICA_LIBS) $(ICU_I18N_LIBS) $(ICU_UC_LIBS) $(cairo_LIBS)
 
 scanutils_test_SOURCES = scanutils_test.cc
 scanutils_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
@@ -344,6 +341,9 @@ tablerecog_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
 
 tabvector_test_SOURCES = tabvector_test.cc
 tabvector_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
+
+tatweel_test_SOURCES = tatweel_test.cc util/utf8/unicodetext.cc third_party/utf/rune.c util/utf8/unilib.cc
+tatweel_test_LDADD = $(GTEST_LIBS) $(TESS_LIBS)
 
 textlineprojection_test_SOURCES = textlineprojection_test.cc
 textlineprojection_test_LDADD = $(ABSEIL_LIBS) $(GTEST_LIBS) $(TESS_LIBS) $(LEPTONICA_LIBS)
