@@ -12,11 +12,13 @@
 #include <cstdio>
 #include <string>
 #include <pango/pango.h>
-#include "absl/strings/str_cat.h"       // for absl::StrCat
 #include "include_gunit.h"
 #include "commandlineflags.h"
 #include "fileio.h"
 #include "pango_font_info.h"
+#include "absl/strings/str_cat.h"       // for absl::StrCat
+#include "gmock/gmock-matchers.h"       // for EXPECT_THAT
+#include "util/utf8/unicodetext.h"      // for UnicodeText
 
 DECLARE_STRING_PARAM_FLAG(fonts_dir);
 DECLARE_STRING_PARAM_FLAG(fontconfig_tmpdir);
@@ -29,19 +31,19 @@ using tesseract::FontUtils;
 using tesseract::PangoFontInfo;
 
 // Fonts in testdata directory
-const char* kExpectedFontNames[] = {"Arab",
-                                    "Arial Bold Italic",
-                                    "DejaVu Sans Ultra-Light",
-                                    "Lohit Hindi",
+const char* kExpectedFontNames[] = {
+  "Arab",
+  "Arial Bold Italic",
+  "DejaVu Sans Ultra-Light",
+  "Lohit Hindi",
 #if PANGO_VERSION <= 12005
-                                    "Times New Roman",
+  "Times New Roman",
 #else
-                                    "Times New Roman,",  // Pango v1.36.2
-                                                         // requires a trailing
-                                                         // ','
+  "Times New Roman,",  // Pango v1.36.2 requires a trailing ','
 #endif
-                                    "UnBatang",
-                                    "Verdana"};
+  "UnBatang",
+  "Verdana"
+};
 
 // Sample text used in tests.
 const char kArabicText[] = "والفكر والصراع 1234,\nوالفكر والصراع";
@@ -51,15 +53,17 @@ const char kKorText[] = "이는 것으로";
 // Hindi words containing illegal vowel sequences.
 const char* kBadlyFormedHinWords[] = {
 #if PANGO_VERSION <= 12005
-    "उपयोक्ताो", "नहीें", "कहीअे", "पत्रिाका", "छह्णाीस",
+  "उपयोक्ताो", "नहीें", "कहीअे", "पत्रिाका", "छह्णाीस",
 #endif
-    // Pango v1.36.2 will render the above words even though they are invalid.
-    "प्रंात", nullptr};
+  // Pango v1.36.2 will render the above words even though they are invalid.
+  "प्रंात", nullptr
+};
 
 class PangoFontInfoTest : public ::testing::Test {
  protected:
   void SetUp() override {
-    std::locale::global(std::locale(""));
+    static std::locale system_locale("");
+    std::locale::global(system_locale);
   }
 
   // Creates a fake fonts.conf file that points to the testdata fonts for
@@ -67,7 +71,9 @@ class PangoFontInfoTest : public ::testing::Test {
   static void SetUpTestCase() {
     FLAGS_fonts_dir = TESTING_DIR;
     FLAGS_fontconfig_tmpdir = FLAGS_test_tmpdir;
+#ifdef GOOGLE_TESSERACT
     FLAGS_use_only_legacy_fonts = false;
+#endif
   }
 
   PangoFontInfo font_info_;
@@ -130,7 +136,7 @@ TEST_F(PangoFontInfoTest, CanRenderLigature) {
   font_info_.ParseFontDescriptionName("Arab 12");
   const char kArabicLigature[] = "لا";
   EXPECT_TRUE(
-      font_info_.CanRenderString(kArabicLigature, strlen(kArabicLigature)));
+    font_info_.CanRenderString(kArabicLigature, strlen(kArabicLigature)));
 
   printf("Next word\n");
   EXPECT_TRUE(font_info_.CanRenderString(kArabicText, strlen(kArabicText)));
@@ -159,9 +165,9 @@ TEST_F(PangoFontInfoTest, CanDropUncoveredChars) {
 
   // Don't drop non-letter characters like word joiners.
   const char* kJoiners[] = {
-      "\u2060",  // U+2060 (WJ)
-      "\u200C",  // U+200C (ZWJ)
-      "\u200D"   // U+200D (ZWNJ)
+    "\u2060",  // U+2060 (WJ)
+    "\u200C",  // U+200C (ZWJ)
+    "\u200D"   // U+200D (ZWNJ)
   };
   for (size_t i = 0; i < ARRAYSIZE(kJoiners); ++i) {
     word = kJoiners[i];
@@ -187,7 +193,11 @@ class FontUtilsTest : public ::testing::Test {
     UnicodeText ut;
     ut.PointToUTF8(utf8_text, strlen(utf8_text));
     for (UnicodeText::const_iterator it = ut.begin(); it != ut.end(); ++it) {
+#if 0
       if (UnicodeProps::IsWhitespace(*it)) continue;
+#else
+      if (std::isspace(*it)) continue;
+#endif
       ++(*ch_map)[*it];
     }
   }
@@ -218,9 +228,9 @@ TEST_F(FontUtilsTest, DoesDetectMissingFonts) {
 TEST_F(FontUtilsTest, DoesListAvailableFonts) {
   const std::vector<std::string>& fonts = FontUtils::ListAvailableFonts();
   EXPECT_THAT(fonts, ::testing::ElementsAreArray(kExpectedFontNames));
-  for (int i = 0; i < fonts.size(); ++i) {
+  for (auto& font : fonts) {
     PangoFontInfo font_info;
-    EXPECT_TRUE(font_info.ParseFontDescriptionName(fonts[i]));
+    EXPECT_TRUE(font_info.ParseFontDescriptionName(font));
   }
 }
 
@@ -289,14 +299,16 @@ TEST_F(FontUtilsTest, GetAllRenderableCharacters) {
   EXPECT_FALSE(unicode_mask[kArabicChar]);     // or Arabic,
   EXPECT_FALSE(unicode_mask[kMongolianChar]);  // or Mongolian,
   EXPECT_FALSE(unicode_mask[kOghamChar]);      // or Ogham.
+  unicode_mask.clear();
 
   // Check that none of the included fonts cover the Mongolian or Ogham space
   // characters.
-  for (int f = 0; f < ARRAYSIZE(kExpectedFontNames); ++f) {
+  for (size_t f = 0; f < ARRAYSIZE(kExpectedFontNames); ++f) {
     SCOPED_TRACE(absl::StrCat("Testing ", kExpectedFontNames[f]));
     FontUtils::GetAllRenderableCharacters(kExpectedFontNames[f], &unicode_mask);
     EXPECT_FALSE(unicode_mask[kOghamChar]);
     EXPECT_FALSE(unicode_mask[kMongolianChar]);
+    unicode_mask.clear();
   }
 }
 }  // namespace
