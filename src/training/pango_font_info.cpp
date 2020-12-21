@@ -312,6 +312,17 @@ int PangoFontInfo::DropUncoveredChars(std::string* utf8_text) const {
   return num_dropped_chars;
 }
 
+static PangoGlyph get_glyph(PangoFont* font, gunichar wc) {
+  hb_font_t* hb_font = pango_font_get_hb_font(font);
+  hb_codepoint_t glyph = PANGO_GET_UNKNOWN_GLYPH(wc);
+  if (hb_font_get_nominal_glyph(hb_font, wc, &glyph)) {
+  } else if (hb_font_get_glyph(hb_font, wc, 0, &glyph)) {
+  } else {
+    printf("Error, could not find glyph 0x%04x, %d\n", wc, pango_font_has_char(font, wc));
+  }
+  return glyph;
+}
+
 bool PangoFontInfo::GetSpacingProperties(const std::string& utf8_char,
                                          int* x_bearing, int* x_advance) const {
   // Convert to equivalent PangoFont structure
@@ -327,8 +338,7 @@ bool PangoFontInfo::GetSpacingProperties(const std::string& utf8_char,
   const UNICHAR::const_iterator it_end = UNICHAR::end(utf8_char.c_str(),
                                                       utf8_char.length());
   for (UNICHAR::const_iterator it = it_begin; it != it_end; ++it) {
-    PangoGlyph glyph_index = pango_fc_font_get_glyph(
-        reinterpret_cast<PangoFcFont*>(font), *it);
+    PangoGlyph glyph_index = get_glyph(font, *it);
     if (!glyph_index) {
       // Glyph for given unicode character doesn't exist in font.
       g_object_unref(font);
@@ -402,15 +412,19 @@ bool PangoFontInfo::CanRenderString(const char* utf8_word, int len,
     PangoGlyph dotted_circle_glyph;
     PangoFont* font = run->item->analysis.font;
 
-#ifdef _WIN32
+    dotted_circle_glyph = pango_fc_font_get_glyph(
+        PANGO_FC_FONT(font), kDottedCircleGlyph);
+    printf("dotted_circle_glyph=%u\n", dotted_circle_glyph);
+
+    dotted_circle_glyph = get_glyph(font, kDottedCircleGlyph);
+    printf("dotted_circle_glyph=%u\n", dotted_circle_glyph);
+
     PangoGlyphString* glyphs = pango_glyph_string_new();
     const char s[] = "\xc2\xa7";
     pango_shape(s, strlen(s), &(run->item->analysis), glyphs);
     dotted_circle_glyph = glyphs->glyphs[0].glyph;
-#else  // TODO: Do we need separate solution for non win build?
-    dotted_circle_glyph = pango_fc_font_get_glyph(
-        reinterpret_cast<PangoFcFont*>(font), kDottedCircleGlyph);
-#endif
+    printf("dotted_circle_glyph=%u\n", dotted_circle_glyph);
+    pango_glyph_string_free(glyphs);
 
     if (TLOG_IS_ON(2)) {
       PangoFontDescription* desc = pango_font_describe(font);
