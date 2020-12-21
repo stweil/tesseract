@@ -412,11 +412,15 @@ bool PangoFontInfo::CanRenderString(const char* utf8_word, int len,
     PangoGlyph dotted_circle_glyph;
     PangoFont* font = run->item->analysis.font;
 
+    dotted_circle_glyph = get_glyph(font, kDottedCircleGlyph);
+    printf("dotted_circle_glyph=%u\n", dotted_circle_glyph);
+
     dotted_circle_glyph = pango_fc_font_get_glyph(
         PANGO_FC_FONT(font), kDottedCircleGlyph);
     printf("dotted_circle_glyph=%u\n", dotted_circle_glyph);
 
-    dotted_circle_glyph = get_glyph(font, kDottedCircleGlyph);
+    dotted_circle_glyph = pango_fc_font_get_glyph(
+        reinterpret_cast<PangoFcFont*>(font), kDottedCircleGlyph);
     printf("dotted_circle_glyph=%u\n", dotted_circle_glyph);
 
     PangoGlyphString* glyphs = pango_glyph_string_new();
