@@ -104,15 +104,15 @@ class BLOB_CHOICE: public ELIST_LINK
       int score1 = 0, score2 = 0;
       fontinfo_id_ = -1;
       fontinfo_id2_ = -1;
-      for (int f = 0; f < fonts_.size(); ++f) {
-        if (fonts_[f].score > score1) {
+      for (auto&font : fonts_) {
+        if (font.score > score1) {
           score2 = score1;
           fontinfo_id2_ = fontinfo_id_;
-          score1 = fonts_[f].score;
-          fontinfo_id_ = fonts_[f].fontinfo_id;
-        } else if (fonts_[f].score > score2) {
-          score2 = fonts_[f].score;
-          fontinfo_id2_ = fonts_[f].fontinfo_id;
+          score1 = font.score;
+          fontinfo_id_ = font.fontinfo_id;
+        } else if (font.score > score2) {
+          score2 = font.score;
+          fontinfo_id2_ = font.fontinfo_id;
         }
       }
     }

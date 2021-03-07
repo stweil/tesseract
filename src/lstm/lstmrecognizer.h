@@ -129,8 +129,8 @@ class TESS_API LSTMRecognizer {
     learning_rate_ *= factor;
     if (network_->TestFlag(NF_LAYER_SPECIFIC_LR)) {
       std::vector<STRING> layers = EnumerateLayers();
-      for (int i = 0; i < layers.size(); ++i) {
-        ScaleLayerLearningRate(layers[i], factor);
+      for (auto layer : layers) {
+        ScaleLayerLearningRate(layer, factor);
       }
     }
   }

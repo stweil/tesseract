@@ -285,8 +285,8 @@ class TESS_API UNICHARSET {
   // Return true if the given unichar id exists within the set.
   // Relies on the fact that unichar ids are contiguous in the unicharset.
   bool contains_unichar_id(UNICHAR_ID unichar_id) const {
-    return unichar_id != INVALID_UNICHAR_ID && unichar_id < unichars.size() &&
-        unichar_id >= 0;
+    return unichar_id >= 0 &&
+      static_cast<unsigned>(unichar_id) < unichars.size();
   }
 
   // Return true if the given unichar representation exists within the set.
@@ -299,9 +299,9 @@ class TESS_API UNICHARSET {
 
   // Delete CHAR_FRAGMENTs stored in properties of unichars array.
   void delete_pointers_in_unichars() {
-    for (int i = 0; i < unichars.size(); ++i) {
-      delete unichars[i].properties.fragment;
-      unichars[i].properties.fragment = nullptr;
+    for (auto&ch : unichars) {
+      delete ch.properties.fragment;
+      ch.properties.fragment = nullptr;
     }
   }
 

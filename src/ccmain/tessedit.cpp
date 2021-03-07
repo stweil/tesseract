@@ -134,7 +134,7 @@ bool Tesseract::init_tesseract_lang_data(
   // Set params specified in vars_vec (done after setting params from config
   // files, so that params in vars_vec can override those from files).
   if (vars_vec != nullptr && vars_values != nullptr) {
-    for (int i = 0; i < vars_vec->size(); ++i) {
+    for (unsigned i = 0; i < vars_vec->size(); ++i) {
       if (!ParamUtils::SetParam((*vars_vec)[i].c_str(),
                                 (*vars_values)[i].c_str(),
                                 set_params_constraint, this->params())) {
@@ -238,8 +238,8 @@ bool Tesseract::init_tesseract_lang_data(
 // Helper returns true if the given string is in the vector of strings.
 static bool IsStrInList(const std::string& str,
                         const std::vector<std::string>& str_list) {
-  for (int i = 0; i < str_list.size(); ++i) {
-    if (str_list[i] == str) return true;
+  for (auto& s : str_list) {
+    if (s == str) return true;
   }
   return false;
 }
@@ -300,7 +300,7 @@ int Tesseract::init_tesseract(const char* arg0, const char* textbase,
   // Add any languages that this language requires
   bool loaded_primary = false;
   // Load the rest into sub_langs_.
-  for (int lang_index = 0; lang_index < langs_to_load.size(); ++lang_index) {
+  for (unsigned lang_index = 0; lang_index < langs_to_load.size(); ++lang_index) {
     if (!IsStrInList(langs_to_load[lang_index], langs_not_to_load)) {
       const char* lang_str = langs_to_load[lang_index].c_str();
       Tesseract* tess_to_init;
@@ -349,15 +349,15 @@ int Tesseract::init_tesseract(const char* arg0, const char* textbase,
     // tessedit_use_primary_params_model is set,
     // otherwise use default language model weights.
     if (tessedit_use_primary_params_model) {
-      for (int s = 0; s < sub_langs_.size(); ++s) {
-        sub_langs_[s]->language_model_->getParamsModel().Copy(
+      for (auto* lang : sub_langs_) {
+        lang->language_model_->getParamsModel().Copy(
             this->language_model_->getParamsModel());
       }
       tprintf("Using params model of the primary language\n");
     } else {
       this->language_model_->getParamsModel().Clear();
-      for (int s = 0; s < sub_langs_.size(); ++s) {
-        sub_langs_[s]->language_model_->getParamsModel().Clear();
+      for (auto* lang : sub_langs_) {
+        lang->language_model_->getParamsModel().Clear();
       }
     }
   }
@@ -436,13 +436,13 @@ void Tesseract::SetupUniversalFontIds() {
 
   // Create the universal ID table.
   CollectFonts(get_fontinfo_table(), &all_fonts);
-  for (int i = 0; i < sub_langs_.size(); ++i) {
-    CollectFonts(sub_langs_[i]->get_fontinfo_table(), &all_fonts);
+  for (auto* lang : sub_langs_) {
+    CollectFonts(lang->get_fontinfo_table(), &all_fonts);
   }
   // Assign ids from the table to each font table.
   AssignIds(all_fonts, &get_fontinfo_table());
-  for (int i = 0; i < sub_langs_.size(); ++i) {
-    AssignIds(all_fonts, &sub_langs_[i]->get_fontinfo_table());
+  for (auto* lang : sub_langs_) {
+    AssignIds(all_fonts, &lang->get_fontinfo_table());
   }
   font_table_size_ = all_fonts.size();
 }

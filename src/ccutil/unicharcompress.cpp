@@ -285,8 +285,7 @@ void UnicharCompress::DefragmentCodeValues(int encoded_null) {
   GenericVector<int> offsets;
   offsets.init_to_size(code_range_, 0);
   // Find which codes are used
-  for (int c = 0; c < encoder_.size(); ++c) {
-    const RecodedCharID& code = encoder_[c];
+  for (auto& code : encoder_) {
     for (int i = 0; i < code.length(); ++i) {
       offsets[code(i)] = 1;
     }
@@ -308,11 +307,10 @@ void UnicharCompress::DefragmentCodeValues(int encoded_null) {
     offsets[encoded_null] = offsets.size() + offsets.back() - encoded_null;
   }
   // Now apply the offsets.
-  for (int c = 0; c < encoder_.size(); ++c) {
-    RecodedCharID* code = &encoder_[c];
-    for (int i = 0; i < code->length(); ++i) {
-      int value = (*code)(i);
-      code->Set(i, value + offsets[value]);
+  for (auto& code : encoder_) {
+    for (int i = 0; i < code.length(); ++i) {
+      int value = code(i);
+      code.Set(i, value + offsets[value]);
     }
   }
   ComputeCodeRange();
@@ -359,7 +357,7 @@ bool UnicharCompress::DeSerialize(TFile* fp) {
 STRING UnicharCompress::GetEncodingAsString(
     const UNICHARSET& unicharset) const {
   STRING encoding;
-  for (int c = 0; c < encoder_.size(); ++c) {
+  for (unsigned c = 0; c < encoder_.size(); ++c) {
     const RecodedCharID& code = encoder_[c];
     if (0 < c && c < SPECIAL_UNICHAR_CODES_COUNT && code == encoder_[c - 1]) {
       // Don't show the duplicate entry.
@@ -400,8 +398,7 @@ bool UnicharCompress::DecomposeHangul(int unicode, int* leading, int* vowel,
 // Computes the value of code_range_ from the encoder_.
 void UnicharCompress::ComputeCodeRange() {
   code_range_ = -1;
-  for (int c = 0; c < encoder_.size(); ++c) {
-    const RecodedCharID& code = encoder_[c];
+  for (auto& code : encoder_) {
     for (int i = 0; i < code.length(); ++i) {
       if (code(i) > code_range_) code_range_ = code(i);
     }
@@ -413,7 +410,7 @@ void UnicharCompress::ComputeCodeRange() {
 void UnicharCompress::SetupDecoder() {
   Cleanup();
   is_valid_start_.resize(code_range_, false);
-  for (int c = 0; c < encoder_.size(); ++c) {
+  for (unsigned c = 0; c < encoder_.size(); ++c) {
     const RecodedCharID& code = encoder_[c];
     decoder_[code] = c;
     is_valid_start_[code(0)] = true;

@@ -43,7 +43,7 @@ namespace tesseract {
 // adds the segmented parts to unicharset.
 static void AddStringsToUnicharset(const std::vector<STRING>& strings,
                                    int norm_mode, UNICHARSET* unicharset) {
-  for (int i = 0; i < strings.size(); ++i) {
+  for (unsigned i = 0; i < strings.size(); ++i) {
     std::vector<std::string> normalized;
     if (NormalizeCleanAndSegmentUTF8(UnicodeNormMode::kNFC, OCRNorm::kNone,
                                      static_cast<GraphemeNormMode>(norm_mode),

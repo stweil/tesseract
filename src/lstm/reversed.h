@@ -2,7 +2,6 @@
 // File:        reversed.h
 // Description: Runs a single network on time-reversed input, reversing output.
 // Author:      Ray Smith
-// Created:     Thu May 02 08:38:06 PST 2013
 //
 // (C) Copyright 2013, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,7 +55,7 @@ class Reversed : public Plumbing {
         to = 'y';
       }
       // Change the from char to the to char.
-      for (int i = 0; i < net_spec.length(); ++i) {
+      for (size_t i = 0; i < net_spec.length(); ++i) {
         if (net_spec[i] == from) net_spec[i] = to;
       }
       return net_spec;

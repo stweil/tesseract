@@ -61,8 +61,9 @@ MasterTrainer::MasterTrainer(NormalizationMode norm_mode,
 
 MasterTrainer::~MasterTrainer() {
   delete [] fragments_;
-  for (int p = 0; p < page_images_.size(); ++p)
-    pixDestroy(&page_images_[p]);
+  for (auto image : page_images_) {
+    pixDestroy(&image);
+  }
 }
 
 // WARNING! Serialize/DeSerialize are only partial, providing

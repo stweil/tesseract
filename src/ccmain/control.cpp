@@ -188,7 +188,7 @@ void Tesseract::SetupWordPassN(int pass_n, WordData* word) {
         word->word->x_height = word->row->x_height();
     }
     word->lang_words.truncate(0);
-    for (int s = 0; s <= sub_langs_.size(); ++s) {
+    for (unsigned s = 0; s <= sub_langs_.size(); ++s) {
       // The sub_langs_.size() entry is for the master language.
       Tesseract* lang_t = s < sub_langs_.size() ? sub_langs_[s] : this;
       auto* word_res = new WERD_RES;
@@ -324,11 +324,11 @@ bool Tesseract::recog_all_words(PAGE_RES* page_res,
       StartBackupAdaptiveClassifier();
     }
     // Now check the sub-langs as well.
-    for (int i = 0; i < sub_langs_.size(); ++i) {
-      if (sub_langs_[i]->AdaptiveClassifierIsFull()) {
-        sub_langs_[i]->SwitchAdaptiveClassifier();
-      } else if (!sub_langs_[i]->AdaptiveClassifierIsEmpty()) {
-        sub_langs_[i]->StartBackupAdaptiveClassifier();
+    for (auto* lang : sub_langs_) {
+      if (lang->AdaptiveClassifierIsFull()) {
+        lang->SwitchAdaptiveClassifier();
+      } else if (!lang->AdaptiveClassifierIsEmpty()) {
+        lang->StartBackupAdaptiveClassifier();
       }
     }
 
@@ -1336,7 +1336,7 @@ void Tesseract::classify_word_and_language(int pass_n, PAGE_RES_IT* pr_it,
       most_recently_used_ = word->tesseract;
     return;
   }
-  int sub = sub_langs_.size();
+  size_t sub = sub_langs_.size();
   if (most_recently_used_ != this) {
     // Get the index of the most_recently_used_.
     for (sub = 0; sub < sub_langs_.size() &&
@@ -1353,7 +1353,7 @@ void Tesseract::classify_word_and_language(int pass_n, PAGE_RES_IT* pr_it,
                                 &best_words) > 0) {
       best_lang_tess = this;
     }
-    for (int i = 0; !WordsAcceptable(best_words) && i < sub_langs_.size();
+    for (unsigned i = 0; !WordsAcceptable(best_words) && i < sub_langs_.size();
          ++i) {
       if (most_recently_used_ != sub_langs_[i] &&
           sub_langs_[i]->RetryWithLanguage(*word_data, recognizer, debug,
@@ -1967,10 +1967,10 @@ void Tesseract::set_word_fonts(WERD_RES *word) {
     const BLOB_CHOICE* choice = word->GetBlobChoice(b);
     if (choice == nullptr) continue;
     auto &fonts = choice->fonts();
-    for (int f = 0; f < fonts.size(); ++f) {
-      const int fontinfo_id = fonts[f].fontinfo_id;
+    for (auto& font : fonts) {
+      const int fontinfo_id = font.fontinfo_id;
       if (0 <= fontinfo_id && fontinfo_id < fontinfo_size) {
-        font_total_score[fontinfo_id] += fonts[f].score;
+        font_total_score[fontinfo_id] += font.score;
       }
     }
   }

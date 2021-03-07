@@ -580,8 +580,9 @@ void Tesseract::Clear() {
   reskew_ = FCOORD(1.0f, 0.0f);
   splitter_.Clear();
   scaled_factor_ = -1;
-  for (int i = 0; i < sub_langs_.size(); ++i)
-    sub_langs_[i]->Clear();
+  for (auto* lang : sub_langs_) {
+    lang->Clear();
+  }
 }
 
 #ifndef DISABLED_LEGACY_ENGINE
@@ -594,8 +595,8 @@ void Tesseract::SetEquationDetect(EquationDetect* detector) {
 // Clear all memory of adaption for this and all subclassifiers.
 void Tesseract::ResetAdaptiveClassifier() {
   ResetAdaptiveClassifierInternal();
-  for (int i = 0; i < sub_langs_.size(); ++i) {
-    sub_langs_[i]->ResetAdaptiveClassifierInternal();
+  for (auto* lang : sub_langs_) {
+    lang->ResetAdaptiveClassifierInternal();
   }
 }
 
@@ -604,8 +605,8 @@ void Tesseract::ResetAdaptiveClassifier() {
 // Clear the document dictionary for this and all subclassifiers.
 void Tesseract::ResetDocumentDictionary() {
   getDict().ResetDocumentDictionary();
-  for (int i = 0; i < sub_langs_.size(); ++i) {
-    sub_langs_[i]->getDict().ResetDocumentDictionary();
+  for (auto* lang : sub_langs_) {
+    lang->getDict().ResetDocumentDictionary();
   }
 }
 
@@ -621,12 +622,12 @@ void Tesseract::SetBlackAndWhitelist() {
                                             tessedit_char_unblacklist.c_str());
   }
   // Black and white lists should apply to all loaded classifiers.
-  for (int i = 0; i < sub_langs_.size(); ++i) {
-    sub_langs_[i]->unicharset.set_black_and_whitelist(
+  for (auto* lang : sub_langs_) {
+    lang->unicharset.set_black_and_whitelist(
         tessedit_char_blacklist.c_str(), tessedit_char_whitelist.c_str(),
         tessedit_char_unblacklist.c_str());
-    if (sub_langs_[i]->lstm_recognizer_) {
-      UNICHARSET& lstm_unicharset = sub_langs_[i]->lstm_recognizer_->GetUnicharset();
+    if (lang->lstm_recognizer_) {
+      UNICHARSET& lstm_unicharset = lang->lstm_recognizer_->GetUnicharset();
       lstm_unicharset.set_black_and_whitelist(tessedit_char_blacklist.c_str(),
                                               tessedit_char_whitelist.c_str(),
                                               tessedit_char_unblacklist.c_str());
@@ -642,14 +643,14 @@ void Tesseract::PrepareForPageseg() {
   auto max_pageseg_strategy =
       static_cast<ShiroRekhaSplitter::SplitStrategy>(
       static_cast<int32_t>(pageseg_devanagari_split_strategy));
-  for (int i = 0; i < sub_langs_.size(); ++i) {
+  for (auto* lang : sub_langs_) {
     auto pageseg_strategy =
         static_cast<ShiroRekhaSplitter::SplitStrategy>(
-        static_cast<int32_t>(sub_langs_[i]->pageseg_devanagari_split_strategy));
+        static_cast<int32_t>(lang->pageseg_devanagari_split_strategy));
     if (pageseg_strategy > max_pageseg_strategy)
       max_pageseg_strategy = pageseg_strategy;
-    pixDestroy(&sub_langs_[i]->pix_binary_);
-    sub_langs_[i]->pix_binary_ = pixClone(pix_binary());
+    pixDestroy(&lang->pix_binary_);
+    lang->pix_binary_ = pixClone(pix_binary());
   }
   // Perform shiro-rekha (top-line) splitting and replace the current image by
   // the newly split image.
@@ -673,10 +674,10 @@ void Tesseract::PrepareForTessOCR(BLOCK_LIST* block_list,
   auto max_ocr_strategy =
       static_cast<ShiroRekhaSplitter::SplitStrategy>(
       static_cast<int32_t>(ocr_devanagari_split_strategy));
-  for (int i = 0; i < sub_langs_.size(); ++i) {
+  for (auto* lang : sub_langs_) {
     auto ocr_strategy =
         static_cast<ShiroRekhaSplitter::SplitStrategy>(
-        static_cast<int32_t>(sub_langs_[i]->ocr_devanagari_split_strategy));
+        static_cast<int32_t>(lang->ocr_devanagari_split_strategy));
     if (ocr_strategy > max_ocr_strategy)
       max_ocr_strategy = ocr_strategy;
   }
