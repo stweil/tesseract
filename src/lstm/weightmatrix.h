@@ -24,6 +24,7 @@
 #include "matrix.h"
 #include "tfloat.h"
 #include "tprintf.h"
+#include "tfloat.h"
 
 namespace tesseract {
 
