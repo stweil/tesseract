@@ -267,6 +267,9 @@ void SIMDDetect::Update() {
     // AVX2 selected by config variable.
     SetDotProduct(DotProductAVX, &IntSimdMatrix::intSimdMatrixAVX2);
     dotproduct_method = "avx2";
+  } else if (dotproduct == "avx-1") {
+    SetDotProduct(DotProductAVX1, &IntSimdMatrix::intSimdMatrixAVX2);
+    dotproduct_method = "avx-1";
 #endif
 #if defined(HAVE_AVX)
   } else if (dotproduct == "avx") {
