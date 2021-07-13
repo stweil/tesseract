@@ -183,6 +183,9 @@ endif
 if HAVE_SSE4_1
 libtesseract_sse_la_CXXFLAGS = -msse4.1
 libtesseract_sse_la_CXXFLAGS += -I$(top_srcdir)/src/ccutil
+if OPENMP_SIMD
+libtesseract_sse_la_CXXFLAGS += -fopenmp-simd -DOPENMP_SIMD
+endif
 libtesseract_sse_la_SOURCES = src/arch/dotproductsse.cpp src/arch/intsimdmatrixsse.cpp
 libtesseract_la_LIBADD += libtesseract_sse.la
 noinst_LTLIBRARIES += libtesseract_sse.la
