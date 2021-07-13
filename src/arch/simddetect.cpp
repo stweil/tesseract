@@ -93,7 +93,7 @@ bool SIMDDetect::sse_available_;
 #endif
 
 #if defined(HAVE_FRAMEWORK_ACCELERATE)
-static TFloat DotProductAccelerate(const TFloat* u, const TFloat* v, int n) {
+TFloat DotProductAccelerate(const TFloat* u, const TFloat* v, int n) {
   TFloat total = 0;
   const int stride = 1;
 #if defined(FAST_FLOAT)
