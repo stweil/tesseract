@@ -37,8 +37,8 @@
 #include "scrollview.h"
 #include "strokewidth.h"
 #include "tablefind.h"
-#include "workingpartset.h"
 #include "tabletransfer.h"
+#include "workingpartset.h"
 
 #include <algorithm>
 
