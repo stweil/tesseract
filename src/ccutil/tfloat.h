@@ -17,6 +17,14 @@
 #ifndef TESSERACT_TFLOAT_H
 #define TESSERACT_TFLOAT_H
 
+namespace tesseract {
+
+#ifdef FAST_FLOAT
+using TFloat = float;
+#else
 using TFloat = double;
+#endif
+
+}
 
 #endif
