@@ -17,44 +17,7 @@
 
 #include "intsimdmatrix.h"
 
-#if !defined(__SSE4_1__)
-#  if defined(__i686__) || defined(__x86_64__)
-#    error Implementation only for SSE 4.1 capable architectures
-#  endif
-#elif defined(FAST_FLOAT)
-namespace tesseract {
-static void matrixDotVector(int dim1, int dim2, const int8_t *wi, const float *scales,
-                            const int8_t *u, float *v) {
-  const int num_out = dim1;
-  const int num_in = dim2 - 1;
-//#pragma omp simd collapse(2)
-  for (int i = 0; i < num_out; ++i) {
-    int total = 0;
-#pragma omp simd reduction(+:total)
-    for (int j = 0; j < num_in; ++j) {
-      total += wi[j] * u[j];
-    }
-    // Add in the bias and correct for integer values.
-    v[i] = (total + wi[num_in] * INT8_MAX) * scales[i];
-    wi += dim2;
-  }
-}
-
-static const IntSimdMatrix simdMatrix = {
-    matrixDotVector,
-    // Number of 32 bit outputs held in each register.
-    1,
-    // Maximum number of registers that we will use to hold outputs.
-    1,
-    // Number of 8 bit inputs in the inputs register.
-    1,
-    // Number of inputs in each weight group.
-    1
-};
-
-const IntSimdMatrix *IntSimdMatrix::intSimdMatrixSSE = &simdMatrix;
-}
-#else
+#if defined(__SSE4_1__)
 
 #  include <emmintrin.h>
 #  include <smmintrin.h>
@@ -102,15 +65,17 @@ static int32_t IntDotProductSSE(const int8_t *u, const int8_t *v, int n) {
 }
 
 // Computes part of matrix.vector v = Wu. Computes 1 result.
-static void PartialMatrixDotVector1(const int8_t *wi, const double *scales, const int8_t *u,
-                                    int num_in, double *v) {
-  double total = IntDotProductSSE(u, wi, num_in);
+template <class TFloat>
+static void PartialMatrixDotVector1(const int8_t *wi, const TFloat *scales, const int8_t *u,
+                                    int num_in, TFloat *v) {
+  TFloat total = IntDotProductSSE(u, wi, num_in);
   // Add in the bias and correct for integer values.
   *v = (total + wi[num_in] * INT8_MAX) * *scales;
 }
 
-static void matrixDotVector(int dim1, int dim2, const int8_t *wi, const double *scales,
-                            const int8_t *u, double *v) {
+template <class TFloat>
+static void matrixDotVector(int dim1, int dim2, const int8_t *wi, const TFloat *scales,
+                            const int8_t *u, TFloat *v) {
   const int num_out = dim1;
   const int num_in = dim2 - 1;
   int output = 0;
@@ -136,6 +101,14 @@ static const IntSimdMatrix simdMatrix = {
 };
 
 const IntSimdMatrix *IntSimdMatrix::intSimdMatrixSSE = &simdMatrix;
+
+} // namespace tesseract.
+
+#else
+
+namespace tesseract {
+
+	const IntSimdMatrix* IntSimdMatrix::intSimdMatrixSSE = nullptr;
 
 } // namespace tesseract.
 
