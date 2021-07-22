@@ -30,6 +30,8 @@
 #include <string>
 #include <vector>
 
+#include "tfloat.h"   // for TFloat
+
 namespace tesseract {
 
 template <class T>
@@ -72,11 +74,11 @@ public:
     return e();
   }
   // Returns a floating point value in the range [-range, range].
-  double SignedRand(double range) {
-    return range * 2.0 * IntRand() / INT32_MAX - range;
+  TFloat SignedRand(TFloat range) {
+    return range * 2 * IntRand() / INT32_MAX - range;
   }
   // Returns a floating point value in the range [0, range].
-  double UnsignedRand(double range) {
+  TFloat UnsignedRand(TFloat range) {
     return range * IntRand() / INT32_MAX;
   }
 
