@@ -3,9 +3,7 @@ name: unittest-disablelegacy
 # currently some unittests are failing with disabled legacy engine.
 
 on:
-  #push:
-  schedule:
-    - cron: 0 0 1 * *
+  push:
 
 jobs:
   linux:
