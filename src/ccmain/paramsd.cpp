@@ -99,7 +99,7 @@ static void GetFirstWords(const char *s, // source string
                           std::string &d // target string
 ) {
   int full_length = strlen(s);
-  int reqd_len = 0; // No. of chars requird
+  int reqd_len = 0; // No. of chars required
   const char *next_word = s;
 
   while ((n > 0) && reqd_len < full_length) {
@@ -107,10 +107,8 @@ static void GetFirstWords(const char *s, // source string
     next_word = s + reqd_len;
     n--;
   }
-  char t[1024];
-  strncpy(t, s, reqd_len);
-  t[reqd_len] = '\0'; // ensure null terminal
-  d = t;
+  std::string rv(s, reqd_len);  // don't copy beyond s[reqd_len]
+  d = std::move(rv);
 }
 
 // Getter for the name.
@@ -180,7 +178,7 @@ void ParamContent::SetValue(const char *val) {
 }
 
 // Gets the up to the first 3 prefixes from s (split by _).
-// For example, tesseract_foo_bar will be split into tesseract,foo and bar.
+// For example, tesseract_foo_bar will be split into tesseract, foo and bar.
 static void GetPrefixes(const char *s, std::string &level_one, std::string &level_two,
                         std::string &level_three) {
   GetFirstWords(s, 1, level_one);
