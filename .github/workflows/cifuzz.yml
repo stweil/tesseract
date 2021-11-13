@@ -1,6 +1,4 @@
 name: CIFuzz
-# OSS-Fuzz CI
-# See https://google.github.io/oss-fuzz/getting-started/continuous-integration/
 on:
   pull_request:
     branches:
