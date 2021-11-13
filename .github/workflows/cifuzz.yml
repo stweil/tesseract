@@ -1,10 +1,13 @@
 name: CIFuzz
+# OSS-Fuzz CI
+# See https://google.github.io/oss-fuzz/getting-started/continuous-integration/
 on:
   pull_request:
-    branches: [ main ]
-  paths:
-   - '**.cpp'
-   - '**.h'
+    branches:
+    - main
+    paths:
+    - '**.cpp'
+    - '**.h'
 jobs:
   Fuzzing:
     runs-on: ubuntu-latest
