@@ -2,10 +2,10 @@ name: CIFuzz
 on:
   pull_request:
     branches:
-    - main
+     - main
   paths:
-  - '**.cpp'
-  - '**.h'
+   - '**.cpp'
+   - '**.h'
 jobs:
   Fuzzing:
     runs-on: ubuntu-latest
