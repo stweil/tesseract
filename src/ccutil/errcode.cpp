@@ -18,9 +18,7 @@
 
 #include "errcode.h"
 
-#include <cstdarg>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <iostream> // for std::cerr
 #include <sstream>  // for std::stringstream
@@ -30,40 +28,7 @@ namespace tesseract {
 constexpr ERRCODE BADERRACTION("Illegal error action");
 #define MAX_MSG 1024
 
-/**********************************************************************
- * error
- *
- * Print an error message and continue, exit or abort according to action.
- * Makes use of error messages and numbers in a common place.
- *
- **********************************************************************/
-void ERRCODE::error(         // handle error
-    const char *caller,      // name of caller
-    TessErrorLogCode action, // action to take
-    const char *format, ...  // special message
-    ) const {
-  va_list args; // variable args
-  std::stringstream msg;
-
-  if (caller != nullptr) {
-    // name of caller
-    msg << caller << ':';
-  }
-  // actual message
-  msg << "Error:" << message;
-  if (format != nullptr) {
-    char str[MAX_MSG];
-    va_start(args, format); // variable list
-    // print remainder
-    std::vsnprintf(str, sizeof(str), format, args);
-    // ensure termination
-    str[sizeof(str) - 1] = '\0';
-    va_end(args);
-    msg << ':' << str;
-  }
-
-  std::cerr << msg.str() << '\n';
-
+static void error_action(TessErrorLogCode action) {
   switch (action) {
     case DBG:
     case TESSLOG:
@@ -86,8 +51,31 @@ void ERRCODE::error(         // handle error
   }
 }
 
+/**********************************************************************
+ * error
+ *
+ * Print an error message and continue, exit or abort according to action.
+ * Makes use of error messages and numbers in a common place.
+ *
+ **********************************************************************/
 void ERRCODE::error(const char *caller, TessErrorLogCode action) const {
-  error(caller, action, nullptr);
+  if (caller != nullptr) {
+    // name of caller
+    fprintf(stderr, "%s\n", fmt::format("{}:Error:{}", caller, message).c_str());
+  } else {
+    fprintf(stderr, "%s\n", fmt::format("Error:{}", message).c_str());
+  }
+  error_action(action);
+}
+
+void ERRCODE::verror(const char *caller, TessErrorLogCode action, fmt::string_view format, fmt::format_args args) const {
+  if (caller != nullptr) {
+    // name of caller
+    fprintf(stderr, "%s\n", fmt::format("{}:Error:{}:{}", caller, message, fmt::vformat(format, args)).c_str());
+  } else {
+    fprintf(stderr, "%s\n", fmt::format("Error:{}:{}", message, fmt::vformat(format, args)).c_str());
+  }
+  error_action(action);
 }
 
 } // namespace tesseract

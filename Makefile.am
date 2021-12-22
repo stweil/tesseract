@@ -347,6 +347,7 @@ endif
 # Rules for src/ccutil
 
 libtesseract_ccutil_la_CPPFLAGS = $(AM_CPPFLAGS)
+libtesseract_ccutil_la_CPPFLAGS += -I$(top_srcdir)/src/fmt/include
 libtesseract_ccutil_la_CPPFLAGS += $(libarchive_CFLAGS)
 if !NO_TESSDATA_PREFIX
 libtesseract_ccutil_la_CPPFLAGS += -DTESSDATA_PREFIX='"@datadir@"'
