@@ -158,10 +158,8 @@ void LSTM::SetEnableTraining(TrainingState state) {
     }
   } else {
     if (state == TS_ENABLED && training_ != TS_ENABLED) {
-      for (int w = 0; w < WT_COUNT; ++w) {
-        if (w == GFS && !Is2D()) {
-          continue;
-        }
+      const auto max_weight = Is2D() ? GFS : WT_COUNT;
+      for (int w = 0; w < max_weight; ++w) {
         gate_weights_[w].InitBackward();
       }
     }
@@ -177,10 +175,8 @@ void LSTM::SetEnableTraining(TrainingState state) {
 int LSTM::InitWeights(float range, TRand *randomizer) {
   Network::SetRandomizer(randomizer);
   num_weights_ = 0;
-  for (int w = 0; w < WT_COUNT; ++w) {
-    if (w == GFS && !Is2D()) {
-      continue;
-    }
+  const auto max_weight = Is2D() ? GFS : WT_COUNT;
+  for (int w = 0; w < max_weight; ++w) {
     num_weights_ +=
         gate_weights_[w].InitWeightsFloat(ns_, na_ + 1, TestFlag(NF_ADAM), range, randomizer);
   }
@@ -202,10 +198,8 @@ int LSTM::RemapOutputs(int old_no, const std::vector<int> &code_map) {
 
 // Converts a float network to an int network.
 void LSTM::ConvertToInt() {
-  for (int w = 0; w < WT_COUNT; ++w) {
-    if (w == GFS && !Is2D()) {
-      continue;
-    }
+  const auto max_weight = Is2D() ? GFS : WT_COUNT;
+  for (int w = 0; w < max_weight; ++w) {
     gate_weights_[w].ConvertToInt();
   }
   if (softmax_ != nullptr) {
@@ -215,10 +209,8 @@ void LSTM::ConvertToInt() {
 
 // Sets up the network for training using the given weight_range.
 void LSTM::DebugWeights() {
-  for (int w = 0; w < WT_COUNT; ++w) {
-    if (w == GFS && !Is2D()) {
-      continue;
-    }
+  const auto max_weight = Is2D() ? GFS : WT_COUNT;
+  for (int w = 0; w < max_weight; ++w) {
     std::ostringstream msg;
     msg << name_ << " Gate weights " << w;
     gate_weights_[w].Debug2D(msg.str().c_str());
@@ -236,10 +228,8 @@ bool LSTM::Serialize(TFile *fp) const {
   if (!fp->Serialize(&na_)) {
     return false;
   }
-  for (int w = 0; w < WT_COUNT; ++w) {
-    if (w == GFS && !Is2D()) {
-      continue;
-    }
+  const auto max_weight = Is2D() ? GFS : WT_COUNT;
+  for (int w = 0; w < max_weight; ++w) {
     if (!gate_weights_[w].Serialize(IsTraining(), fp)) {
       return false;
     }
@@ -264,10 +254,8 @@ bool LSTM::DeSerialize(TFile *fp) {
     nf_ = 0;
   }
   is_2d_ = false;
-  for (int w = 0; w < WT_COUNT; ++w) {
-    if (w == GFS && !Is2D()) {
-      continue;
-    }
+  const auto max_weight = Is2D() ? GFS : WT_COUNT;
+  for (int w = 0; w < max_weight; ++w) {
     if (!gate_weights_[w].DeSerialize(IsTraining(), fp)) {
       return false;
     }
@@ -725,10 +713,8 @@ bool LSTM::Backward(bool debug, const NetworkIO &fwd_deltas, NetworkScratch *scr
 #ifdef _OPENMP
 #  pragma omp parallel for num_threads(GFS) if (!Is2D())
 #endif
-  for (int w = 0; w < WT_COUNT; ++w) {
-    if (w == GFS && !Is2D()) {
-      continue;
-    }
+  const auto max_weight = Is2D() ? GFS : WT_COUNT;
+  for (int w = 0; w < max_weight; ++w) {
     gate_weights_[w].SumOuterTransposed(*gate_errors_t[w], *source_t, false);
   }
   if (softmax_ != nullptr) {
@@ -743,10 +729,8 @@ void LSTM::Update(float learning_rate, float momentum, float adam_beta, int num_
 #if DEBUG_DETAIL > 3
   PrintW();
 #endif
-  for (int w = 0; w < WT_COUNT; ++w) {
-    if (w == GFS && !Is2D()) {
-      continue;
-    }
+  const auto max_weight = Is2D() ? GFS : WT_COUNT;
+  for (int w = 0; w < max_weight; ++w) {
     gate_weights_[w].Update(learning_rate, momentum, adam_beta, num_samples);
   }
   if (softmax_ != nullptr) {
@@ -763,10 +747,8 @@ void LSTM::Update(float learning_rate, float momentum, float adam_beta, int num_
 void LSTM::CountAlternators(const Network &other, TFloat *same, TFloat *changed) const {
   ASSERT_HOST(other.type() == type_);
   const LSTM *lstm = static_cast<const LSTM *>(&other);
-  for (int w = 0; w < WT_COUNT; ++w) {
-    if (w == GFS && !Is2D()) {
-      continue;
-    }
+  const auto max_weight = Is2D() ? GFS : WT_COUNT;
+  for (int w = 0; w < max_weight; ++w) {
     gate_weights_[w].CountAlternators(lstm->gate_weights_[w], same, changed);
   }
   if (softmax_ != nullptr) {
@@ -779,10 +761,8 @@ void LSTM::CountAlternators(const Network &other, TFloat *same, TFloat *changed)
 // Prints the weights for debug purposes.
 void LSTM::PrintW() {
   tprintf("Weight state:%s\n", name_.c_str());
-  for (int w = 0; w < WT_COUNT; ++w) {
-    if (w == GFS && !Is2D()) {
-      continue;
-    }
+  const auto max_weight = Is2D() ? GFS : WT_COUNT;
+  for (int w = 0; w < max_weight; ++w) {
     tprintf("Gate %d, inputs\n", w);
     for (int i = 0; i < ni_; ++i) {
       tprintf("Row %d:", i);
@@ -810,10 +790,8 @@ void LSTM::PrintW() {
 // Prints the weight deltas for debug purposes.
 void LSTM::PrintDW() {
   tprintf("Delta state:%s\n", name_.c_str());
-  for (int w = 0; w < WT_COUNT; ++w) {
-    if (w == GFS && !Is2D()) {
-      continue;
-    }
+  const auto max_weight = Is2D() ? GFS : WT_COUNT;
+  for (int w = 0; w < max_weight; ++w) {
     tprintf("Gate %d, inputs\n", w);
     for (int i = 0; i < ni_; ++i) {
       tprintf("Row %d:", i);
@@ -847,10 +825,8 @@ void LSTM::ResizeForward(const NetworkIO &input) {
   which_fg_.ResizeNoInit(input.Width(), ns_);
   if (IsTraining()) {
     state_.ResizeFloat(input, ns_);
-    for (int w = 0; w < WT_COUNT; ++w) {
-      if (w == GFS && !Is2D()) {
-        continue;
-      }
+    const auto max_weight = Is2D() ? GFS : WT_COUNT;
+    for (int w = 0; w < max_weight; ++w) {
       node_values_[w].ResizeFloat(input, ns_);
     }
   }
