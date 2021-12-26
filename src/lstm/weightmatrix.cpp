@@ -88,28 +88,6 @@ static bool Serialize(TFile *fp, const GENERIC_2D_ARRAY<TFloat> &tfloat_array) {
 #endif
 }
 
-// Computes matrix.vector v = Wu.
-// u is of size W.dim2() - add_bias_fwd and the output v is of size
-// W.dim1() - skip_bias_back.
-// If add_bias_fwd, u is imagined to have an extra element at the end with value
-// 1, to implement the bias, weight.
-// If skip_bias_back, we are actually performing the backwards product on a
-// transposed matrix, so we need to drop the v output corresponding to the last
-// element in dim1.
-static inline void MatrixDotVectorInternal(const GENERIC_2D_ARRAY<TFloat> &w, bool add_bias_fwd,
-                                           bool skip_bias_back, const TFloat *u, TFloat *v) {
-  int num_results = w.dim1() - skip_bias_back;
-  int extent = w.dim2() - add_bias_fwd;
-  for (int i = 0; i < num_results; ++i) {
-    const TFloat *wi = w[i];
-    TFloat total = DotProduct(wi, u, extent);
-    if (add_bias_fwd) {
-      total += wi[extent]; // The bias value.
-    }
-    v[i] = total;
-  }
-}
-
 // Copies the whole input transposed, converted to TFloat, into *this.
 void TransposedArray::Transpose(const GENERIC_2D_ARRAY<TFloat> &input) {
   int width = input.dim1();
@@ -387,7 +365,14 @@ bool WeightMatrix::DeSerializeOld(bool training, TFile *fp) {
 // Asserts that the call matches what we have.
 void WeightMatrix::MatrixDotVector(const TFloat *u, TFloat *v) const {
   assert(!int_mode_);
-  MatrixDotVectorInternal(wf_, true, false, u, v);
+  int num_results = wf_.dim1();
+  int extent = wf_.dim2() - 1;
+  for (int i = 0; i < num_results; ++i) {
+    const TFloat *wi = wf_[i];
+    TFloat total = DotProduct(wi, u, extent);
+    total += wi[extent]; // The bias value.
+    v[i] = total;
+  }
 }
 
 void WeightMatrix::MatrixDotVector(const int8_t *u, TFloat *v) const {
@@ -418,7 +403,16 @@ void WeightMatrix::MultiplyAccumulate(const TFloat *v, TFloat *inout) {
 // last value of 1, as with MatrixDotVector.
 void WeightMatrix::VectorDotMatrix(const TFloat *u, TFloat *v) const {
   assert(!int_mode_);
-  MatrixDotVectorInternal(wf_t_, false, true, u, v);
+  // We are actually performing the backwards product on a
+  // transposed matrix, so we need to drop the v output corresponding to the
+  // bias (last element in dim1).
+  int num_results = wf_t_.dim1() - 1;
+  int extent = wf_t_.dim2();
+  for (int i = 0; i < num_results; ++i) {
+    const TFloat *wi = wf_t_[i];
+    TFloat total = DotProduct(wi, u, extent);
+    v[i] = total;
+  }
 }
 
 // Fills dw_[i][j] with the dot product u[i][] . v[j][], using elements from
