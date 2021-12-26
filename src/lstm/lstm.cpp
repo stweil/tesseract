@@ -21,6 +21,8 @@
 
 #include "lstm.h"
 
+// 24893 ms
+#undef _OPENMP
 #ifdef _OPENMP
 #  include <omp.h>
 #endif

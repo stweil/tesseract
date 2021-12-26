@@ -21,6 +21,9 @@
 
 #include "fullyconnected.h"
 
+// 21843 ms
+#undef _OPENMP
+
 #ifdef _OPENMP
 #  include <omp.h>
 #endif
