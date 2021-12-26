@@ -38,6 +38,7 @@
 #if defined(THREADPOOL)
 #include <atomic> // for std::atomic
 #include <thread_pool.hpp>
+// no thread pool // 22540 ms
 //const int kNumThreads = 2; // 30602 ms
 //const int kNumThreads = 4; // 26940 ms
 //const int kNumThreads = 4; // 21829 ms
@@ -50,7 +51,9 @@
 //const int kNumThreads = 16; // 21668 ms
 //const int kNumThreads = 24; // 21497 ms
 //const int kNumThreads = 24; // 20761 ms
-const int kNumThreads = 24; // 20938 ms
+//const int kNumThreads = 24; // 20938 ms
+const int kNumThreads = 24; // 20640 ms
+//const int kNumThreads = 48; // 22425 ms
 static thread_pool pool(kNumThreads);
 #elif defined(_OPENMP)
 const int kNumThreads = 4;
@@ -157,6 +160,7 @@ void FullyConnected::Forward(bool debug, const NetworkIO &input,
     output->Resize(input, no_);
   }
   SetupForward(input, input_transpose);
+#if defined(THREADPOOL)
   std::vector<NetworkScratch::FloatVec> temp_lines(kNumThreads);
   std::vector<NetworkScratch::FloatVec> curr_input(kNumThreads);
   int ro = no_;
@@ -167,7 +171,6 @@ void FullyConnected::Forward(bool debug, const NetworkIO &input,
     temp_lines[i].Init(ro, scratch);
     curr_input[i].Init(ni_, scratch);
   }
-#if defined(THREADPOOL)
   std::atomic<int> num_threads = 0;
   if (input.int_mode()) {
     pool.parallelize_loop(0, width,
@@ -211,6 +214,16 @@ void FullyConnected::Forward(bool debug, const NetworkIO &input,
     });
   }
 #else // THREADPOOL
+  std::vector<NetworkScratch::FloatVec> temp_lines(kNumThreads);
+  std::vector<NetworkScratch::FloatVec> curr_input(kNumThreads);
+  int ro = no_;
+  if (IntSimdMatrix::intSimdMatrix) {
+    ro = IntSimdMatrix::intSimdMatrix->RoundOutputs(ro);
+  }
+  for (int i = 0; i < kNumThreads; ++i) {
+    temp_lines[i].Init(ro, scratch);
+    curr_input[i].Init(ni_, scratch);
+  }
 #ifdef _OPENMP
 #  pragma omp parallel for num_threads(kNumThreads)
   for (int t = 0; t < width; ++t) {
