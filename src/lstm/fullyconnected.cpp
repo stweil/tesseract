@@ -34,7 +34,13 @@
 #include "networkscratch.h"
 
 // Number of threads to use for parallel calculation of Forward and Backward.
-#ifdef _OPENMP
+//#define THREADPOOL
+#if defined(THREADPOOL)
+#include <atomic> // for std::atomic
+#include <thread_pool.hpp>
+const int kNumThreads = 64;
+static thread_pool pool(kNumThreads);
+#elif defined(_OPENMP)
 const int kNumThreads = 4;
 #else
 const int kNumThreads = 1;
@@ -149,6 +155,40 @@ void FullyConnected::Forward(bool debug, const NetworkIO &input,
     temp_lines[i].Init(ro, scratch);
     curr_input[i].Init(ni_, scratch);
   }
+#if defined(THREADPOOL)
+  std::atomic<int> num_threads = 0;
+  bool needsCopyTimeStepFrom = IsTraining() && type_ != NT_SOFTMAX;
+  if (input.int_mode()) {
+    auto loop = [this, &input, &output, &needsCopyTimeStepFrom, &num_threads, &temp_lines, &curr_input](const int &start, const int &end) {
+      // Thread-local pointer to temporary storage.
+      int thread_id = num_threads++;
+      TFloat *temp_line = temp_lines[thread_id];
+      for (int t = start; t < end; t++) {
+        ForwardTimeStep(input.i(t), t, temp_line);
+        output->WriteTimeStep(t, temp_line);
+        if (needsCopyTimeStepFrom) {
+          acts_.CopyTimeStepFrom(t, *output, t);
+        }
+      }
+    };
+    pool.parallelize_loop(0, width, loop, kNumThreads);
+  } else {
+    auto loop = [this, &input, &output, &needsCopyTimeStepFrom, &num_threads, &temp_lines, &curr_input](const int &start, const int &end) {
+      // Thread-local pointer to temporary storage.
+      int thread_id = num_threads++;
+      TFloat *temp_line = temp_lines[thread_id];
+      for (int t = start; t < end; t++) {
+        input.ReadTimeStep(t, curr_input[thread_id]);
+        ForwardTimeStep(curr_input[thread_id], t, temp_line);
+        output->WriteTimeStep(t, temp_line);
+        if (needsCopyTimeStepFrom) {
+          acts_.CopyTimeStepFrom(t, *output, t);
+        }
+      }
+    };
+    pool.parallelize_loop(0, width, loop, kNumThreads);
+  }
+#else // THREADPOOL
 #ifdef _OPENMP
 #  pragma omp parallel for num_threads(kNumThreads)
   for (int t = 0; t < width; ++t) {
@@ -171,6 +211,7 @@ void FullyConnected::Forward(bool debug, const NetworkIO &input,
       acts_.CopyTimeStepFrom(t, *output, t);
     }
   }
+#endif // THREADPOOL
   // Zero all the elements that are in the padding around images that allows
   // multiple different-sized images to exist in a single array.
   // acts_ is only used if this is not a softmax op.
@@ -250,6 +291,30 @@ bool FullyConnected::Backward(bool debug, const NetworkIO &fwd_deltas, NetworkSc
   for (int i = 0; i < kNumThreads; ++i) {
     errors[i].Init(no_, scratch);
   }
+#if 0
+  int width = fwd_deltas.Width();
+  NetworkScratch::GradientStore errors_t;
+  errors_t.Init(no_, width, scratch);
+#if defined(THREADPOOL)
+  std::atomic<int> num_threads = 0;
+  auto loop = [this, &num_threads, &fwd_deltas, &back_deltas, &errors_t, &errors, &temp_backprops](const int &start, const int &end) {
+    int thread_id = num_threads++;
+    TFloat *backprop = nullptr;
+    if (needs_to_backprop_) {
+      backprop = temp_backprops[thread_id];
+    }
+    TFloat *curr_errors = errors[thread_id];
+    for (int t = start; t < end; t++) {
+      BackwardTimeStep(fwd_deltas, t, curr_errors, errors_t.get(), backprop);
+      if (backprop != nullptr) {
+        back_deltas->WriteTimeStep(t, backprop);
+      }
+    }
+  };
+  pool.parallelize_loop(0, width, loop, kNumThreads);
+#else // THREADPOOL
+#endif
+#endif
   std::vector<NetworkScratch::FloatVec> temp_backprops;
   if (needs_to_backprop_) {
     temp_backprops.resize(kNumThreads);
@@ -278,6 +343,25 @@ bool FullyConnected::Backward(bool debug, const NetworkIO &fwd_deltas, NetworkSc
       back_deltas->WriteTimeStep(t, backprop);
     }
   }
+#if 0
+  int thread_id = 0;
+  TFloat *curr_errors = errors[thread_id];
+  if (needs_to_backprop_) {
+    std::vector<NetworkScratch::FloatVec> temp_backprops(kNumThreads);
+    for (int i = 0; i < kNumThreads; ++i) {
+      temp_backprops[i].Init(ni_, scratch);
+    }
+    TFloat *backprop = temp_backprops[thread_id];
+    for (int t = 0; t < width; ++t) {
+      BackwardTimeStep(fwd_deltas, t, curr_errors, errors_t.get(), backprop);
+      back_deltas->WriteTimeStep(t, backprop);
+    }
+  } else {
+    for (int t = 0; t < width; ++t) {
+      BackwardTimeStep(fwd_deltas, t, curr_errors, errors_t.get(), nullptr);
+    }
+  }
+#endif // THREADPOOL
   FinishBackward(*errors_t.get());
   if (needs_to_backprop_) {
     back_deltas->ZeroInvalidElements();
