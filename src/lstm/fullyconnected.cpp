@@ -52,7 +52,7 @@
 //const int kNumThreads = 24; // 21497 ms
 //const int kNumThreads = 24; // 20761 ms
 //const int kNumThreads = 24; // 20938 ms
-const int kNumThreads = 24; // 20640 ms
+const unsigned kNumThreads = 24; // 20640 ms
 //const int kNumThreads = 48; // 22425 ms
 static thread_pool pool(kNumThreads);
 #elif defined(_OPENMP)
@@ -167,7 +167,7 @@ void FullyConnected::Forward(bool debug, const NetworkIO &input,
   if (IntSimdMatrix::intSimdMatrix) {
     ro = IntSimdMatrix::intSimdMatrix->RoundOutputs(ro);
   }
-  for (int i = 0; i < kNumThreads; ++i) {
+  for (unsigned i = 0; i < kNumThreads; ++i) {
     temp_lines[i].Init(ro, scratch);
     curr_input[i].Init(ni_, scratch);
   }
@@ -323,13 +323,13 @@ bool FullyConnected::Backward(bool debug, const NetworkIO &fwd_deltas, NetworkSc
 #endif
   back_deltas->Resize(fwd_deltas, ni_);
   std::vector<NetworkScratch::FloatVec> errors(kNumThreads);
-  for (int i = 0; i < kNumThreads; ++i) {
+  for (unsigned i = 0; i < kNumThreads; ++i) {
     errors[i].Init(no_, scratch);
   }
   std::vector<NetworkScratch::FloatVec> temp_backprops;
   if (needs_to_backprop_) {
     temp_backprops.resize(kNumThreads);
-    for (int i = 0; i < kNumThreads; ++i) {
+    for (unsigned i = 0; i < kNumThreads; ++i) {
       temp_backprops[i].Init(ni_, scratch);
     }
   }
