@@ -38,7 +38,10 @@
 #if defined(THREADPOOL)
 #include <atomic> // for std::atomic
 #include <thread_pool.hpp>
-const int kNumThreads = 64;
+//const int kNumThreads = 2; // 30602 ms
+//const int kNumThreads = 4; // 26940 ms
+//const int kNumThreads = 8; // 26253 ms
+const int kNumThreads = 16; // 25916 ms
 static thread_pool pool(kNumThreads);
 #elif defined(_OPENMP)
 const int kNumThreads = 4;
@@ -157,12 +160,13 @@ void FullyConnected::Forward(bool debug, const NetworkIO &input,
   }
 #if defined(THREADPOOL)
   std::atomic<int> num_threads = 0;
-  bool needsCopyTimeStepFrom = IsTraining() && type_ != NT_SOFTMAX;
   if (input.int_mode()) {
-    auto loop = [this, &input, &output, &needsCopyTimeStepFrom, &num_threads, &temp_lines, &curr_input](const int &start, const int &end) {
+    pool.parallelize_loop(0, width,
+      [this, &input, &output, &num_threads, &temp_lines, &curr_input](const int &start, const int &end) {
       // Thread-local pointer to temporary storage.
       int thread_id = num_threads++;
       TFloat *temp_line = temp_lines[thread_id];
+      bool needsCopyTimeStepFrom = IsTraining() && type_ != NT_SOFTMAX;
       for (int t = start; t < end; t++) {
         ForwardTimeStep(input.i(t), t, temp_line);
         output->WriteTimeStep(t, temp_line);
@@ -170,13 +174,14 @@ void FullyConnected::Forward(bool debug, const NetworkIO &input,
           acts_.CopyTimeStepFrom(t, *output, t);
         }
       }
-    };
-    pool.parallelize_loop(0, width, loop, kNumThreads);
+    });
   } else {
-    auto loop = [this, &input, &output, &needsCopyTimeStepFrom, &num_threads, &temp_lines, &curr_input](const int &start, const int &end) {
+    pool.parallelize_loop(0, width,
+      [this, &input, &output, &num_threads, &temp_lines, &curr_input](const int &start, const int &end) {
       // Thread-local pointer to temporary storage.
       int thread_id = num_threads++;
       TFloat *temp_line = temp_lines[thread_id];
+      bool needsCopyTimeStepFrom = IsTraining() && type_ != NT_SOFTMAX;
       for (int t = start; t < end; t++) {
         input.ReadTimeStep(t, curr_input[thread_id]);
         ForwardTimeStep(curr_input[thread_id], t, temp_line);
@@ -185,8 +190,7 @@ void FullyConnected::Forward(bool debug, const NetworkIO &input,
           acts_.CopyTimeStepFrom(t, *output, t);
         }
       }
-    };
-    pool.parallelize_loop(0, width, loop, kNumThreads);
+    });
   }
 #else // THREADPOOL
 #ifdef _OPENMP
