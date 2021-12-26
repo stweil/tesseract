@@ -318,7 +318,7 @@ public:
     /**
      * @brief The duration, in microseconds, that the worker function should sleep for when it cannot find any tasks in the queue. If set to 0, then instead of sleeping, the worker function will execute std::this_thread::yield() if there are no tasks in the queue. The default value is 1000.
      */
-    ui32 sleep_duration = 1000;
+    ui32 sleep_duration = 0;
     std::mutex cv_m;
     std::condition_variable cv;
 

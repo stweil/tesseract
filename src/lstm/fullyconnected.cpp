@@ -41,10 +41,12 @@
 //const int kNumThreads = 2; // 30602 ms
 //const int kNumThreads = 4; // 26940 ms
 //const int kNumThreads = 4; // 21829 ms
-const int kNumThreads = 4; // 23965 ms
+//const int kNumThreads = 4; // 23965 ms
 //const int kNumThreads = 8; // 26253 ms
+const int kNumThreads = 8; // 22506 ms
 //const int kNumThreads = 16; // 25916 ms
 //const int kNumThreads = 16; // 21497 ms
+//const int kNumThreads = 16; // 21668 ms
 //const int kNumThreads = 24; // 21497 ms
 //const int kNumThreads = 24; // 20761 ms
 static thread_pool pool(kNumThreads);
@@ -164,7 +166,6 @@ void FullyConnected::Forward(bool debug, const NetworkIO &input,
     curr_input[i].Init(ni_, scratch);
   }
 #if defined(THREADPOOL)
-  pool.sleep_duration = 0;
   std::atomic<int> num_threads = 0;
   if (input.int_mode()) {
     pool.parallelize_loop(0, width,
