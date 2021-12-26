@@ -43,12 +43,14 @@
 //const int kNumThreads = 4; // 21829 ms
 //const int kNumThreads = 4; // 23965 ms
 //const int kNumThreads = 8; // 26253 ms
-const int kNumThreads = 8; // 22506 ms
+//const int kNumThreads = 8; // 22506 ms
+//const int kNumThreads = 8; // 22121 ms
 //const int kNumThreads = 16; // 25916 ms
 //const int kNumThreads = 16; // 21497 ms
 //const int kNumThreads = 16; // 21668 ms
 //const int kNumThreads = 24; // 21497 ms
 //const int kNumThreads = 24; // 20761 ms
+const int kNumThreads = 24; // 20938 ms
 static thread_pool pool(kNumThreads);
 #elif defined(_OPENMP)
 const int kNumThreads = 4;
@@ -311,30 +313,6 @@ bool FullyConnected::Backward(bool debug, const NetworkIO &fwd_deltas, NetworkSc
   for (int i = 0; i < kNumThreads; ++i) {
     errors[i].Init(no_, scratch);
   }
-#if 0
-  int width = fwd_deltas.Width();
-  NetworkScratch::GradientStore errors_t;
-  errors_t.Init(no_, width, scratch);
-#if defined(THREADPOOL)
-  std::atomic<int> num_threads = 0;
-  auto loop = [this, &num_threads, &fwd_deltas, &back_deltas, &errors_t, &errors, &temp_backprops](const int &start, const int &end) {
-    int thread_id = num_threads++;
-    TFloat *backprop = nullptr;
-    if (needs_to_backprop_) {
-      backprop = temp_backprops[thread_id];
-    }
-    TFloat *curr_errors = errors[thread_id];
-    for (int t = start; t < end; t++) {
-      BackwardTimeStep(fwd_deltas, t, curr_errors, errors_t.get(), backprop);
-      if (backprop != nullptr) {
-        back_deltas->WriteTimeStep(t, backprop);
-      }
-    }
-  };
-  pool.parallelize_loop(0, width, loop, kNumThreads);
-#else // THREADPOOL
-#endif
-#endif
   std::vector<NetworkScratch::FloatVec> temp_backprops;
   if (needs_to_backprop_) {
     temp_backprops.resize(kNumThreads);
@@ -345,6 +323,32 @@ bool FullyConnected::Backward(bool debug, const NetworkIO &fwd_deltas, NetworkSc
   int width = fwd_deltas.Width();
   NetworkScratch::GradientStore errors_t;
   errors_t.Init(no_, width, scratch);
+#if defined(THREADPOOL)
+  std::atomic<unsigned> num_threads = 0;
+  if (needs_to_backprop_) {
+    pool.parallelize_loop(0, width,
+      [this, &back_deltas, &fwd_deltas, &temp_backprops, &errors, &errors_t, &num_threads](const unsigned &start, const unsigned &end) {
+      // Thread-local pointer to temporary storage.
+      unsigned thread_id = num_threads++;
+      TFloat *curr_errors = errors[thread_id];
+      TFloat *backprop = temp_backprops[thread_id];
+      for (unsigned t = start; t < end; t++) {
+        BackwardTimeStep(fwd_deltas, t, curr_errors, errors_t.get(), backprop);
+        back_deltas->WriteTimeStep(t, backprop);
+      }
+    });
+  } else {
+    pool.parallelize_loop(0, width,
+      [this, &fwd_deltas, &errors, &errors_t, &num_threads](const unsigned &start, const unsigned &end) {
+      // Thread-local pointer to temporary storage.
+      unsigned thread_id = num_threads++;
+      TFloat *curr_errors = errors[thread_id];
+      for (unsigned t = start; t < end; t++) {
+        BackwardTimeStep(fwd_deltas, t, curr_errors, errors_t.get(), nullptr);
+      }
+    });
+  }
+#else
 #ifdef _OPENMP
 #  pragma omp parallel for num_threads(kNumThreads)
   for (int t = 0; t < width; ++t) {
@@ -361,24 +365,6 @@ bool FullyConnected::Backward(bool debug, const NetworkIO &fwd_deltas, NetworkSc
     BackwardTimeStep(fwd_deltas, t, curr_errors, errors_t.get(), backprop);
     if (backprop != nullptr) {
       back_deltas->WriteTimeStep(t, backprop);
-    }
-  }
-#if 0
-  int thread_id = 0;
-  TFloat *curr_errors = errors[thread_id];
-  if (needs_to_backprop_) {
-    std::vector<NetworkScratch::FloatVec> temp_backprops(kNumThreads);
-    for (int i = 0; i < kNumThreads; ++i) {
-      temp_backprops[i].Init(ni_, scratch);
-    }
-    TFloat *backprop = temp_backprops[thread_id];
-    for (int t = 0; t < width; ++t) {
-      BackwardTimeStep(fwd_deltas, t, curr_errors, errors_t.get(), backprop);
-      back_deltas->WriteTimeStep(t, backprop);
-    }
-  } else {
-    for (int t = 0; t < width; ++t) {
-      BackwardTimeStep(fwd_deltas, t, curr_errors, errors_t.get(), nullptr);
     }
   }
 #endif // THREADPOOL
