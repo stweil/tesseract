@@ -65,6 +65,7 @@ jobs:
 
       - name: Install dependencies on macOS
         run: |
+           echo "macOS=$(echo {{ matrix.config.os }} | sed s/macOS-//)"
            brew install autoconf automake
            brew install leptonica
            brew install libarchive
