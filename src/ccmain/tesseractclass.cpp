@@ -78,7 +78,7 @@ Tesseract::Tesseract()
     , INT_MEMBER(thresholding_method,
                  static_cast<int>(ThresholdMethod::Otsu),
                  "Thresholding method: 0 = Otsu, 1 = LeptonicaOtsu, 2 = "
-                 "Sauvola",
+                 "Sauvola, 3 = Nlbin",
                  this->params())
     , BOOL_MEMBER(thresholding_debug, false,
                   "Debug the thresholding process",
