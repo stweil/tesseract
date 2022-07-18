@@ -136,12 +136,11 @@ static void horizontal_coutline_projection( // project outlines
   ICOORD pos;        // current point
   ICOORD step;       // edge step
   int32_t length;    // of outline
-  int16_t stepindex; // current step
   C_OUTLINE_IT out_it = outline->child();
 
   pos = outline->start_pos();
   length = outline->pathlength();
-  for (stepindex = 0; stepindex < length; stepindex++) {
+  for (int32_t stepindex = 0; stepindex < length; stepindex++) {
     step = outline->step(stepindex);
     if (step.y() > 0) {
       stats->add(pos.y(), pos.x());
