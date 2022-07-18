@@ -283,7 +283,6 @@ void Textord::row_spacing_stats(TO_ROW *row, GAPMAP *gapmap, int16_t block_idx, 
   int16_t gap_width;
   int16_t real_space_threshold = 0;
   int16_t max = 0;
-  int16_t index;
   int16_t large_gap_count = 0;
   bool suspected_table;
   int32_t max_max_nonspace; // upper bound
@@ -483,7 +482,7 @@ number of samples can be taken as certain kerns.
 
     // default
     row->max_nonspace = max_max_nonspace;
-    for (index = 0; index <= max_max_nonspace; index++) {
+    for (int32_t index = 0; index <= max_max_nonspace; index++) {
       if (all_gap_stats.pile_count(index) > max) {
         max = all_gap_stats.pile_count(index);
       }
