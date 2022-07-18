@@ -110,9 +110,9 @@ ColumnFinder::~ColumnFinder() {
 #endif
   nontext_map_.destroy();
   while (denorm_ != nullptr) {
-    DENORM *dead_denorm = denorm_;
-    denorm_ = const_cast<DENORM *>(denorm_->predecessor());
-    delete dead_denorm;
+    auto *predecessor = const_cast<DENORM *>(denorm_->predecessor());
+    delete denorm_;
+    denorm_ = predecessor;
   }
 
   // The ColPartitions are destroyed automatically, but any boxes in
