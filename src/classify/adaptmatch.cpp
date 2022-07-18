@@ -1958,6 +1958,7 @@ void Classify::RemoveBadMatches(ADAPT_RESULTS *Results) {
       if (match.rating >= BadMatchThreshold) {
         if (!unicharset.get_isalpha(match.unichar_id) ||
             strstr(romans, unicharset.id_to_unichar(match.unichar_id)) != nullptr) {
+          // Do nothing here for roman numbers.
         } else if (unicharset.eq(match.unichar_id, "l") && scored_one < BadMatchThreshold) {
           Results->match[Next].unichar_id = unichar_id_one;
         } else if (unicharset.eq(match.unichar_id, "O") && scored_zero < BadMatchThreshold) {
