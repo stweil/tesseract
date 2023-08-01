@@ -89,7 +89,7 @@ void CLIST::assign_to_sublist( // to this list
   constexpr ERRCODE LIST_NOT_EMPTY("Destination list must be empty before extracting a sublist");
 
   if (!empty()) {
-    LIST_NOT_EMPTY.error("CLIST.assign_to_sublist", ABORT);
+    LIST_NOT_EMPTY.abort("CLIST.assign_to_sublist");
   }
 
   last = start_it->extract_sublist(end_it);
@@ -246,11 +246,11 @@ void *CLIST_ITERATOR::data_relative( // get data + or - ...
 
 #ifndef NDEBUG
   if (!list)
-    NO_LIST.error("CLIST_ITERATOR::data_relative", ABORT);
+    NO_LIST.abort("CLIST_ITERATOR::data_relative");
   if (list->empty())
-    EMPTY_LIST.error("CLIST_ITERATOR::data_relative", ABORT);
+    EMPTY_LIST.abort("CLIST_ITERATOR::data_relative");
   if (offset < -1)
-    BAD_PARAMETER.error("CLIST_ITERATOR::data_relative", ABORT, "offset < -l");
+    BAD_PARAMETER.abort("CLIST_ITERATOR::data_relative", "offset < -l");
 #endif
 
   if (offset == -1) {
@@ -308,7 +308,7 @@ link */
   /* Error if either current element is deleted */
 
   if (!current || !other_it->current) {
-    DONT_EXCHANGE_DELETED.error("CLIST_ITERATOR.exchange", ABORT);
+    DONT_EXCHANGE_DELETED.abort("CLIST_ITERATOR.exchange");
   }
 
   /* Now handle the 4 cases: doubleton list; non-doubleton adjacent elements
@@ -389,12 +389,12 @@ CLIST_LINK *CLIST_ITERATOR::extract_sublist( // from this current
   constexpr ERRCODE DONT_EXTRACT_DELETED("Can't extract a sublist marked by deleted points");
 
   if (list != other_it->list)
-    BAD_EXTRACTION_PTS.error("CLIST_ITERATOR.extract_sublist", ABORT);
+    BAD_EXTRACTION_PTS.abort("CLIST_ITERATOR.extract_sublist");
   if (list->empty())
-    EMPTY_LIST.error("CLIST_ITERATOR::extract_sublist", ABORT);
+    EMPTY_LIST.abort("CLIST_ITERATOR::extract_sublist");
 
   if (!current || !other_it->current)
-    DONT_EXTRACT_DELETED.error("CLIST_ITERATOR.extract_sublist", ABORT);
+    DONT_EXTRACT_DELETED.abort("CLIST_ITERATOR.extract_sublist");
 #endif
 
   ex_current_was_last = other_it->ex_current_was_last = false;
@@ -404,7 +404,7 @@ CLIST_LINK *CLIST_ITERATOR::extract_sublist( // from this current
   temp_it.mark_cycle_pt();
   do {                         // walk sublist
     if (temp_it.cycled_list()) { // can't find end pt
-      BAD_SUBLIST.error("CLIST_ITERATOR.extract_sublist", ABORT);
+      BAD_SUBLIST.abort("CLIST_ITERATOR.extract_sublist");
     }
 
     if (temp_it.at_last()) {

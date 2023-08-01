@@ -231,10 +231,10 @@ public:
   ELIST_LINK *data() { // get current data
 #ifndef NDEBUG
     if (!list) {
-      NO_LIST.error("ELIST_ITERATOR::data", ABORT);
+      NO_LIST.abort("ELIST_ITERATOR::data");
     }
     if (!current) {
-      NULL_DATA.error("ELIST_ITERATOR::data", ABORT);
+      NULL_DATA.abort("ELIST_ITERATOR::data");
     }
 #endif
     return current;
@@ -256,7 +256,7 @@ public:
   bool empty() const { // is list empty?
 #ifndef NDEBUG
     if (!list) {
-      NO_LIST.error("ELIST_ITERATOR::empty", ABORT);
+      NO_LIST.abort("ELIST_ITERATOR::empty");
     }
 #endif
     return list->empty();
@@ -299,7 +299,7 @@ inline void ELIST_ITERATOR::set_to_list( // change list
     ELIST *list_to_iterate) {
 #ifndef NDEBUG
   if (!list_to_iterate) {
-    BAD_PARAMETER.error("ELIST_ITERATOR::set_to_list", ABORT, "list_to_iterate is nullptr");
+    BAD_PARAMETER.abort("ELIST_ITERATOR::set_to_list", "list_to_iterate is nullptr");
   }
 #endif
 
@@ -334,13 +334,13 @@ inline void ELIST_ITERATOR::add_after_then_move( // element to add
     ELIST_LINK *new_element) {
 #ifndef NDEBUG
   if (!list) {
-    NO_LIST.error("ELIST_ITERATOR::add_after_then_move", ABORT);
+    NO_LIST.abort("ELIST_ITERATOR::add_after_then_move");
   }
   if (!new_element) {
-    BAD_PARAMETER.error("ELIST_ITERATOR::add_after_then_move", ABORT, "new_element is nullptr");
+    BAD_PARAMETER.abort("ELIST_ITERATOR::add_after_then_move", "new_element is nullptr");
   }
   if (new_element->next) {
-    STILL_LINKED.error("ELIST_ITERATOR::add_after_then_move", ABORT);
+    STILL_LINKED.abort("ELIST_ITERATOR::add_after_then_move");
   }
 #endif
 
@@ -381,13 +381,13 @@ inline void ELIST_ITERATOR::add_after_stay_put( // element to add
     ELIST_LINK *new_element) {
 #ifndef NDEBUG
   if (!list) {
-    NO_LIST.error("ELIST_ITERATOR::add_after_stay_put", ABORT);
+    NO_LIST.abort("ELIST_ITERATOR::add_after_stay_put");
   }
   if (!new_element) {
-    BAD_PARAMETER.error("ELIST_ITERATOR::add_after_stay_put", ABORT, "new_element is nullptr");
+    BAD_PARAMETER.abort("ELIST_ITERATOR::add_after_stay_put", "new_element is nullptr");
   }
   if (new_element->next) {
-    STILL_LINKED.error("ELIST_ITERATOR::add_after_stay_put", ABORT);
+    STILL_LINKED.abort("ELIST_ITERATOR::add_after_stay_put");
   }
 #endif
 
@@ -430,13 +430,13 @@ inline void ELIST_ITERATOR::add_before_then_move( // element to add
     ELIST_LINK *new_element) {
 #ifndef NDEBUG
   if (!list) {
-    NO_LIST.error("ELIST_ITERATOR::add_before_then_move", ABORT);
+    NO_LIST.abort("ELIST_ITERATOR::add_before_then_move");
   }
   if (!new_element) {
-    BAD_PARAMETER.error("ELIST_ITERATOR::add_before_then_move", ABORT, "new_element is nullptr");
+    BAD_PARAMETER.abort("ELIST_ITERATOR::add_before_then_move", "new_element is nullptr");
   }
   if (new_element->next) {
-    STILL_LINKED.error("ELIST_ITERATOR::add_before_then_move", ABORT);
+    STILL_LINKED.abort("ELIST_ITERATOR::add_before_then_move");
   }
 #endif
 
@@ -473,13 +473,13 @@ inline void ELIST_ITERATOR::add_before_stay_put( // element to add
     ELIST_LINK *new_element) {
 #ifndef NDEBUG
   if (!list) {
-    NO_LIST.error("ELIST_ITERATOR::add_before_stay_put", ABORT);
+    NO_LIST.abort("ELIST_ITERATOR::add_before_stay_put");
   }
   if (!new_element) {
-    BAD_PARAMETER.error("ELIST_ITERATOR::add_before_stay_put", ABORT, "new_element is nullptr");
+    BAD_PARAMETER.abort("ELIST_ITERATOR::add_before_stay_put", "new_element is nullptr");
   }
   if (new_element->next) {
-    STILL_LINKED.error("ELIST_ITERATOR::add_before_stay_put", ABORT);
+    STILL_LINKED.abort("ELIST_ITERATOR::add_before_stay_put");
   }
 #endif
 
@@ -517,10 +517,10 @@ inline void ELIST_ITERATOR::add_before_stay_put( // element to add
 inline void ELIST_ITERATOR::add_list_after(ELIST *list_to_add) {
 #ifndef NDEBUG
   if (!list) {
-    NO_LIST.error("ELIST_ITERATOR::add_list_after", ABORT);
+    NO_LIST.abort("ELIST_ITERATOR::add_list_after");
   }
   if (!list_to_add) {
-    BAD_PARAMETER.error("ELIST_ITERATOR::add_list_after", ABORT, "list_to_add is nullptr");
+    BAD_PARAMETER.abort("ELIST_ITERATOR::add_list_after", "list_to_add is nullptr");
   }
 #endif
 
@@ -564,10 +564,10 @@ inline void ELIST_ITERATOR::add_list_after(ELIST *list_to_add) {
 inline void ELIST_ITERATOR::add_list_before(ELIST *list_to_add) {
 #ifndef NDEBUG
   if (!list) {
-    NO_LIST.error("ELIST_ITERATOR::add_list_before", ABORT);
+    NO_LIST.abort("ELIST_ITERATOR::add_list_before");
   }
   if (!list_to_add) {
-    BAD_PARAMETER.error("ELIST_ITERATOR::add_list_before", ABORT, "list_to_add is nullptr");
+    BAD_PARAMETER.abort("ELIST_ITERATOR::add_list_before", "list_to_add is nullptr");
   }
 #endif
 
@@ -612,11 +612,11 @@ inline ELIST_LINK *ELIST_ITERATOR::extract() {
 
 #ifndef NDEBUG
   if (!list) {
-    NO_LIST.error("ELIST_ITERATOR::extract", ABORT);
+    NO_LIST.abort("ELIST_ITERATOR::extract");
   }
   if (!current) { // list empty or
                   // element extracted
-    NULL_CURRENT.error("ELIST_ITERATOR::extract", ABORT);
+    NULL_CURRENT.abort("ELIST_ITERATOR::extract");
   }
 #endif
 
@@ -649,7 +649,7 @@ inline ELIST_LINK *ELIST_ITERATOR::extract() {
 inline ELIST_LINK *ELIST_ITERATOR::move_to_first() {
 #ifndef NDEBUG
   if (!list) {
-    NO_LIST.error("ELIST_ITERATOR::move_to_first", ABORT);
+    NO_LIST.abort("ELIST_ITERATOR::move_to_first");
   }
 #endif
 
@@ -673,7 +673,7 @@ inline ELIST_LINK *ELIST_ITERATOR::move_to_first() {
 inline void ELIST_ITERATOR::mark_cycle_pt() {
 #ifndef NDEBUG
   if (!list) {
-    NO_LIST.error("ELIST_ITERATOR::mark_cycle_pt", ABORT);
+    NO_LIST.abort("ELIST_ITERATOR::mark_cycle_pt");
   }
 #endif
 
@@ -695,7 +695,7 @@ inline void ELIST_ITERATOR::mark_cycle_pt() {
 inline bool ELIST_ITERATOR::at_first() const {
 #ifndef NDEBUG
   if (!list) {
-    NO_LIST.error("ELIST_ITERATOR::at_first", ABORT);
+    NO_LIST.abort("ELIST_ITERATOR::at_first");
   }
 #endif
 
@@ -715,7 +715,7 @@ inline bool ELIST_ITERATOR::at_first() const {
 inline bool ELIST_ITERATOR::at_last() const {
 #ifndef NDEBUG
   if (!list) {
-    NO_LIST.error("ELIST_ITERATOR::at_last", ABORT);
+    NO_LIST.abort("ELIST_ITERATOR::at_last");
   }
 #endif
 
@@ -735,7 +735,7 @@ inline bool ELIST_ITERATOR::at_last() const {
 inline bool ELIST_ITERATOR::cycled_list() const {
 #ifndef NDEBUG
   if (!list) {
-    NO_LIST.error("ELIST_ITERATOR::cycled_list", ABORT);
+    NO_LIST.abort("ELIST_ITERATOR::cycled_list");
   }
 #endif
 
@@ -754,7 +754,7 @@ inline void ELIST_ITERATOR::sort( // sort elements
         const void *, const void *)) {
 #ifndef NDEBUG
   if (!list) {
-    NO_LIST.error("ELIST_ITERATOR::sort", ABORT);
+    NO_LIST.abort("ELIST_ITERATOR::sort");
   }
 #endif
 
@@ -776,13 +776,13 @@ inline void ELIST_ITERATOR::add_to_end( // element to add
     ELIST_LINK *new_element) {
 #ifndef NDEBUG
   if (!list) {
-    NO_LIST.error("ELIST_ITERATOR::add_to_end", ABORT);
+    NO_LIST.abort("ELIST_ITERATOR::add_to_end");
   }
   if (!new_element) {
-    BAD_PARAMETER.error("ELIST_ITERATOR::add_to_end", ABORT, "new_element is nullptr");
+    BAD_PARAMETER.abort("ELIST_ITERATOR::add_to_end", "new_element is nullptr");
   }
   if (new_element->next) {
-    STILL_LINKED.error("ELIST_ITERATOR::add_to_end", ABORT);
+    STILL_LINKED.abort("ELIST_ITERATOR::add_to_end");
   }
 #endif
 
