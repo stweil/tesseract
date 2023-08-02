@@ -832,7 +832,7 @@ void ColumnFinder::ShrinkRangeToLongestRun(int **column_set_costs, const int *as
   int best_range_size = 0;
   *best_start = orig_end;
   *best_end = orig_end;
-  int end = orig_end;
+  int end;
   for (int start = orig_start; start < orig_end; start = end) {
     // Find the first possible
     while (start < orig_end) {

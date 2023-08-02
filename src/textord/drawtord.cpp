@@ -241,7 +241,6 @@ void plot_word_decisions( // draw words
     TO_ROW *row           // row to draw
 ) {
   ScrollView::Color colour = ScrollView::MAGENTA; // current colour
-  ScrollView::Color rect_colour;                  // fuzzy colour
   int32_t prev_x;                                 // end of prev blob
   int16_t blob_count;                             // blobs in word
   BLOBNBOX *blob;                                 // current blob
@@ -250,7 +249,6 @@ void plot_word_decisions( // draw words
   BLOBNBOX_IT blob_it = row->blob_list();
   BLOBNBOX_IT start_it = blob_it; // word start
 
-  rect_colour = ScrollView::BLACK;
   prev_x = -INT16_MAX;
   blob_count = 0;
   for (blob_it.mark_cycle_pt(); !blob_it.cycled_list(); blob_it.forward()) {
@@ -274,6 +272,7 @@ void plot_word_decisions( // draw words
         colour = static_cast<ScrollView::Color>(colour + 1);
       }
       if (blob_box.left() - prev_x < row->min_space) {
+        ScrollView::Color rect_colour; // fuzzy colour
         if (blob_box.left() - prev_x > row->space_threshold) {
           rect_colour = ScrollView::GOLDENROD;
         } else {
