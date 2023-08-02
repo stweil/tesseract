@@ -343,7 +343,7 @@ void Classify::LearnWord(const char *fontname, WERD_RES *word) {
 
       // TODO(rays): re-enable this part of the code when we switch to the
       // new classifier that needs to see examples of garbage.
-      /*
+#if 0
 if (word->best_state[ch] > 1) {
   // If the next blob is good, make junk with the rightmost fragment.
   if (ch + 1 < word_len && word->correct_text[ch + 1].length() > 0) {
@@ -366,7 +366,7 @@ if (ch + 1 < word_len && word->correct_text[ch + 1].length() > 0) {
               word->best_state[ch] + word->best_state[ch + 1],
               threshold, CST_NGRAM, joined_text.c_str(), word);
 }
-*/
+#endif
     }
     start_blob += word->best_state[ch];
   }
