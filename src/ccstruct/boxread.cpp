@@ -161,12 +161,11 @@ bool ReadNextBox(int target_page, int *line_number, FILE *box_file, std::string 
                  TBOX *bounding_box) {
   int page = 0;
   char buff[kBoxReadBufSize]; // boxfile read buffer
-  char *buffptr = buff;
 
   while (fgets(buff, sizeof(buff) - 1, box_file)) {
     (*line_number)++;
 
-    buffptr = buff;
+    char *buffptr = buff;
     const auto *ubuf = reinterpret_cast<const unsigned char *>(buffptr);
     if (ubuf[0] == 0xef && ubuf[1] == 0xbb && ubuf[2] == 0xbf) {
       buffptr += 3; // Skip unicode file designation.

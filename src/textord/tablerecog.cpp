@@ -855,7 +855,6 @@ bool TableRecognizer::FindLinesBoundingBox(TBOX *bounding_box) {
   // The box can only get bigger, increasing area.
   bool changed = true;
   while (changed) {
-    changed = false;
     int old_area = bounding_box->area();
     bool check = FindLinesBoundingBoxIteration(bounding_box);
     // At this point, the function will return true.

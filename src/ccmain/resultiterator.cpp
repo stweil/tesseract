@@ -512,7 +512,6 @@ bool ResultIterator::Next(PageIteratorLevel level) {
         at_beginning_of_minor_run_ = false;
         return true;
       }
-      level = RIL_WORD; // we've fallen through to the next word.
     }
       // Fall through.
     case RIL_WORD: // explicit fall-through.

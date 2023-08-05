@@ -438,7 +438,7 @@ bool TabFind::FindTabVectors(TabVector_LIST *hlines, BLOBNBOX_LIST *image_blobs,
     tab_win = MakeWindow(640, 50, "FinalTabs");
     DisplayBoxes(tab_win);
     DisplayTabs("FinalTabs", tab_win);
-    tab_win = DisplayTabVectors(tab_win);
+    DisplayTabVectors(tab_win);
   }
 #endif // !GRAPHICS_DISABLED
   return true;
@@ -514,7 +514,7 @@ ScrollView *TabFind::FindInitialTabVectors(BLOBNBOX_LIST *image_blobs, int min_g
 #ifndef GRAPHICS_DISABLED
   if (textord_tabfind_show_initialtabs) {
     ScrollView *line_win = MakeWindow(0, 0, "VerticalLines");
-    line_win = DisplayTabVectors(line_win);
+    DisplayTabVectors(line_win);
   }
 #endif
   // Prepare the grid.

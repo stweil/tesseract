@@ -470,7 +470,6 @@ void ScriptDetector::detect_blob(BLOB_CHOICE_LIST *scores) {
     int prev_id = -1;
     int prev_fontinfo_id = -1;
     const char *prev_unichar = "";
-    const char *unichar = "";
 
     for (choice_it.mark_cycle_pt(); !choice_it.cycled_list(); choice_it.forward()) {
       BLOB_CHOICE *choice = choice_it.data();
@@ -493,7 +492,7 @@ void ScriptDetector::detect_blob(BLOB_CHOICE_LIST *scores) {
       }
       done[id] = true;
 
-      unichar = tess_->unicharset.id_to_unichar(choice->unichar_id());
+      const char *unichar = tess_->unicharset.id_to_unichar(choice->unichar_id());
       // Save data from the first match
       if (prev_score < 0) {
         prev_score = -choice->certainty();

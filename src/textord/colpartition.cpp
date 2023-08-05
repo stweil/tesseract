@@ -2543,7 +2543,6 @@ void ColPartition::LeftEdgeRun(ColPartition_IT *part_it, ICOORD *start,
       start_y = (start_y + prev_bottom) / 2;
     }
   }
-  int end_y = part->bounding_box_.bottom();
   int margin_right = INT32_MAX;
   int margin_left = -INT32_MAX;
   UpdateLeftMargin(*part, &margin_left, &margin_right);
@@ -2576,7 +2575,7 @@ void ColPartition::LeftEdgeRun(ColPartition_IT *part_it, ICOORD *start,
   }
   // Now calculate the end_y.
   part = part_it->data_relative(-1);
-  end_y = part->bounding_box_.bottom();
+  int end_y = part->bounding_box_.bottom();
   if (!part_it->at_first() && part_it->data()->bounding_box_.top() < end_y) {
     end_y = (end_y + part_it->data()->bounding_box_.top()) / 2;
   }
@@ -2633,7 +2632,6 @@ void ColPartition::RightEdgeRun(ColPartition_IT *part_it, ICOORD *start,
       start_y = (start_y + next_y) / 2;
     }
   }
-  int end_y = part->bounding_box_.top();
   int margin_right = INT32_MAX;
   int margin_left = -INT32_MAX;
   UpdateRightMargin(*part, &margin_left, &margin_right);
@@ -2665,7 +2663,7 @@ void ColPartition::RightEdgeRun(ColPartition_IT *part_it, ICOORD *start,
   }
   // Now calculate the end_y.
   part = part_it->data_relative(1);
-  end_y = part->bounding_box().top();
+  int end_y = part->bounding_box().top();
   if (!part_it->at_last() && part_it->data()->bounding_box_.bottom() > end_y) {
     end_y = (end_y + part_it->data()->bounding_box_.bottom()) / 2;
   }

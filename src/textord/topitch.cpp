@@ -989,7 +989,7 @@ bool fixed_pitch_row(TO_ROW *row, // row to do
         res_string = "MF";
         break;
       default:
-        res_string = "??";
+        ;
     }
     tprintf(":sd/p=%g:occ=%g:init_res=%s\n", pitch_sd / row->fixed_pitch, sp_sd, res_string);
   }

@@ -400,7 +400,6 @@ are ignoring big gaps*/
       row->space_size = std::max(row->space_threshold + 1.0f, row->xheight);
     }
   } else if (tosp_sanity_method == 1) {
-    sane_space = row->space_size;
     /* NEVER let space size get too close to kern size */
     if ((row->space_size < tosp_min_sane_kn_sp * std::max(row->kern_size, 2.5f)) ||
         ((row->space_size - row->kern_size) < (tosp_silly_kn_sp_gap * row->xheight))) {

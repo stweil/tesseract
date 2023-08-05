@@ -69,7 +69,7 @@ bool Dict::AcceptableChoice(const WERD_CHOICE &best_choice,
         xht = "INCONSISTENT";
         break;
       default:
-        xht = "UNKNOWN";
+        ;
     }
     tprintf("\nStopper:  %s (word=%c, case=%c, xht_ok=%s=[%g,%g])\n",
             best_choice.unichar_string().c_str(), (is_valid_word ? 'y' : 'n'),

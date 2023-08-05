@@ -890,7 +890,7 @@ LanguageModelNgramInfo *LanguageModel::GenerateNgramInfo(const char *unichar, fl
                                                          float outline_length,
                                                          const ViterbiStateEntry *parent_vse) {
   // Initialize parent context.
-  const char *pcontext_ptr = "";
+  const char *pcontext_ptr;
   int pcontext_unichar_step_len = 0;
   if (parent_vse == nullptr) {
     pcontext_ptr = prev_word_str_.c_str();
