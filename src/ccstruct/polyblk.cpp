@@ -358,9 +358,12 @@ ICOORDELT_LIST *PB_LINE_IT::get_line(TDimension y) {
 
   if (!r.empty()) {
     r.sort(lessthan);
+    // TODO: remove loop after checking its history.
+#if 0
     for (r.mark_cycle_pt(); !r.cycled_list(); r.forward()) {
       x = r.data();
     }
+#endif
     for (r.mark_cycle_pt(); !r.cycled_list(); r.forward()) {
       r.data()->set_y(r.data_relative(1)->x() - r.data()->x());
       r.forward();
