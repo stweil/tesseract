@@ -208,13 +208,20 @@ public:
   // and top-right corners. Use rotate_large if you want to guarantee
   // that all content is contained within the rotated box.
   void rotate(const FCOORD &vec) { // by vector
+#if 0
     ICOORD top_left(bot_left.x(), top_right.y());
     bot_left -= top_left;
     top_right -= top_left;
+#endif
+    tprintf("before: "); print();
     bot_left.rotate(vec);
     top_right.rotate(vec);
+    *this = TBOX(bot_left, top_right);
+    tprintf("after:  "); print();
+#if 0
     bot_left += top_left;
     top_right += top_left;
+#endif
   }
   // rotate_large constructs the containing bounding box of all 4
   // corners after rotating them. It therefore guarantees that all
@@ -297,6 +304,7 @@ public:
   void print_to_str(std::string &str) const;
 
 #ifndef GRAPHICS_DISABLED
+#if 1
   void plot(                  // use current settings
       ScrollView *fd) const { // where to paint
     fd->Rectangle(bot_left.x(), bot_left.y(), top_right.x(), top_right.y());
@@ -306,6 +314,7 @@ public:
       ScrollView *fd,                         // where to paint
       ScrollView::Color fill_colour,          // colour for inside
       ScrollView::Color border_colour) const; // colour for border
+#endif
 #endif
   // Writes to the given file. Returns false in case of error.
   bool Serialize(FILE *fp) const;
