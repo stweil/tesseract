@@ -338,7 +338,6 @@ static void PrintLangsList(tesseract::TessBaseAPI &api) {
   for (const auto &language : languages) {
     printf("%s\n", language.c_str());
   }
-  api.End();
 }
 
 /**
@@ -713,6 +712,7 @@ int main(int argc, char **argv) {
 
   if (list_langs) {
     PrintLangsList(api);
+    api.End();
     return EXIT_SUCCESS;
   }
 
