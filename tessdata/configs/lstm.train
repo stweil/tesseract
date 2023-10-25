@@ -1,4 +1,3 @@
-file_type                   .bl
 textord_fast_pitch_test	T
 tessedit_zero_rejection T
 tessedit_minimal_rejection F
