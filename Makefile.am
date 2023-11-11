@@ -1160,6 +1160,7 @@ unittest_CPPFLAGS += -DTESS_PANGO_TRAINING_API=
 unittest_CPPFLAGS += -DTESS_UNICHARSET_TRAINING_API=
 unittest_CPPFLAGS += -I$(top_builddir)/include
 unittest_CPPFLAGS += -I$(top_srcdir)/include
+unittest_CPPFLAGS += -I$(top_srcdir)/src/fmt/include
 unittest_CPPFLAGS += -I$(top_srcdir)/src/arch
 unittest_CPPFLAGS += -I$(top_srcdir)/src/ccmain
 unittest_CPPFLAGS += -I$(top_srcdir)/src/ccstruct
