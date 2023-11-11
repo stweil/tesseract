@@ -34,7 +34,7 @@ extern TESS_API void vTessPrint(fmt::string_view format, fmt::format_args args);
 // Main logging function.
 template <typename S, typename... Args>
 void tprintf(const S *format, Args &&...args) {
-  vTessPrint(format, fmt::make_args_checked<Args...>(format, args...));
+  vTessPrint(format, fmt::make_format_args(args...));
 }
 
 } // namespace tesseract

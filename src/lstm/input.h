@@ -95,7 +95,7 @@ public:
 
 private:
   void DebugWeights() override {
-    tprintf("Must override Network::DebugWeights for type %d\n", type_);
+    tprintf("Must override Network::DebugWeights for type {}\n", type_);
   }
 
   // Input shape determines how images are dealt with.

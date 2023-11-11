@@ -244,7 +244,8 @@ bool ParseBoxFileStr(const char *boxfile_str, int *page_number, std::string &utf
   stream >> y_max;
   stream >> *page_number;
   if (x_max < x_min || y_max < y_min) {
-    tprintf("Bad box coordinates in boxfile string! %s\n", ubuf);
+    tprintf("Bad box coordinates in boxfile string! {}\n",
+            reinterpret_cast<const char *>(ubuf));
     return false;
   }
   // Test for long space-delimited string label.

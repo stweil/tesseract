@@ -500,8 +500,8 @@ BLOBNBOX *AlignedBlob::FindAlignedBlob(const AlignedBlobParams &p, bool top_to_b
       // Aligned so keep it. If it is a marked tab save it as result,
       // otherwise keep it as backup_result to return in case of later failure.
       if (WithinTestRegion(2, x_start, start_y)) {
-        tprintf("aligned, seeking%d, l=%d, r=%d\n", p.right_tab, neighbour->left_tab_type(),
-                neighbour->right_tab_type());
+        tprintf("aligned, seeking{}, l={}, r={}\n", p.right_tab,
+                neighbour->left_tab_type(), neighbour->right_tab_type());
       }
       TabType n_type = p.right_tab ? neighbour->right_tab_type() : neighbour->left_tab_type();
       if (n_type != TT_NONE && (p.ragged || n_type != TT_MAYBE_RAGGED)) {

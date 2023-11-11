@@ -628,6 +628,22 @@ static void PreloadRenderers(tesseract::TessBaseAPI &api,
   }
 }
 
+namespace tesseract {
+
+static inline auto format_as(Orientation o) {
+  return fmt::underlying(o);
+}
+
+static inline auto format_as(TextlineOrder o) {
+  return fmt::underlying(o);
+}
+
+static inline auto format_as(WritingDirection d) {
+  return fmt::underlying(d);
+}
+
+}
+
 /**********************************************************************
  *  main()
  *
@@ -768,7 +784,7 @@ int main(int argc, char **argv) {
       // ("Automatic page segmentation, but no OSD, or OCR").
       it->Orientation(&orientation, &direction, &order, &deskew_angle);
       tprintf(
-          "Orientation: %d\nWritingDirection: %d\nTextlineOrder: %d\n"
+          "Orientation: {}\nWritingDirection: {}\nTextlineOrder: {}\n"
           "Deskew angle: %.4f\n",
           orientation, direction, order, deskew_angle);
     } else {

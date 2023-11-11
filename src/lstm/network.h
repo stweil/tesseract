@@ -78,6 +78,10 @@ enum NetworkType {
   NT_COUNT // Array size.
 };
 
+static inline auto format_as(NetworkType t) {
+  return fmt::underlying(t);
+}
+
 // Enum of Network behavior flags. Can in theory be set for each individual
 // network element.
 enum NetworkFlags {

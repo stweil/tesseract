@@ -52,6 +52,10 @@ enum LineType {
   LT_MULTIPLE = 'M', // Matches for both LT_START and LT_BODY.
 };
 
+static inline auto format_as(LineType t) {
+  return fmt::underlying(t);
+}
+
 // The first paragraph in a page of body text is often un-indented.
 // This is a typographic convention which is common to indicate either that:
 // (1) The paragraph is the continuation of a previous paragraph, or

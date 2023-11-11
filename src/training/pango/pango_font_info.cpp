@@ -500,8 +500,9 @@ bool FontUtils::IsAvailableFont(const char *input_query_desc, std::string *best_
   PangoFontDescription *selected_desc = pango_font_describe(selected_font);
 
   bool equal = pango_font_description_equal(desc, selected_desc);
-  tlog(3, "query weight = %d \t selected weight =%d\n", pango_font_description_get_weight(desc),
-       pango_font_description_get_weight(selected_desc));
+  tlog(3, "query weight = {} \t selected weight ={}\n",
+       static_cast<int>(pango_font_description_get_weight(desc)),
+       static_cast<int>(pango_font_description_get_weight(selected_desc)));
 
   char *selected_desc_str = pango_font_description_to_string(selected_desc);
   tlog(2, "query_desc: '%s' Selected: '%s'\n", query_desc.c_str(), selected_desc_str);

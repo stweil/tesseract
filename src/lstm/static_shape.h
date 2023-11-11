@@ -2,7 +2,6 @@
 // File:        static_shape.h
 // Description: Defines the size of the 4-d tensor input/output from a network.
 // Author:      Ray Smith
-// Created:     Fri Oct 14 09:07:31 PST 2016
 //
 // (C) Copyright 2016, Google Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,6 +31,10 @@ enum LossType {
   LT_SOFTMAX,  // Outputs sum to 1 in fixed positions.
   LT_LOGISTIC, // Logistic outputs with independent values.
 };
+
+static inline auto format_as(LossType t) {
+  return fmt::underlying(t);
+}
 
 // Simple class to hold the tensor shape that is known at network build time
 // and the LossType of the loss function.

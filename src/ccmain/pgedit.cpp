@@ -80,6 +80,10 @@ enum CMD_EVENTS {
   SHOW_DROPCAPS_CMD_EVENT,
 };
 
+static inline auto format_as(CMD_EVENTS e) {
+  return fmt::underlying(e);
+}
+
 enum ColorationMode {
   CM_RAINBOW,
   CM_SUBSCRIPT,

@@ -53,6 +53,10 @@ enum BlobChoiceClassifier {
   BCC_FAKE,               // From some other process.
 };
 
+static inline auto format_as(BlobChoiceClassifier c) {
+  return fmt::underlying(c);
+}
+
 class BLOB_CHOICE : public ELIST_LINK {
 public:
   BLOB_CHOICE() {
@@ -177,11 +181,13 @@ public:
             static_cast<double>(max_xheight_),
             unichar_id_, (unicharset == nullptr) ? "" : unicharset->debug_str(unichar_id_).c_str());
   }
+
   void print_full() const {
     print(nullptr);
-    tprintf(" script=%d, font1=%d, font2=%d, yshift=%g, classifier=%d\n", script_id_, fontinfo_id_,
-            fontinfo_id2_, static_cast<double>(yshift_), classifier_);
+    tprintf(" script={}, font1={}, font2={}, yshift={}, classifier={}\n",
+            script_id_, fontinfo_id_, fontinfo_id2_, yshift_, classifier_);
   }
+
   // Sort function for sorting BLOB_CHOICEs in increasing order of rating.
   static int SortByRating(const void *p1, const void *p2) {
     const BLOB_CHOICE *bc1 = *static_cast<const BLOB_CHOICE *const *>(p1);
@@ -249,6 +255,10 @@ enum PermuterType {
 
   NUM_PERMUTER_TYPES
 };
+
+static inline auto format_as(PermuterType pt) {
+  return fmt::underlying(pt);
+}
 
 // ScriptPos tells whether a character is subscript, superscript or normal.
 enum ScriptPos { SP_NORMAL, SP_SUBSCRIPT, SP_SUPERSCRIPT, SP_DROPCAP };
