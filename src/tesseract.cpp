@@ -531,7 +531,7 @@ static void PreloadRenderers(tesseract::TessBaseAPI &api,
       }
     }
 
-    api.GetBoolVariable("tessedit_create_page", &b);
+    api.GetBoolVariable("tessedit_create_page_xml", &b);
     if (b) {
       auto renderer = std::make_unique<tesseract::TessPAGERenderer>(outputbase);
       if (renderer->happy()) {
