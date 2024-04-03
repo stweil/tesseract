@@ -435,6 +435,7 @@ dnl **********************
 CPLUSPLUS=
 AX_CHECK_COMPILE_FLAG([-std=c++17], [CPLUSPLUS=17], [], [$WERROR])
 AX_CHECK_COMPILE_FLAG([-std=c++20], [CPLUSPLUS=20], [], [$WERROR])
+AX_CHECK_COMPILE_FLAG([-std=c++23], [CPLUSPLUS=23], [], [$WERROR])
 
 if test -z "$CPLUSPLUS"; then
   AC_MSG_ERROR([Your compiler does not have the necessary C++17 support! Cannot proceed.])

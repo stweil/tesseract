@@ -24,7 +24,7 @@ namespace tesseract {
 // Documentation:
 // https://developer.arm.com/architectures/instruction-sets/intrinsics/
 
-#if defined(FAST_FLOAT) && defined(__ARM_ARCH_ISA_A64)
+#if defined(FAST_FLOAT) && defined(__ARM_ARCH_ISA_A64) && !defined(TFLOAT)
 
 float DotProductNEON(const float *u, const float *v, int n) {
   float32x4_t result0123 = vdupq_n_f32(0.0f);

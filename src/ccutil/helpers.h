@@ -32,6 +32,7 @@
 #include <vector>
 
 #include "serialis.h"
+#include "tesstypes.h" // for TFloat
 
 namespace tesseract {
 
@@ -179,6 +180,13 @@ inline int IntCastRounded(float x) {
   assert(std::isfinite(x));
   return x >= 0.0F ? static_cast<int>(x + 0.5F) : -static_cast<int>(-x + 0.5F);
 }
+
+#if defined(TFLOAT)
+inline int IntCastRounded(TFloat x) {
+  //assert(std::isfinite(x));
+  return x >= 0.0F ? static_cast<int>(x + 0.5F) : -static_cast<int>(-x + 0.5F);
+}
+#endif
 
 // Reverse the order of bytes in a n byte quantity for big/little-endian switch.
 inline void ReverseN(void *ptr, int num_bytes) {

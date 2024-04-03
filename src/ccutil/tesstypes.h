@@ -33,9 +33,24 @@ using TDimension = int16_t;
 #endif
 
 // Floating point data type used for LSTM calculations.
-#if defined(FAST_FLOAT)
+#if defined(TFLOAT)
+// Use floating point type which was provided by user.
+using TFloat = TFLOAT;
+
+TFloat fabs(TFloat x);
+TFloat log2(TFloat x);
+TFloat sqrt(TFloat x);
+#if 0
+// only C++ 23
+using TFloat = std::float16;
+using TFloat = float16;
+using TFloat = _Float16;
+#endif
+#elif defined(FAST_FLOAT)
+// Use 32 bit FP.
 using TFloat = float;
 #else
+// Use 64 bit FP.
 using TFloat = double;
 #endif
 

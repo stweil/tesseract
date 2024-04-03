@@ -38,7 +38,7 @@ const TFloat kAdamEpsilon = 1e-8;
 
 // Utility functions convert between double and float arrays.
 #ifdef FAST_FLOAT
-static void DoubleToFloat(const GENERIC_2D_ARRAY<double> &src, GENERIC_2D_ARRAY<float> &dst) {
+static void DoubleToTFloat(const GENERIC_2D_ARRAY<double> &src, GENERIC_2D_ARRAY<TFloat> &dst) {
   const auto dim1 = src.dim1();
   const auto dim2 = src.dim2();
   dst.ResizeNoInit(dim1, dim2);
@@ -46,13 +46,28 @@ static void DoubleToFloat(const GENERIC_2D_ARRAY<double> &src, GENERIC_2D_ARRAY<
     const auto *src_i = src[i];
     auto *dst_i = dst[i];
     for (int j = 0; j < dim2; ++j) {
-      dst_i[j] = static_cast<float>(src_i[j]);
+      dst_i[j] = static_cast<TFloat>(src_i[j]);
     }
   }
 }
 #endif
 
+#if !defined(TFLOAT)
 static void FloatToDouble(const GENERIC_2D_ARRAY<float> &src, GENERIC_2D_ARRAY<double> &dst) {
+  const auto dim1 = src.dim1();
+  const auto dim2 = src.dim2();
+  dst.ResizeNoInit(dim1, dim2);
+  for (int i = 0; i < dim1; ++i) {
+    const auto *src_i = src[i];
+    auto *dst_i = dst[i];
+    for (int j = 0; j < dim2; ++j) {
+      dst_i[j] = static_cast<double>(src_i[j]);
+    }
+  }
+}
+#endif
+
+static void TFloatToDouble(const GENERIC_2D_ARRAY<TFloat> &src, GENERIC_2D_ARRAY<double> &dst) {
   const auto dim1 = src.dim1();
   const auto dim2 = src.dim2();
   dst.ResizeNoInit(dim1, dim2);
@@ -71,7 +86,7 @@ static bool DeSerialize(TFile *fp, GENERIC_2D_ARRAY<TFloat> &tfloat_array) {
   if (!double_array.DeSerialize(fp)) {
     return false;
   }
-  DoubleToFloat(double_array, tfloat_array);
+  DoubleToTFloat(double_array, tfloat_array);
   return true;
 #else
   return tfloat_array.DeSerialize(fp);
@@ -81,7 +96,7 @@ static bool DeSerialize(TFile *fp, GENERIC_2D_ARRAY<TFloat> &tfloat_array) {
 static bool Serialize(TFile *fp, const GENERIC_2D_ARRAY<TFloat> &tfloat_array) {
 #ifdef FAST_FLOAT
   GENERIC_2D_ARRAY<double> double_array;
-  FloatToDouble(tfloat_array, double_array);
+  TFloatToDouble(tfloat_array, double_array);
   return double_array.Serialize(fp);
 #else
   return tfloat_array.Serialize(fp);

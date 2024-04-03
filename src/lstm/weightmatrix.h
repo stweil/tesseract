@@ -37,6 +37,12 @@ public:
   // Writes a vector of data representing a timestep (gradients or sources).
   // The data is assumed to be of size1 in size (the strided dimension).
   ~TransposedArray() override;
+  void WriteStrided(int t, const TFloat *data) {
+    int size1 = dim1();
+    for (int i = 0; i < size1; ++i) {
+      put(i, t, data[i]);
+    }
+  }
   void WriteStrided(int t, const float *data) {
     int size1 = dim1();
     for (int i = 0; i < size1; ++i) {
