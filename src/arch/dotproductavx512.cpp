@@ -29,7 +29,18 @@ namespace tesseract {
 
 // Computes and returns the dot product of the n-vectors u and v.
 // Uses Intel AVX intrinsics to access the SIMD instruction set.
-#  if defined(FAST_FLOAT)
+#  if defined(TFLOAT)
+TFloat DotProductAVX512F(const TFloat *u, const TFloat *v, int n) {
+  TFloat total = 0;
+#if defined(OPENMP_SIMD) || defined(_OPENMP)
+#pragma omp simd reduction(+:total)
+#endif
+  for (int k = 0; k < n; k++) {
+    total += u[k] * v[k];
+  }
+  return total;
+}
+#  elif defined(FAST_FLOAT)
 float DotProductAVX512F(const float *u, const float *v, int n) {
   const unsigned quot = n / 16;
   const unsigned rem = n % 16;

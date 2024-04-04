@@ -231,6 +231,7 @@ SIMDDetect::SIMDDetect() {
 #  endif
 #endif
 
+#if !defined(TFLOAT)
   // Select code for calculation of dot product based on autodetection.
   if (false) {
     // This is a dummy to support conditional compilation.
@@ -260,6 +261,7 @@ SIMDDetect::SIMDDetect() {
     SetDotProduct(DotProductNEON, &IntSimdMatrix::intSimdMatrixNEON);
 #endif
   }
+#endif
 
   const char *dotproduct_env = getenv("DOTPRODUCT");
   if (dotproduct_env != nullptr) {
