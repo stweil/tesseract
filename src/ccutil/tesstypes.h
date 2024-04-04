@@ -56,4 +56,10 @@ using TFloat = double;
 
 }
 
+#if defined(TFLOAT)
+namespace std {
+tesseract::TFloat exp(tesseract::TFloat x);
+}
+#endif
+
 #endif // TESSERACT_TESSTYPES_H

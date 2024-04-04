@@ -3,6 +3,14 @@
 
 #if defined(TFLOAT)
 
+namespace std {
+
+tesseract::TFloat exp(tesseract::TFloat x) {
+  return expf(x);
+}
+
+}
+
 namespace tesseract {
 
 TFloat fabs(TFloat x) {

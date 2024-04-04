@@ -195,11 +195,7 @@ inline void SoftmaxInPlace(int n, T *inout) {
   T prob_total = 0;
   for (int i = 0; i < n; i++) {
     T prob = inout[i] - max_output;
-#if defined(TFLOAT)
-    prob = std::expf(ClipToRange(prob, -kMaxSoftmaxActivation, static_cast<T>(0)));
-#else
     prob = std::exp(ClipToRange(prob, -kMaxSoftmaxActivation, static_cast<T>(0)));
-#endif
     prob_total += prob;
     inout[i] = prob;
   }
