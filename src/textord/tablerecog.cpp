@@ -947,7 +947,7 @@ bool TableRecognizer::RecognizeWhitespacedTable(const TBOX &guess_box, Structure
       if (table->FindWhitespacedStructure() &&
           table->column_count() >= best_cols * kRequiredColumns) {
         if (false && IsWeakTableRow(table, 0)) {
-          // Currently buggy, but was looking promising so disabled.
+          // TODO: Currently buggy, but was looking promising so disabled.
           --chances;
         } else {
           // We favor 2 things,
@@ -1001,7 +1001,7 @@ bool TableRecognizer::RecognizeWhitespacedTable(const TBOX &guess_box, Structure
           table->column_count() >= best_cols * kRequiredColumns) {
         int last_row = table->row_count() - 1;
         if (false && IsWeakTableRow(table, last_row)) {
-          // Currently buggy, but was looking promising so disabled.
+          // TODO: Currently buggy, but was looking promising so disabled.
           --chances;
         } else {
           chances = kMaxChances;
