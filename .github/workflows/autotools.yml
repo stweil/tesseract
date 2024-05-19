@@ -2,9 +2,9 @@ name: autotools
 # autotools build of tesseract and training tools on Ubuntu.
 # run command line tests, basicapitest and unittests. '--disable-openmp'
 on:
-  #push:
-  schedule:
-    - cron: 0 20 * * *
+  push:
+    # schedule:
+    #    - cron: 0 20 * * *
 jobs:
 
   linux:
@@ -13,12 +13,14 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - { name: ubuntu-22.04-clang-15-autotools, os: ubuntu-22.04, cxx: clang++-15 } #installed
+          # - { name: ubuntu-22.04-clang-15-autotools, os: ubuntu-22.04, cxx: clang++-15 } #installed
 
-          - { name: ubuntu-22.04-gcc-12-autotools, os: ubuntu-22.04, cxx: g++-12 } #installed
-          - { name: ubuntu-22.04-gcc-11-autotools, os: ubuntu-22.04, cxx: g++-11 } #installed
-          - { name: ubuntu-20.04-gcc-10-autotools, os: ubuntu-20.04, cxx: g++-10 } #installed
-          - { name: ubuntu-20.04-gcc-9-autotools, os: ubuntu-20.04, cxx: g++-9 } #installed
+          - { name: ubuntu-24.04-gcc-14-autotools, os: ubuntu-24.04, cxx: g++-14 } #installed
+          - { name: ubuntu-24.04-gcc-13-autotools, os: ubuntu-24.04, cxx: g++-13 } #installed
+          # - { name: ubuntu-22.04-gcc-12-autotools, os: ubuntu-22.04, cxx: g++-12 } #installed
+          # - { name: ubuntu-22.04-gcc-11-autotools, os: ubuntu-22.04, cxx: g++-11 } #installed
+          # - { name: ubuntu-20.04-gcc-10-autotools, os: ubuntu-20.04, cxx: g++-10 } #installed
+          # - { name: ubuntu-20.04-gcc-9-autotools, os: ubuntu-20.04, cxx: g++-9 } #installed
 
     steps:
     - uses: actions/checkout@v4
