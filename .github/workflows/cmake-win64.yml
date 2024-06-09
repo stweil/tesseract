@@ -111,21 +111,17 @@ jobs:
         run: |
           curl -L https://github.com/tesseract-ocr/tessdata/raw/main/eng.traineddata --output ${{env.ILOC}}/share/tessdata/eng.traineddata
           curl -L https://github.com/tesseract-ocr/tessdata/raw/main/osd.traineddata --output ${{env.ILOC}}/share/tessdata/osd.traineddata
-          echo "Setting TESSDATA_PREFIX..."
-          set TESSDATA_PREFIX=${{env.ILOC}}/share/tessdata
-          echo "Setting PATH..."
-          set PATH=${{env.ILOC}}/bin;%PATH%
           echo "Checking installed tesseract version..."
-          tesseract -v
+          ${{env.ILOC}}/bin/tesseract -v
 
       - name: List installed models
         shell: cmd
         run: |
           echo "Checking installed langs"
-          tesseract --list-langs
+          ${{env.ILOC}}/bin/tesseract --list-langs
 
       - name: Run OCR
         shell: cmd
         run: |
           echo "Checking OCR process"
-          tesseract test/testing/phototest.tif -
+          ${{env.ILOC}}/bin/tesseract test/testing/phototest.tif -
