@@ -670,9 +670,9 @@ IntegerMatcher::IntegerMatcher(tesseract::IntParam *classify_debug_level)
   /* Initialize table for evidence to similarity lookup */
   for (int i = 0; i < SE_TABLE_SIZE; i++) {
     uint32_t IntSimilarity = i << (27 - SE_TABLE_BITS);
-    double Similarity = (static_cast<double>(IntSimilarity)) / 65536.0 / 65536.0;
+    double Similarity = IntSimilarity / 65536.0 / 65536.0;
     double evidence = Similarity / kSimilarityCenter;
-    evidence = 255.0 / (evidence * evidence + 1.0);
+    evidence = 255 / (evidence * evidence + 1);
 
     if (kSEExponentialMultiplier > 0.0) {
       double scale =
@@ -681,7 +681,7 @@ IntegerMatcher::IntegerMatcher(tesseract::IntParam *classify_debug_level)
       evidence *= ClipToRange(scale, 0.0, 1.0);
     }
 
-    similarity_evidence_table_[i] = static_cast<uint8_t>(evidence + 0.5);
+    similarity_evidence_table_[i] = static_cast<uint8_t>(std::round(evidence));
   }
 
   /* Initialize evidence computation variables */
