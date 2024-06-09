@@ -106,7 +106,7 @@ jobs:
           path: ${{env.ILOC}}
           retention-days: 5
 
-      - name: Display Tesseract Version and Test Command Line Usage
+      - name: Display Tesseract Version
         shell: cmd
         run: |
           curl -L https://github.com/tesseract-ocr/tessdata/raw/main/eng.traineddata --output ${{env.ILOC}}/share/tessdata/eng.traineddata
@@ -117,7 +117,15 @@ jobs:
           set PATH=${{env.ILOC}}/bin;%PATH%
           echo "Checking installed tesseract version..."
           tesseract -v
+
+      - name: List installed models
+        shell: cmd
+        run: |
           echo "Checking installed langs"
           tesseract --list-langs
+
+      - name: Run OCR
+        shell: cmd
+        run: |
           echo "Checking OCR process"
           tesseract test/testing/phototest.tif -
