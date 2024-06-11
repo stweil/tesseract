@@ -906,6 +906,7 @@ Trainability LSTMTrainer::PrepareForBackward(const ImageData *trainingdata,
       // Apart from space and null, increment the label. This changes the
       // script-id to the same script-id but upside-down.
       // The labels need to be reversed in order, as the first is now the last.
+      // TODO: possibly wrong code, check.
       for (auto truth_label : truth_labels) {
         if (truth_label != UNICHAR_SPACE && truth_label != null_char_) {
           ++truth_label;
