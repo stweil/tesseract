@@ -12,22 +12,9 @@ on:
         default: 'Windows (64 bit)'
         type: choice
         options:
-          - 'Windows (32 bit)'
           - 'Windows (64 bit)'
 
 jobs:
-  build32:
-    # Disable 32 bit builds.
-    runs-on: [ubuntu-24.04]
-    steps:
-    - uses: actions/checkout@v4
-    - name: Build Tesseract installer (32 bit)
-      run: .github/workflows/build.sh i686
-    - uses: actions/upload-artifact@v4
-      with:
-        name: Tesseract Installer for Windows (32 bit)
-        path: dist
-
   build64:
     runs-on: [ubuntu-24.04]
     steps:
