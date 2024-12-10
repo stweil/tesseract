@@ -417,7 +417,7 @@ void NetworkIO::Randomize(int t, int offset, int num_features, TRand *randomizer
   if (int_mode_) {
     int8_t *line = i_[t] + offset;
     for (int i = 0; i < num_features; ++i) {
-      line[i] = IntCastRounded(randomizer->SignedRand(INT8_MAX));
+      line[i] = 0; // IntCastRounded(randomizer->SignedRand(INT8_MAX));
     }
   } else {
     // float mode.
