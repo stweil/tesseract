@@ -462,7 +462,8 @@ static bool ParseArgs(int argc, char **argv, const char **lang, const char **ima
       const std::string argument(argv[i + 1]);
       const auto equal_pos = argument.find('=');
       if (equal_pos == std::string::npos) {
-          throw std::invalid_argument("Missing '=' in configvar assignment");
+        fprintf(stderr, "Missing = in configvar assignment\n");
+        return false;
       }
       // Extract key and value
       const std::string key = argument.substr(0, equal_pos);
