@@ -752,7 +752,8 @@ if(HAVE_AVX2)
                               PROPERTIES COMPILE_FLAGS ${AVX2_COMPILE_FLAGS})
 endif(HAVE_AVX2)
 if(HAVE_AVX512F)
-  list(APPEND arch_files_opt src/arch/dotproductavx512.cpp)
+  list(APPEND arch_files_opt src/arch/dotproductavx512.cpp
+       src/arch/intsimdmatrixavx512.cpp)
   set_source_files_properties(src/arch/dotproductavx512.cpp
                               PROPERTIES COMPILE_FLAGS ${AVX512F_COMPILE_FLAGS})
 endif(HAVE_AVX512F)
@@ -863,6 +864,7 @@ if(ENABLE_PRECOMPILED_HEADERS)
     src/arch/dotproductsse.cpp
     src/arch/dotproductneon.cpp
     src/arch/intsimdmatrixavx2.cpp
+    src/arch/intsimdmatrixavx512.cpp
     src/arch/intsimdmatrixsse.cpp
     src/arch/intsimdmatrixneon.cpp
   )
