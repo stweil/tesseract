@@ -149,6 +149,12 @@ case "${host_cpu}" in
       AC_DEFINE([HAVE_AVX2], [1], [Enable AVX2 instructions])
     fi
 
+    AX_CHECK_COMPILE_FLAG([-mavx512bw], [avx512bw=true], [avx512bw=false], [$WERROR])
+    AM_CONDITIONAL([HAVE_AVX512BW], $avx512bw)
+    if $avx512bw; then
+      AC_DEFINE([HAVE_AVX512BW], [1], [Enable AVX512BW instructions])
+    fi
+
     AX_CHECK_COMPILE_FLAG([-mavx512f], [avx512f=true], [avx512f=false], [$WERROR])
     AM_CONDITIONAL([HAVE_AVX512F], $avx512f)
     if $avx512f; then

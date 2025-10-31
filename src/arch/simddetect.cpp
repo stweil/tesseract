@@ -256,7 +256,11 @@ SIMDDetect::SIMDDetect() {
 #if defined(HAVE_AVX512F)
   } else if (avx512F_available_) {
     // AVX512F detected.
-    SetDotProduct(DotProductAVX512F, &IntSimdMatrix::intSimdMatrixAVX2);
+    if (avx512BW_available_) {
+      SetDotProduct(DotProductAVX512F, &IntSimdMatrix::intSimdMatrixAVX512);
+    } else {
+      SetDotProduct(DotProductAVX512F, &IntSimdMatrix::intSimdMatrixAVX2);
+    }
 #endif
 #if defined(HAVE_AVX2)
   } else if (avx2_available_) {
