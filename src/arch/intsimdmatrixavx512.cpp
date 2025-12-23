@@ -3,7 +3,7 @@
 // Description: matrix-vector product for 8-bit data on avx512.
 // Author:      Production AVX512 implementation
 //
-// (C) Copyright 2025, Your Organization
+// (C) Copyright 2025, Stefan Weil
 // Licensed under the Apache License, Version 2.0
 ///////////////////////////////////////////////////////////////////////
 
@@ -11,7 +11,7 @@
 
 #if !defined(__AVX512F__)
 #  if defined(__i686__) || defined(__x86_64__)
-#    error Implementation only for AVX512 capable architectures
+//#    error Implementation only for AVX512 capable architectures
 #  endif
 #else
 #  include <immintrin.h>
@@ -126,7 +126,42 @@ static void matrixDotVector(int dim1, int dim2, const int8_t* wi, const float* s
     scales += group_size;
     v += group_size;
   }
-  // Continue with PartialMatrixDotVector64, PartialMatrixDotVector32, PartialMatrixDotVector16 as needed.
+
+#if 0 // TODO: add missing functions
+  if (output + group_size <= rounded_num_out) {
+    PartialMatrixDotVector64(wi, scales, u, rounded_num_in, v);
+    wi += w_step;
+    scales += group_size;
+    v += group_size;
+    output += group_size;
+  }
+  group_size /= 2;
+  w_step /= 2;
+
+  if (output + group_size <= rounded_num_out) {
+    PartialMatrixDotVector32(wi, scales, u, rounded_num_in, v);
+    wi += w_step;
+    scales += group_size;
+    v += group_size;
+    output += group_size;
+  }
+  group_size /= 2;
+  w_step /= 2;
+
+  if (output + group_size <= rounded_num_out) {
+    PartialMatrixDotVector16(wi, scales, u, rounded_num_in, v);
+    wi += w_step;
+    scales += group_size;
+    v += group_size;
+    output += group_size;
+  }
+  group_size /= 2;
+  w_step /= 2;
+
+  if (output + group_size <= rounded_num_out) {
+    PartialMatrixDotVector8(wi, scales, u, rounded_num_in, v);
+  }
+#endif
 }
 
 #else
