@@ -209,6 +209,15 @@ libtesseract_la_LIBADD += libtesseract_neon.la
 noinst_LTLIBRARIES += libtesseract_neon.la
 endif
 
+if HAVE_SVE
+libtesseract_sve_la_CXXFLAGS = $(SVE_CXXFLAGS)
+libtesseract_sve_la_CXXFLAGS += -O3
+libtesseract_sve_la_CXXFLAGS += -I$(top_srcdir)/src/ccutil
+libtesseract_sve_la_SOURCES = src/arch/dotproductsve.cpp
+libtesseract_la_LIBADD += libtesseract_sve.la
+noinst_LTLIBRARIES += libtesseract_sve.la
+endif
+
 if HAVE_RVV
 libtesseract_rvv_la_CXXFLAGS = $(RVV_CXXFLAGS)
 libtesseract_rvv_la_CXXFLAGS += -O3

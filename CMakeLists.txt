@@ -256,6 +256,24 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64.*|AARCH64.*")
   set(HAVE_SSE4_1 FALSE)
   set(HAVE_NEON TRUE)
 
+  include(CheckCXXSourceCompiles)
+  set(SVE_TEST_SOURCE "
+#include <arm_sve.h>
+int main() {
+  svfloat32_t v = svdup_f32(0.0f);
+  return 0;
+}
+")
+  check_cxx_source_compiles("${SVE_TEST_SOURCE}" HAVE_SVE)
+  if(HAVE_SVE)
+    set(SVE_COMPILE_FLAGS "-msve-vector-bits=256")
+    add_definitions("-D__ARM_FEATURE_SVE")
+  endif()
+
+  # ARMv8.2-A includes DOTPROD by default
+  set(HAVE_DOTPROD TRUE)
+  add_definitions("-D__ARM_FEATURE_DOTPROD")
+
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm.*")
 
   set(HAVE_AVX FALSE)
@@ -477,6 +495,7 @@ else(DISABLE_TIFF)
     include_directories(${TIFF_INCLUDE_DIRS})
   endif(TIFF_FOUND)
 endif(DISABLE_TIFF)
+
 if(DISABLE_ARCHIVE)
   set(HAVE_LIBARCHIVE OFF)
   message(STATUS "LibArchive support disabled.")
@@ -491,6 +510,7 @@ else(DISABLE_ARCHIVE)
     include_directories(${LibArchive_INCLUDE_DIRS})
   endif(LibArchive_FOUND)
 endif(DISABLE_ARCHIVE)
+
 if(DISABLE_CURL)
   set(HAVE_LIBCURL OFF)
   message(STATUS "CURL support disabled.")
@@ -505,6 +525,16 @@ else(DISABLE_CURL)
     include_directories(${CURL_INCLUDE_DIRS})
   endif(CURL_FOUND)
 endif(DISABLE_CURL)
+
+# Check for Apple Accelerate framework on Apple platforms
+if(APPLE)
+  find_library(ACCELERATE_FRAMEWORK Accelerate)
+  if(ACCELERATE_FRAMEWORK)
+    set(HAVE_FRAMEWORK_ACCELERATE TRUE)
+    add_definitions("-DHAVE_FRAMEWORK_ACCELERATE")
+    message(STATUS "Found Apple Accelerate framework")
+  endif()
+endif(APPLE)
 
 # ##############################################################################
 #
@@ -581,6 +611,7 @@ message(STATUS "HAVE_FMA: ${HAVE_FMA}")
 message(STATUS "HAVE_SSE4_1: ${HAVE_SSE4_1}")
 message(STATUS "MARCH_NATIVE_OPT: ${MARCH_NATIVE_OPT}")
 message(STATUS "HAVE_NEON: ${HAVE_NEON}")
+message(STATUS "HAVE_SVE: ${HAVE_SVE}")
 message(STATUS "Link-time optimization: ${CMAKE_INTERPROCEDURAL_OPTIMIZATION}")
 message(STATUS "--------------------------------------------------------")
 message(STATUS "Build with openmp support [OPENMP_BUILD]: ${OPENMP_BUILD}")
@@ -689,6 +720,14 @@ if(HAVE_NEON)
       PROPERTIES COMPILE_FLAGS ${NEON_COMPILE_FLAGS})
   endif()
 endif(HAVE_NEON)
+if(HAVE_SVE)
+  list(APPEND arch_files_opt src/arch/dotproductsve.cpp)
+  if(SVE_COMPILE_FLAGS)
+    set_source_files_properties(
+      src/arch/dotproductsve.cpp
+      PROPERTIES COMPILE_FLAGS ${SVE_COMPILE_FLAGS})
+  endif()
+endif(HAVE_SVE)
 
 # Use explicit header file lists from SourceLists.cmake
 set(TESSERACT_HDR ${TESSERACT_HDR_INCLUDE} ${TESSERACT_HDR_INTERNAL})
@@ -762,6 +801,7 @@ if(ENABLE_PRECOMPILED_HEADERS)
     src/arch/dotproductfma.cpp
     src/arch/dotproductsse.cpp
     src/arch/dotproductneon.cpp
+    src/arch/dotproductsve.cpp
     src/arch/intsimdmatrixavx2.cpp
     src/arch/intsimdmatrixsse.cpp
     src/arch/intsimdmatrixneon.cpp
@@ -819,6 +859,9 @@ if(CURL_FOUND)
     target_link_libraries(libtesseract PUBLIC ${CURL_LIBRARIES})
   endif()
 endif(CURL_FOUND)
+if(HAVE_FRAMEWORK_ACCELERATE)
+  target_link_libraries(libtesseract PUBLIC "-framework Accelerate")
+endif()
 
 set_target_properties(
   libtesseract PROPERTIES VERSION

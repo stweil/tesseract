@@ -131,6 +131,7 @@ AM_CONDITIONAL([HAVE_AVX512F], false)
 AM_CONDITIONAL([HAVE_FMA], false)
 AM_CONDITIONAL([HAVE_SSE4_1], false)
 AM_CONDITIONAL([HAVE_NEON], false)
+AM_CONDITIONAL([HAVE_SVE], false)
 AM_CONDITIONAL([HAVE_RVV], false)
 
 case "${host_cpu}" in
@@ -174,6 +175,14 @@ case "${host_cpu}" in
     # ARMv8 always has NEON and does not need special compiler flags.
     AM_CONDITIONAL([HAVE_NEON], true)
     AC_DEFINE([HAVE_NEON], [1], [Enable NEON instructions])
+
+    AX_CHECK_COMPILE_FLAG([-fsve], [sve=true], [sve=false], [$WERROR])
+    AM_CONDITIONAL([HAVE_SVE], ${sve})
+    if $sve; then
+      AC_DEFINE([__ARM_FEATURE_SVE], [1], [Enable SVE instructions])
+      SVE_CXXFLAGS="-fsve"
+      AC_SUBST([SVE_CXXFLAGS])
+    fi
     ;;
 
   arm*)
