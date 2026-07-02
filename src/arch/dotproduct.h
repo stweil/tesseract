@@ -25,6 +25,9 @@ namespace tesseract {
 // Computes and returns the dot product of the n-vectors u and v.
 TFloat DotProductNative(const TFloat *u, const TFloat *v, int n);
 
+// Use Apple Accelerate framework.
+TFloat DotProductAccelerate(const TFloat* u, const TFloat* v, int n);
+
 // Uses Intel AVX intrinsics to access the SIMD instruction set.
 TFloat DotProductAVX(const TFloat *u, const TFloat *v, int n);
 
@@ -77,6 +80,8 @@ void TanhVectorAVX2(int n, const float *in, float *out);
 void LogisticVectorAVX2(int n, const float *in, float *out);
 void FloatToInt8VectorAVX2(int n, const float *in, int8_t *out);
 #endif
+// Use ARM SVE intrinsics.
+TFloat DotProductSVE(const TFloat *u, const TFloat *v, int n);
 
 } // namespace tesseract.
 
