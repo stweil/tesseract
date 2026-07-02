@@ -32,57 +32,43 @@ namespace tesseract {
 // Uses Intel SSE intrinsics to access the SIMD instruction set.
 #if defined(FAST_FLOAT)
 float DotProductSSE(const float *u, const float *v, int n) {
-  int max_offset = n - 4;
+  int max_offset = n - 8;
   int offset = 0;
-  // Accumulate a set of 4 sums in sum, by loading pairs of 4 values from u and
-  // v, and multiplying them together in parallel.
-  __m128 sum = _mm_setzero_ps();
+  __m128 sum0 = _mm_setzero_ps();
+  __m128 sum1 = _mm_setzero_ps();
   if (offset <= max_offset) {
-    offset = 4;
-    // Aligned load is reputedly faster but requires 16 byte aligned input.
+    offset = 8;
     if ((reinterpret_cast<uintptr_t>(u) & 15) == 0 &&
         (reinterpret_cast<uintptr_t>(v) & 15) == 0) {
-      // Use aligned load.
-      sum = _mm_load_ps(u);
-      __m128 floats2 = _mm_load_ps(v);
-      // Multiply.
-      sum = _mm_mul_ps(sum, floats2);
+      sum0 = _mm_mul_ps(_mm_load_ps(u), _mm_load_ps(v));
+      sum1 = _mm_mul_ps(_mm_load_ps(u + 4), _mm_load_ps(v + 4));
       while (offset <= max_offset) {
         __m128 floats1 = _mm_load_ps(u + offset);
-        floats2 = _mm_load_ps(v + offset);
-        floats1 = _mm_mul_ps(floats1, floats2);
-        sum = _mm_add_ps(sum, floats1);
-        offset += 4;
+        __m128 floats2 = _mm_load_ps(v + offset);
+        sum0 = _mm_add_ps(sum0, _mm_mul_ps(floats1, floats2));
+        floats1 = _mm_load_ps(u + offset + 4);
+        floats2 = _mm_load_ps(v + offset + 4);
+        sum1 = _mm_add_ps(sum1, _mm_mul_ps(floats1, floats2));
+        offset += 8;
       }
     } else {
-      // Use unaligned load.
-      sum = _mm_loadu_ps(u);
-      __m128 floats2 = _mm_loadu_ps(v);
-      // Multiply.
-      sum = _mm_mul_ps(sum, floats2);
+      sum0 = _mm_mul_ps(_mm_loadu_ps(u), _mm_loadu_ps(v));
+      sum1 = _mm_mul_ps(_mm_loadu_ps(u + 4), _mm_loadu_ps(v + 4));
       while (offset <= max_offset) {
         __m128 floats1 = _mm_loadu_ps(u + offset);
-        floats2 = _mm_loadu_ps(v + offset);
-        floats1 = _mm_mul_ps(floats1, floats2);
-        sum = _mm_add_ps(sum, floats1);
-        offset += 4;
+        __m128 floats2 = _mm_loadu_ps(v + offset);
+        sum0 = _mm_add_ps(sum0, _mm_mul_ps(floats1, floats2));
+        floats1 = _mm_loadu_ps(u + offset + 4);
+        floats2 = _mm_loadu_ps(v + offset + 4);
+        sum1 = _mm_add_ps(sum1, _mm_mul_ps(floats1, floats2));
+        offset += 8;
       }
     }
   }
-  // Add the 4 sums in sum horizontally.
-#if 0
-  alignas(32) float tmp[4];
-  _mm_store_ps(tmp, sum);
+  sum0 = _mm_add_ps(sum0, sum1);
+  alignas(16) float tmp[4];
+  _mm_store_ps(tmp, sum0);
   float result = tmp[0] + tmp[1] + tmp[2] + tmp[3];
-#else
-  __m128 zero = _mm_setzero_ps();
-  // https://www.felixcloutier.com/x86/haddps
-  sum = _mm_hadd_ps(sum, zero);
-  sum = _mm_hadd_ps(sum, zero);
-  // Extract the low result.
-  float result = _mm_cvtss_f32(sum);
-#endif
-  // Add on any left-over products.
   while (offset < n) {
     result += u[offset] * v[offset];
     ++offset;
