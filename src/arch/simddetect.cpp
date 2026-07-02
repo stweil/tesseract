@@ -143,13 +143,21 @@ static const SIMDDetect &detector_init = SIMDDetect::GetDetector();
 bool SIMDDetect::neon_available_ = true;
 // If true, then the NEON dot product instructions have been detected.
 bool SIMDDetect::neon_dotprod_available_;
+// ARMv8 always has SVE when compiled with SVE support.
+#if defined(__ARM_FEATURE_SVE)
+bool SIMDDetect::sve_available_ = true;
+#else
+bool SIMDDetect::sve_available_ = false;
+#endif
 #elif defined(HAVE_NEON)
 // If true, then Neon has been detected.
 bool SIMDDetect::neon_available_;
 // The NEON dot product instructions are only used for ARMv8.
 bool SIMDDetect::neon_dotprod_available_;
+bool SIMDDetect::sve_available_ = false;
 #elif defined(HAVE_RVV)
 bool SIMDDetect::rvv_available_;
+bool SIMDDetect::sve_available_ = false;
 #else
 // If true, then AVX has been detected.
 bool SIMDDetect::avx_available_;
@@ -164,7 +172,7 @@ bool SIMDDetect::sse_available_;
 #endif
 
 #if defined(HAVE_FRAMEWORK_ACCELERATE)
-static TFloat DotProductAccelerate(const TFloat* u, const TFloat* v, int n) {
+TFloat DotProductAccelerate(const TFloat* u, const TFloat* v, int n) {
   TFloat total = 0;
   const int stride = 1;
 #if defined(FAST_FLOAT)
@@ -429,6 +437,11 @@ SIMDDetect::SIMDDetect() {
     // SSE detected.
     SetDotProduct(DotProductSSE, &IntSimdMatrix::intSimdMatrixSSE);
 #endif
+#if defined(__ARM_FEATURE_SVE)
+  } else if (sve_available_) {
+    // SVE detected.
+    SetDotProduct(DotProductSVE, &IntSimdMatrix::intSimdMatrixNEON);
+#endif
 #if defined(HAVE_NEON) || defined(__aarch64__)
   } else if (neon_available_) {
     // NEON detected.
@@ -496,6 +509,12 @@ void SIMDDetect::Update() {
                                       : &IntSimdMatrix::intSimdMatrixNEON);
     dotproduct_method = "neon";
 #endif
+#if defined(__ARM_FEATURE_SVE)
+  } else if (dotproduct == "sve" && sve_available_) {
+    // SVE selected by config variable.
+    SetDotProduct(DotProductSVE, &IntSimdMatrix::intSimdMatrixNEON);
+    dotproduct_method = "sve";
+#endif
   } else if (dotproduct == "std::inner_product") {
     // std::inner_product selected by config variable.
     SetDotProduct(DotProductStdInnerProduct, IntSimdMatrix::intSimdMatrix);
@@ -520,6 +539,9 @@ void SIMDDetect::Update() {
 #endif
 #if defined(HAVE_FRAMEWORK_ACCELERATE)
         " accelerate"
+#endif
+#if defined(__ARM_FEATURE_SVE)
+        " sve"
 #endif
         " std::inner_product.\n");
   }
