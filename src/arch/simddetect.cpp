@@ -72,6 +72,17 @@
 #  endif
 #endif
 
+#if defined(__aarch64__)
+// The integer dotprod (SDOT) instruction is an optional ARMv8.2-A feature, so
+// it is probed at run time (a binary may run on CPUs with or without it).
+#  if defined(__APPLE__)
+#    include <sys/sysctl.h>
+#  else
+#    include <asm/hwcap.h>
+#    include <sys/auxv.h>
+#  endif
+#endif
+
 namespace tesseract {
 
 // Computes and returns the dot product of the two n-vectors u and v.
@@ -121,13 +132,19 @@ bool SIMDDetect::sve_available_ = true;
 #else
 bool SIMDDetect::sve_available_ = false;
 #endif
+// The integer dotprod (SDOT) instruction is an optional ARMv8.2-A feature, so
+// it has to be probed at run time (a given binary may run on CPUs that do or
+// do not implement it).
+bool SIMDDetect::dotprod_available_ = false;
 #elif defined(HAVE_NEON)
 // If true, then Neon has been detected.
 bool SIMDDetect::neon_available_;
 bool SIMDDetect::sve_available_ = false;
+bool SIMDDetect::dotprod_available_ = false;
 #elif defined(HAVE_RVV)
 bool SIMDDetect::rvv_available_;
 bool SIMDDetect::sve_available_ = false;
+bool SIMDDetect::dotprod_available_ = false;
 #else
 // If true, then AVX has been detected.
 bool SIMDDetect::avx_available_;
@@ -171,6 +188,17 @@ static TFloat DotProductStdInnerProduct(const TFloat *u, const TFloat *v, int n)
 static void SetDotProduct(DotProductFunction f, const IntSimdMatrix *m = nullptr) {
   DotProduct = f;
   IntSimdMatrix::intSimdMatrix = m;
+}
+
+// Returns the NEON int8 matrix kernel to use: the faster dotprod (SDOT)
+// version when the CPU implements the optional ARMv8.2-A dotprod instruction,
+// and the generic NEON version otherwise.
+static const IntSimdMatrix *NeonIntSimdMatrix(bool dotprod_available) {
+#if defined(__aarch64__) || defined(__ARM_FEATURE_DOTPROD)
+  if (dotprod_available)
+    return &IntSimdMatrix::intSimdMatrixNEONDotProd;
+#endif
+  return &IntSimdMatrix::intSimdMatrixNEON;
 }
 
 // Constructor.
@@ -281,6 +309,23 @@ SIMDDetect::SIMDDetect() {
 #  endif
 #endif
 
+#if defined(__aarch64__)
+  // Probe the optional ARMv8.2-A integer dotprod (SDOT) instruction at run
+  // time, so the same binary can run on CPUs that do or do not implement it.
+#  if defined(__APPLE__)
+  {
+    int dotprod = 0;
+    size_t len = sizeof(dotprod);
+    if (sysctlbyname("hw.optional.arm.FEAT_DotProd", &dotprod, &len, nullptr, 0) == 0)
+      dotprod_available_ = dotprod != 0;
+  }
+#  else
+  // HWCAP2_ASIMDDP is bit 20. getauxval is available on all aarch64 Linux
+  // targets supported by glibc, bionic and musl.
+  dotprod_available_ = (getauxval(AT_HWCAP2) & (1ul << 20)) != 0;
+#  endif
+#endif
+
   // Select code for calculation of dot product based on autodetection.
   if (false) {
     // This is a dummy to support conditional compilation.
@@ -307,12 +352,12 @@ SIMDDetect::SIMDDetect() {
 #if defined(__ARM_FEATURE_SVE)
   } else if (sve_available_) {
     // SVE detected.
-    SetDotProduct(DotProductSVE, &IntSimdMatrix::intSimdMatrixNEON);
+    SetDotProduct(DotProductSVE, NeonIntSimdMatrix(dotprod_available_));
 #endif
 #if defined(HAVE_NEON) || defined(__aarch64__)
   } else if (neon_available_) {
     // NEON detected.
-    SetDotProduct(DotProductNEON, &IntSimdMatrix::intSimdMatrixNEON);
+    SetDotProduct(DotProductNEON, NeonIntSimdMatrix(dotprod_available_));
 #endif
 #if defined(HAVE_RVV)
   } else if (rvv_available_) {
@@ -369,13 +414,13 @@ void SIMDDetect::Update() {
 #if defined(HAVE_NEON) || defined(__aarch64__)
   } else if (dotproduct == "neon" && neon_available_) {
     // NEON selected by config variable.
-    SetDotProduct(DotProductNEON, &IntSimdMatrix::intSimdMatrixNEON);
+    SetDotProduct(DotProductNEON, NeonIntSimdMatrix(dotprod_available_));
     dotproduct_method = "neon";
 #endif
 #if defined(__ARM_FEATURE_SVE)
   } else if (dotproduct == "sve" && sve_available_) {
     // SVE selected by config variable.
-    SetDotProduct(DotProductSVE, &IntSimdMatrix::intSimdMatrixNEON);
+    SetDotProduct(DotProductSVE, NeonIntSimdMatrix(dotprod_available_));
     dotproduct_method = "sve";
 #endif
   } else if (dotproduct == "std::inner_product") {

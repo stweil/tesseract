@@ -115,6 +115,11 @@ struct TESS_API IntSimdMatrix {
   static const IntSimdMatrix *intSimdMatrix;
   // Only available with NEON.
   static const IntSimdMatrix intSimdMatrixNEON;
+  // Only available with NEON and the ARMv8.2-A dotprod (SDOT) instruction.
+  // Selected at run time by SIMDDetect when the CPU implements dotprod.
+#if defined(__aarch64__) || defined(__ARM_FEATURE_DOTPROD)
+  static const IntSimdMatrix intSimdMatrixNEONDotProd;
+#endif
   // Only available with RVV.
   static const IntSimdMatrix intSimdMatrixRVV;
   // Only available with AVX2 / AVX / FMA / SSE.

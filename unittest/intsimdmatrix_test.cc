@@ -134,4 +134,38 @@ TEST_F(IntSimdMatrixTest, AVX2) {
 #endif
 }
 
+// Tests that the NEON implementation gets the same result as the vanilla.
+TEST_F(IntSimdMatrixTest, NEON) {
+#if defined(HAVE_NEON)
+  if (!SIMDDetect::IsNEONAvailable()) {
+    GTEST_LOG_(INFO) << "No NEON found! Not tested!";
+    GTEST_SKIP();
+  }
+  ExpectEqualResults(IntSimdMatrix::intSimdMatrixNEON);
+#else
+  GTEST_LOG_(INFO) << "NEON unsupported! Not tested!";
+  GTEST_SKIP();
+#endif
+}
+
+// Tests that the NEON dotprod (SDOT) implementation gets the same result as
+// the vanilla. Skipped when the CPU does not implement the optional ARMv8.2-A
+// dotprod instruction.
+TEST_F(IntSimdMatrixTest, NEON_DotProd) {
+#if defined(__aarch64__) || defined(__ARM_FEATURE_DOTPROD)
+  if (!SIMDDetect::IsNEONAvailable()) {
+    GTEST_LOG_(INFO) << "No NEON found! Not tested!";
+    GTEST_SKIP();
+  }
+  if (!SIMDDetect::IsDotProdAvailable()) {
+    GTEST_LOG_(INFO) << "No dotprod (SDOT) found! Not tested!";
+    GTEST_SKIP();
+  }
+  ExpectEqualResults(IntSimdMatrix::intSimdMatrixNEONDotProd);
+#else
+  GTEST_LOG_(INFO) << "dotprod (SDOT) unsupported! Not tested!";
+  GTEST_SKIP();
+#endif
+}
+
 } // namespace tesseract

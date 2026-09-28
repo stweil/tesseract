@@ -71,6 +71,11 @@ public:
   static inline bool IsSVEAvailable() {
     return GetDetector().sve_available_;
   }
+  // Returns true if the ARMv8.2-A integer dotprod (SDOT) instruction is
+  // available on this system.
+  static inline bool IsDotProdAvailable() {
+    return GetDetector().dotprod_available_;
+  }
 
   // Update settings after config variable was set.
   static TESS_API void Update();
@@ -101,6 +106,9 @@ private:
   static TESS_API bool rvv_available_;
   // If true, then SVE has been detected.
   static TESS_API bool sve_available_;
+  // If true, then the ARMv8.2-A integer dotprod (SDOT) instruction has been
+  // detected.
+  static TESS_API bool dotprod_available_;
 };
 
 } // namespace tesseract
