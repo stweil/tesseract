@@ -111,6 +111,10 @@ static void PrintVersionInfo() {
 #if defined(HAVE_NEON) || defined(__aarch64__)
   if (tesseract::SIMDDetect::IsNEONAvailable())
     printf(" Found NEON\n");
+  if (tesseract::SIMDDetect::IsSVEAvailable())
+    printf(" Found SVE\n");
+  if (tesseract::SIMDDetect::IsDotProdAvailable())
+    printf(" Found DotProd\n");
 #elif defined(HAVE_RVV)
   if (tesseract::SIMDDetect::IsRVVAvailable())
     printf(" Found RVV\n");
