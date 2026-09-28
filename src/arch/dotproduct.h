@@ -45,6 +45,13 @@ TFloat DotProductNEON(const TFloat *u, const TFloat *v, int n);
 // Use ARM SVE intrinsics.
 TFloat DotProductSVE(const TFloat *u, const TFloat *v, int n);
 
+#if defined(__ARM_FEATURE_SVE)
+// Returns the number of bits of the native SVE vector length of the CPU.
+// Only call this when SVE is known to be available (e.g.
+// SIMDDetect::IsSVEAvailable()), because it uses SVE instructions.
+int SVENativeVectorLengthInBits();
+#endif
+
 } // namespace tesseract.
 
 #endif // TESSERACT_ARCH_DOTPRODUCT_H_
