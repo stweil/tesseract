@@ -164,11 +164,77 @@ static inline void PartialMatrixDotVector8(const int8_t *__restrict wi,
   }
 }
 
-static void matrixDotVector(int dim1, int dim2, const int8_t *wi, const TFloat *scales,
-                            const int8_t *u, TFloat *v) {
+#if defined(__aarch64__) || defined(__ARM_FEATURE_DOTPROD)
+// Fast path using the ARMv8.2-A dotprod (SDOT) instruction.
+// vdotq_s32 computes four 8-bit dot products at once, which replaces the
+// vmull_s8 + vpaddlq_s16 multiply-accumulate and the horizontal reduction
+// tree used by the generic NEON path. For each 8-byte weight register
+// (two outputs x 8 inputs) vdotq_s32 yields [o_lo, o_hi] where o_lo/o_hi are
+// the sums over the first/last four inputs of the corresponding output;
+// vpaddq_s32(d, d) then folds those two halves together.
+// This kernel is compiled with the dotprod feature enabled via a target
+// attribute so that it is always available, and only called at run time when
+// SIMDDetect reports that the CPU actually implements dotprod.
+__attribute__((target("+dotprod")))
+static inline void PartialMatrixDotVector8Sdot(const int8_t *__restrict wi,
+                                               const TFloat *__restrict scales,
+                                               const int8_t *__restrict u, int num_in,
+                                               TFloat *__restrict v, int num_out) {
+  int32x4_t result0123 = {0, 0, 0, 0};
+  int32x4_t result4567 = {0, 0, 0, 0};
+  int8x8_t bias_scale = {127, 127, 127, 127, 127, 127, 127, 127};
+  for (int j = 0; j < num_in; j += 8) {
+    int8x8_t vu = vld1_s8(u);
+    int8x16_t vu16 = vcombine_s8(vu, vu); // broadcast the 8 inputs over 16 bytes
+    int8x16_t vw01 = vld1q_s8(wi);        // out0[0..7] out1[0..7]
+    int8x16_t vw23 = vld1q_s8(wi + 8 * 2);
+    int8x16_t vw45 = vld1q_s8(wi + 8 * 4);
+    int8x16_t vw67 = vld1q_s8(wi + 8 * 6);
+    int32x4_t d01 = vdotq_s32(vdupq_n_s32(0), vw01, vu16);
+    int32x4_t d23 = vdotq_s32(vdupq_n_s32(0), vw23, vu16);
+    int32x4_t d45 = vdotq_s32(vdupq_n_s32(0), vw45, vu16);
+    int32x4_t d67 = vdotq_s32(vdupq_n_s32(0), vw67, vu16);
+    // Fold each output's two 4-input halves into a single lane.
+    int32x4_t r0123 = vcombine_s32(vget_low_s32(vpaddq_s32(d01, d01)),
+                                   vget_low_s32(vpaddq_s32(d23, d23)));
+    int32x4_t r4567 = vcombine_s32(vget_low_s32(vpaddq_s32(d45, d45)),
+                                   vget_low_s32(vpaddq_s32(d67, d67)));
+    result0123 = vaddq_s32(result0123, r0123);
+    result4567 = vaddq_s32(result4567, r4567);
+    u += 8;
+    wi += 64;
+  }
+  int8x8_t bias = vld1_s8(wi);
+  int16x8_t scaled_bias = vmull_s8(bias, bias_scale);
+  result0123 = vaddw_s16(result0123, vget_low_s16(scaled_bias));
+  result4567 = vaddw_s16(result4567, vget_high_s16(scaled_bias));
+  *v++ = vget_lane_s32(vget_low_s32(result0123), 0) * *scales++;
+  if (num_out > 1)
+    *v++ = vget_lane_s32(vget_low_s32(result0123), 1) * *scales++;
+  if (num_out > 2)
+    *v++ = vget_lane_s32(vget_high_s32(result0123), 0) * *scales++;
+  if (num_out > 3)
+    *v++ = vget_lane_s32(vget_high_s32(result0123), 1) * *scales++;
+  if (num_out > 4)
+    *v++ = vget_lane_s32(vget_low_s32(result4567), 0) * *scales++;
+  if (num_out > 5)
+    *v++ = vget_lane_s32(vget_low_s32(result4567), 1) * *scales++;
+  if (num_out > 6)
+    *v++ = vget_lane_s32(vget_high_s32(result4567), 0) * *scales++;
+  if (num_out > 7)
+    *v = vget_lane_s32(vget_high_s32(result4567), 1) * *scales;
+}
+#endif // __aarch64__ || __ARM_FEATURE_DOTPROD
+
+// Runs the given partial function over the output vector, producing num_out
+// results in v, one block of group_size outputs at a time.
+static void RunMatrixDotVector(
+    void (*partial)(const int8_t *, const TFloat *, const int8_t *, int, TFloat *, int),
+    int dim1, int dim2, const int8_t *wi, const TFloat *scales, const int8_t *u,
+    TFloat *v) {
   const int num_out = dim1;
   const int num_in = dim2 - 1;
-  // Each call to a partial_func_ produces group_size outputs, except the
+  // Each call to the partial function produces group_size outputs, except the
   // last one, which can produce less.
   const int rounded_num_in = IntSimdMatrix::Roundup(num_in, kNumInputsPerGroup);
   int group_size = kNumOutputsPerRegister * kMaxOutputRegisters;
@@ -177,19 +243,32 @@ static void matrixDotVector(int dim1, int dim2, const int8_t *wi, const TFloat *
   int w_step = (rounded_num_in + 1) * group_size;
 
   for (; output + group_size <= num_out; output += group_size) {
-    PartialMatrixDotVector8(wi, scales, u, rounded_num_in, v, kNumOutputsPerRegister);
+    partial(wi, scales, u, rounded_num_in, v, kNumOutputsPerRegister);
     wi += w_step;
     scales += group_size;
     v += group_size;
   }
   if (output < num_out)
-    PartialMatrixDotVector8(wi, scales, u, rounded_num_in, v,
-                            num_out & (kNumOutputsPerRegister - 1));
+    partial(wi, scales, u, rounded_num_in, v, num_out & (kNumOutputsPerRegister - 1));
 }
+
+// Generic (vmull) implementation of the NEON kernel.
+static void matrixDotVectorNeon(int dim1, int dim2, const int8_t *wi,
+                                const TFloat *scales, const int8_t *u, TFloat *v) {
+  RunMatrixDotVector(PartialMatrixDotVector8, dim1, dim2, wi, scales, u, v);
+}
+
+#if defined(__aarch64__) || defined(__ARM_FEATURE_DOTPROD)
+// Dotprod (SDOT) implementation of the NEON kernel.
+static void matrixDotVectorDotProd(int dim1, int dim2, const int8_t *wi,
+                                   const TFloat *scales, const int8_t *u, TFloat *v) {
+  RunMatrixDotVector(PartialMatrixDotVector8Sdot, dim1, dim2, wi, scales, u, v);
+}
+#endif // __aarch64__ || __ARM_FEATURE_DOTPROD
 
 const IntSimdMatrix IntSimdMatrix::intSimdMatrixNEON = {
     // Function.
-    matrixDotVector,
+    matrixDotVectorNeon,
     // Number of 32 bit outputs held in each register.
     kNumOutputsPerRegister,
     // Maximum number of registers that we will use to hold outputs.
@@ -199,6 +278,21 @@ const IntSimdMatrix IntSimdMatrix::intSimdMatrixNEON = {
     // Number of inputs in each weight group.
     kNumInputsPerGroup
 };
+
+#if defined(__aarch64__) || defined(__ARM_FEATURE_DOTPROD)
+const IntSimdMatrix IntSimdMatrix::intSimdMatrixNEONDotProd = {
+    // Function.
+    matrixDotVectorDotProd,
+    // Number of 32 bit outputs held in each register.
+    kNumOutputsPerRegister,
+    // Maximum number of registers that we will use to hold outputs.
+    kMaxOutputRegisters,
+    // Number of 8 bit inputs in the inputs register.
+    kNumInputsPerRegister,
+    // Number of inputs in each weight group.
+    kNumInputsPerGroup
+};
+#endif // __aarch64__ || __ARM_FEATURE_DOTPROD
 
 } // namespace tesseract.
 
