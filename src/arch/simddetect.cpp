@@ -344,7 +344,7 @@ SIMDDetect::SIMDDetect() {
   if (false) {
     // This is a dummy to support conditional compilation.
 #if defined(HAVE_AVX512VNNI) && defined(HAVE_AVX512F)
-  } else if (IsAVX512VNNIAvailable()) {
+  } else if (avx512VNNI_available_) {
     // AVX512-VNNI implies AVX512F. Use AVX512F for the float dot product and
     // the faster VNNI kernel for the int8 matrix.
     SetDotProduct(DotProductAVX512F, &IntSimdMatrix::intSimdMatrixAVX512VNNI);
