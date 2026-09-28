@@ -68,8 +68,9 @@
 #endif
 
 #if defined(__aarch64__) && defined(__linux__) && \
-    !defined(__ARM_FEATURE_DOTPROD)
-// Needed for the detection of the NEON dot product instructions at runtime.
+    (!defined(__ARM_FEATURE_DOTPROD) || defined(__ARM_FEATURE_SVE))
+// Needed for the detection of the NEON dot product instructions and of SVE
+// at runtime.
 #  include <sys/auxv.h>
 #  if !defined(HWCAP_ASIMDDP)
 #    define HWCAP_ASIMDDP (1 << 20)
@@ -143,12 +144,9 @@ static const SIMDDetect &detector_init = SIMDDetect::GetDetector();
 bool SIMDDetect::neon_available_ = true;
 // If true, then the NEON dot product instructions have been detected.
 bool SIMDDetect::neon_dotprod_available_;
-// ARMv8 always has SVE when compiled with SVE support.
-#if defined(__ARM_FEATURE_SVE)
-bool SIMDDetect::sve_available_ = true;
-#else
+// SVE is an optional CPU feature, so it has to be probed at run time (a given
+// binary may run on CPUs that do or do not implement it).
 bool SIMDDetect::sve_available_ = false;
-#endif
 #elif defined(HAVE_NEON)
 // If true, then Neon has been detected.
 bool SIMDDetect::neon_available_;
@@ -393,6 +391,13 @@ SIMDDetect::SIMDDetect() {
   neon_dotprod_available_ = true;
 #  elif defined(__linux__)
   neon_dotprod_available_ = (getauxval(AT_HWCAP) & HWCAP_ASIMDDP) != 0;
+#  endif
+#  if defined(__ARM_FEATURE_SVE) && defined(__linux__)
+  // SVE is an optional CPU feature, so it is probed at run time: the same
+  // binary may run on CPUs that do or do not implement it. The SVE code is
+  // compiled in, so it is usable only if the CPU implements it.
+  // HWCAP2_SVE is bit 22.
+  sve_available_ = (getauxval(AT_HWCAP2) & (1ul << 22)) != 0;
 #  endif
 #endif
 
