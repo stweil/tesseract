@@ -21,6 +21,11 @@
 
 namespace tesseract {
 
+// Returns the number of bits of the native SVE vector length of the CPU.
+int SVENativeVectorLengthInBits() {
+  return static_cast<int>(svcntw()) * 32;
+}
+
 #if defined(FAST_FLOAT)
 
 float DotProductSVE(const float *u, const float *v, int n) {

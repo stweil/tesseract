@@ -130,6 +130,9 @@ bool SIMDDetect::neon_available_ = true;
 // SVE is an optional CPU feature, so it has to be probed at run time (a given
 // binary may run on CPUs that do or do not implement it).
 bool SIMDDetect::sve_available_ = false;
+// SVE is only selected automatically when its native vector length makes it
+// faster than NEON; set in the constructor once SVE has been probed.
+bool SIMDDetect::sve_preferred_ = false;
 // The integer dotprod (SDOT) instruction is an optional ARMv8.2-A feature, so
 // it has to be probed at run time (a given binary may run on CPUs that do or
 // do not implement it).
@@ -138,10 +141,12 @@ bool SIMDDetect::dotprod_available_ = false;
 // If true, then Neon has been detected.
 bool SIMDDetect::neon_available_;
 bool SIMDDetect::sve_available_ = false;
+bool SIMDDetect::sve_preferred_ = false;
 bool SIMDDetect::dotprod_available_ = false;
 #elif defined(HAVE_RVV)
 bool SIMDDetect::rvv_available_;
 bool SIMDDetect::sve_available_ = false;
+bool SIMDDetect::sve_preferred_ = false;
 bool SIMDDetect::dotprod_available_ = false;
 #else
 // If true, then AVX has been detected.
@@ -326,6 +331,10 @@ SIMDDetect::SIMDDetect() {
 #if defined(__ARM_FEATURE_SVE)
   // SVE code is compiled in, so it is usable only if the CPU implements it.
   sve_available_ = (hwcap & HWCAP_SVE) != 0;
+  // SVE is only worth selecting automatically when its native vector length
+  // is large enough to beat NEON (e.g. 128-bit SVE on Neoverse V2 is slower
+  // than NEON, 256-bit SVE on Neoverse V3 / Cortex-X4 is faster).
+  sve_preferred_ = sve_available_ && SVENativeVectorLengthInBits() >= 256;
 #endif
   dotprod_available_ = (hwcap & HWCAP_ASIMDDP) != 0;
 #  endif
@@ -355,8 +364,8 @@ SIMDDetect::SIMDDetect() {
     SetDotProduct(DotProductSSE, &IntSimdMatrix::intSimdMatrixSSE);
 #endif
 #if defined(__ARM_FEATURE_SVE)
-  } else if (sve_available_) {
-    // SVE detected.
+  } else if (sve_preferred_) {
+    // SVE detected with a native vector length large enough to beat NEON.
     SetDotProduct(DotProductSVE, NeonIntSimdMatrix(dotprod_available_));
 #endif
 #if defined(HAVE_NEON) || defined(__aarch64__)
