@@ -266,7 +266,8 @@ int main() {
 ")
   check_cxx_source_compiles("${SVE_TEST_SOURCE}" HAVE_SVE)
   if(HAVE_SVE)
-    set(SVE_COMPILE_FLAGS "-msve-vector-bits=256")
+    # SVE code is compiled vector-length-agnostic so the same binary runs at
+    # any SVE vector width the CPU provides (do not pin -msve-vector-bits).
     add_definitions("-D__ARM_FEATURE_SVE")
   endif()
 
@@ -722,11 +723,6 @@ if(HAVE_NEON)
 endif(HAVE_NEON)
 if(HAVE_SVE)
   list(APPEND arch_files_opt src/arch/dotproductsve.cpp)
-  if(SVE_COMPILE_FLAGS)
-    set_source_files_properties(
-      src/arch/dotproductsve.cpp
-      PROPERTIES COMPILE_FLAGS ${SVE_COMPILE_FLAGS})
-  endif()
 endif(HAVE_SVE)
 
 # Use explicit header file lists from SourceLists.cmake
