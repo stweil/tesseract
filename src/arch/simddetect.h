@@ -106,6 +106,9 @@ private:
   static TESS_API bool rvv_available_;
   // If true, then SVE has been detected.
   static TESS_API bool sve_available_;
+  // If true, then SVE is selected automatically (SVE is available and its
+  // native vector length makes it faster than NEON for dot products).
+  static TESS_API bool sve_preferred_;
   // If true, then the ARMv8.2-A integer dotprod (SDOT) instruction has been
   // detected.
   static TESS_API bool dotprod_available_;
