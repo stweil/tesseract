@@ -176,11 +176,19 @@ case "${host_cpu}" in
     AM_CONDITIONAL([HAVE_NEON], true)
     AC_DEFINE([HAVE_NEON], [1], [Enable NEON instructions])
 
-    AX_CHECK_COMPILE_FLAG([-fsve], [sve=true], [sve=false], [$WERROR])
+    # -march=armv8-a+sve is understood by GCC >= 9 and by Clang; the old
+    # -fsve flag is only known to GCC < 10 and is not a valid Clang option.
+    AX_CHECK_COMPILE_FLAG([-march=armv8-a+sve], [sve=true], [sve=false], [$WERROR])
+    if test "x$sve" = xfalse; then
+      AX_CHECK_COMPILE_FLAG([-fsve], [sve=true], [sve=false], [$WERROR])
+      SVE_CXXFLAGS="-fsve"
+    fi
     AM_CONDITIONAL([HAVE_SVE], ${sve})
     if $sve; then
       AC_DEFINE([__ARM_FEATURE_SVE], [1], [Enable SVE instructions])
-      SVE_CXXFLAGS="-fsve"
+      if test -z "${SVE_CXXFLAGS}"; then
+        SVE_CXXFLAGS="-march=armv8-a+sve"
+      fi
       AC_SUBST([SVE_CXXFLAGS])
     fi
     ;;

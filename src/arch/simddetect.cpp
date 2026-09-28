@@ -73,8 +73,9 @@
 #endif
 
 #if defined(__aarch64__)
-// The integer dotprod (SDOT) instruction is an optional ARMv8.2-A feature, so
-// it is probed at run time (a binary may run on CPUs with or without it).
+// The integer dotprod (SDOT) instruction and SVE are optional CPU features,
+// so they are probed at run time (a binary may run on CPUs with or without
+// them).
 #  if defined(__APPLE__)
 #    include <sys/sysctl.h>
 #  else
@@ -319,14 +320,14 @@ SIMDDetect::SIMDDetect() {
       dotprod_available_ = dotprod != 0;
   }
 #  else
-  // getauxval is available on all aarch64 Linux targets supported by glibc,
-  // bionic and musl. HWCAP2_SVE is bit 22, HWCAP2_ASIMDDP is bit 20.
-  const unsigned long hwcap2 = getauxval(AT_HWCAP2);
+  // SVE is HWCAP bit 22 of AT_HWCAP, the dotprod (SDOT) instruction is
+  // HWCAP bit 20 of the same word.
+  const unsigned long hwcap = getauxval(AT_HWCAP);
 #if defined(__ARM_FEATURE_SVE)
   // SVE code is compiled in, so it is usable only if the CPU implements it.
-  sve_available_ = (hwcap2 & (1ul << 22)) != 0;
+  sve_available_ = (hwcap & HWCAP_SVE) != 0;
 #endif
-  dotprod_available_ = (hwcap2 & (1ul << 20)) != 0;
+  dotprod_available_ = (hwcap & HWCAP_ASIMDDP) != 0;
 #  endif
 #endif
 

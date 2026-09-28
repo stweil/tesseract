@@ -256,19 +256,16 @@ elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64.*|AARCH64.*")
   set(HAVE_SSE4_1 FALSE)
   set(HAVE_NEON TRUE)
 
-  include(CheckCXXSourceCompiles)
-  set(SVE_TEST_SOURCE "
-#include <arm_sve.h>
-int main() {
-  svfloat32_t v = svdup_f32(0.0f);
-  return 0;
-}
-")
-  check_cxx_source_compiles("${SVE_TEST_SOURCE}" HAVE_SVE)
+  # -march=armv8-a+sve is understood by GCC >= 9 and by Clang; the old -fsve
+  # flag is only known to GCC < 10 and is not a valid Clang option.
+  check_cxx_compiler_flag("-march=armv8-a+sve" HAVE_SVE)
   if(HAVE_SVE)
-    # SVE code is compiled vector-length-agnostic so the same binary runs at
-    # any SVE vector width the CPU provides (do not pin -msve-vector-bits).
-    add_definitions("-D__ARM_FEATURE_SVE")
+    set(SVE_COMPILE_FLAGS "-march=armv8-a+sve")
+  else()
+    check_cxx_compiler_flag("-fsve" HAVE_SVE)
+    if(HAVE_SVE)
+      set(SVE_COMPILE_FLAGS "-fsve")
+    endif()
   endif()
 
   # ARMv8.2-A includes DOTPROD by default
@@ -722,7 +719,13 @@ if(HAVE_NEON)
   endif()
 endif(HAVE_NEON)
 if(HAVE_SVE)
+  # Like autotools, the feature macro is defined for all sources (the tests
+  # and simddetect.cpp need to know that SVE code exists in the library); the
+  # compiler flag that enables SVE is applied only to the SVE kernel itself.
+  add_definitions("-D__ARM_FEATURE_SVE")
   list(APPEND arch_files_opt src/arch/dotproductsve.cpp)
+  set_source_files_properties(src/arch/dotproductsve.cpp
+                              PROPERTIES COMPILE_FLAGS ${SVE_COMPILE_FLAGS})
 endif(HAVE_SVE)
 
 # Use explicit header file lists from SourceLists.cmake
