@@ -75,6 +75,9 @@
 #  if !defined(HWCAP_ASIMDDP)
 #    define HWCAP_ASIMDDP (1 << 20)
 #  endif
+#  if !defined(HWCAP_SVE)
+#    define HWCAP_SVE (1 << 22)
+#  endif
 #endif
 
 #if defined(HAVE_RVV)
@@ -396,8 +399,8 @@ SIMDDetect::SIMDDetect() {
   // SVE is an optional CPU feature, so it is probed at run time: the same
   // binary may run on CPUs that do or do not implement it. The SVE code is
   // compiled in, so it is usable only if the CPU implements it.
-  // HWCAP2_SVE is bit 22.
-  sve_available_ = (getauxval(AT_HWCAP2) & (1ul << 22)) != 0;
+  // HWCAP_SVE is bit 22 of AT_HWCAP.
+  sve_available_ = (getauxval(AT_HWCAP) & HWCAP_SVE) != 0;
 #  endif
 #endif
 
