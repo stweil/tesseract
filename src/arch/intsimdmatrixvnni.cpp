@@ -29,15 +29,17 @@ namespace tesseract {
 
 // AVX512-VNNI _mm512_dpbusd_epi32() computes 16 dot products of four 8-bit
 // values each, adding them to the corresponding 32-bit accumulators. For each
-// 32-bit element it multiplies a SIGNED int8 (operand a) with an UNSIGNED
-// uint8 (operand b). This is the integer analogue of the ARM SDOT instruction
-// and does in one instruction what the AVX2 kernel needs two for (maddubs +
-// madd), so it is roughly twice as fast on the int8 multiply.
+// 32-bit element it multiplies a SIGNED int8 (the third source operand) with
+// an UNSIGNED uint8 (the second source operand). This is the integer analogue
+// of the ARM SDOT instruction and does in one instruction what the AVX2 kernel
+// needs two for (maddubs + madd), so it is roughly twice as fast on the int8
+// multiply.
 //
 // Weights and inputs are stored as signed 8-bit values, but dpbusd requires
-// the weight operand to be unsigned. We therefore store each weight byte w as
-// (w + 128) mod 256 (equivalently w XOR 0x80), which as an unsigned integer
-// equals w + 128. Then
+// its second source operand to be unsigned. We therefore store each weight
+// byte w as (w + 128) mod 256 (equivalently w XOR 0x80), which as an unsigned
+// integer equals w + 128, and pass those offset weights as the second
+// (unsigned) operand and the signed inputs as the third. Then
 //
 //     u * (w + 128) = u * w + 128 * u
 //
@@ -66,16 +68,18 @@ static void PartialVNNI(const int8_t *wi, const TFloat *scales, const int8_t *u,
   const __m512i sign_offset = _mm512_set1_epi8(static_cast<int8_t>(128));
   __m512i acc = _mm512_setzero_si512();
   for (int g = 0; g < groups; ++g) {
-    // a: the four input values u[g*4 .. g*4+3] (signed), replicated to all 16
-    // outputs (every output sees the same four inputs of this group).
+    // inputs: the four input values u[g*4 .. g*4+3] (signed), replicated to all
+    // 16 outputs (every output sees the same four inputs of this group).
     const int32_t uquad =
         *reinterpret_cast<const int32_t *>(u + g * kNumInputsPerGroup);
-    const __m512i a = _mm512_set1_epi32(uquad);
-    // b: the 16 outputs' four weights each (64 bytes), offset by 128 to make
-    // them unsigned for dpbusd.
-    __m512i b = _mm512_loadu_si512(reinterpret_cast<const __m512i *>(wi));
-    b = _mm512_xor_si512(b, sign_offset);
-    acc = _mm512_dpbusd_epi32(acc, a, b);
+    const __m512i inputs = _mm512_set1_epi32(uquad);
+    // weights: the 16 outputs' four weights each (64 bytes), offset by 128 to
+    // become the unsigned operand. dpbusd multiplies its second source operand
+    // (treated as unsigned) with its third (treated as signed), so the offset
+    // weights must be the second operand and the signed inputs the third.
+    __m512i weights = _mm512_loadu_si512(reinterpret_cast<const __m512i *>(wi));
+    weights = _mm512_xor_si512(weights, sign_offset);
+    acc = _mm512_dpbusd_epi32(acc, weights, inputs);
     wi += kNumOutputsPerRegister * kNumInputsPerGroup;
   }
   // dpbusd treated the weights as (w + 128), so each output accumulator
