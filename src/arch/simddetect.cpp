@@ -67,27 +67,22 @@
 #  endif
 #endif
 
-#if defined(__aarch64__)
-// Needed for the run-time detection of the NEON dot product and SVE
-// instructions.
-#  if defined(__APPLE__)
-#    include <sys/sysctl.h>
-#  elif defined(__linux__)
-#    include <sys/auxv.h>
-#    include <asm/hwcap.h>
-#    if !defined(HWCAP2_ASIMDDP)
-#      define HWCAP2_ASIMDDP (1 << 20)
-#    endif
-#    if !defined(HWCAP2_SVE)
-#      define HWCAP2_SVE (1 << 22)
-#    endif
-#  endif
-#endif
-
 #if defined(HAVE_RVV)
 #  if defined(HAVE_GETAUXVAL) || defined(HAVE_ELF_AUX_INFO)
 #    include <sys/auxv.h>
 #    define HWCAP_RV(letter) (1ul << ((letter) - 'A'))
+#  endif
+#endif
+
+#if defined(__aarch64__)
+// The integer dotprod (SDOT) instruction and SVE are optional CPU features,
+// so they are probed at run time (a binary may run on CPUs with or without
+// them).
+#  if defined(__APPLE__)
+#    include <sys/sysctl.h>
+#  else
+#    include <asm/hwcap.h>
+#    include <sys/auxv.h>
 #  endif
 #endif
 
@@ -418,14 +413,14 @@ SIMDDetect::SIMDDetect() {
       neon_dotprod_available_ = dotprod != 0;
   }
 #  else
-  // getauxval is available on all aarch64 Linux targets supported by glibc,
-  // bionic and musl. HWCAP2_SVE is bit 22, HWCAP2_ASIMDDP is bit 20.
-  const unsigned long hwcap2 = getauxval(AT_HWCAP2);
+  // SVE is HWCAP bit 22 of AT_HWCAP, the dotprod (SDOT) instruction is
+  // HWCAP bit 20 of the same word.
+  const unsigned long hwcap = getauxval(AT_HWCAP);
 #if defined(__ARM_FEATURE_SVE)
   // SVE code is compiled in, so it is usable only if the CPU implements it.
-  sve_available_ = (hwcap2 & HWCAP2_SVE) != 0;
+  sve_available_ = (hwcap & HWCAP_SVE) != 0;
 #endif
-  neon_dotprod_available_ = (hwcap2 & HWCAP2_ASIMDDP) != 0;
+  neon_dotprod_available_ = (hwcap & HWCAP_ASIMDDP) != 0;
 #  endif
 #endif
 
