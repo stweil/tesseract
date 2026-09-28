@@ -67,12 +67,20 @@
 #  endif
 #endif
 
-#if defined(__aarch64__) && defined(__linux__) && \
-    !defined(__ARM_FEATURE_DOTPROD)
-// Needed for the detection of the NEON dot product instructions at runtime.
-#  include <sys/auxv.h>
-#  if !defined(HWCAP_ASIMDDP)
-#    define HWCAP_ASIMDDP (1 << 20)
+#if defined(__aarch64__)
+// Needed for the run-time detection of the NEON dot product and SVE
+// instructions.
+#  if defined(__APPLE__)
+#    include <sys/sysctl.h>
+#  elif defined(__linux__)
+#    include <sys/auxv.h>
+#    include <asm/hwcap.h>
+#    if !defined(HWCAP2_ASIMDDP)
+#      define HWCAP2_ASIMDDP (1 << 20)
+#    endif
+#    if !defined(HWCAP2_SVE)
+#      define HWCAP2_SVE (1 << 22)
+#    endif
 #  endif
 #endif
 
@@ -143,12 +151,9 @@ static const SIMDDetect &detector_init = SIMDDetect::GetDetector();
 bool SIMDDetect::neon_available_ = true;
 // If true, then the NEON dot product instructions have been detected.
 bool SIMDDetect::neon_dotprod_available_;
-// ARMv8 always has SVE when compiled with SVE support.
-#if defined(__ARM_FEATURE_SVE)
-bool SIMDDetect::sve_available_ = true;
-#else
+// SVE is an optional CPU feature, so it has to be probed at run time (a given
+// binary may run on CPUs that do or do not implement it).
 bool SIMDDetect::sve_available_ = false;
-#endif
 #elif defined(HAVE_NEON)
 // If true, then Neon has been detected.
 bool SIMDDetect::neon_available_;
@@ -387,15 +392,6 @@ SIMDDetect::SIMDDetect() {
 #  endif
 #endif
 
-#if defined(__aarch64__)
-#  if defined(__ARM_FEATURE_DOTPROD)
-  // The code was built for a CPU with the NEON dot product instructions.
-  neon_dotprod_available_ = true;
-#  elif defined(__linux__)
-  neon_dotprod_available_ = (getauxval(AT_HWCAP) & HWCAP_ASIMDDP) != 0;
-#  endif
-#endif
-
 #if defined(HAVE_RVV)
 #  if defined(HAVE_GETAUXVAL)
   const unsigned long hwcap = getauxval(AT_HWCAP);
@@ -406,6 +402,30 @@ SIMDDetect::SIMDDetect() {
     hwcap = 0;
   }
   rvv_available_ = hwcap & HWCAP_RV('V');
+#  endif
+#endif
+
+#if defined(__aarch64__)
+  // SVE and the integer dotprod (SDOT) instruction are optional CPU features,
+  // so they are probed at run time: the same binary may run on CPUs that do or
+  // do not implement them.
+#  if defined(__APPLE__)
+  {
+    // Apple Silicon has no SVE; only dotprod is exposed.
+    int dotprod = 0;
+    size_t len = sizeof(dotprod);
+    if (sysctlbyname("hw.optional.arm.FEAT_DotProd", &dotprod, &len, nullptr, 0) == 0)
+      neon_dotprod_available_ = dotprod != 0;
+  }
+#  else
+  // getauxval is available on all aarch64 Linux targets supported by glibc,
+  // bionic and musl. HWCAP2_SVE is bit 22, HWCAP2_ASIMDDP is bit 20.
+  const unsigned long hwcap2 = getauxval(AT_HWCAP2);
+#if defined(__ARM_FEATURE_SVE)
+  // SVE code is compiled in, so it is usable only if the CPU implements it.
+  sve_available_ = (hwcap2 & HWCAP2_SVE) != 0;
+#endif
+  neon_dotprod_available_ = (hwcap2 & HWCAP2_ASIMDDP) != 0;
 #  endif
 #endif
 
