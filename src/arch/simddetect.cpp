@@ -343,15 +343,12 @@ SIMDDetect::SIMDDetect() {
   // Select code for calculation of dot product based on autodetection.
   if (false) {
     // This is a dummy to support conditional compilation.
-#if defined(HAVE_AVX512VNNI) && defined(HAVE_AVX512F)
-  } else if (avx512VNNI_available_) {
-    // AVX512-VNNI implies AVX512F. Use AVX512F for the float dot product and
-    // the faster VNNI kernel for the int8 matrix.
-    SetDotProduct(DotProductAVX512F, &IntSimdMatrix::intSimdMatrixAVX512VNNI);
-#endif
 #if defined(HAVE_AVX512F)
   } else if (avx512F_available_) {
-    // AVX512F detected (no VNNI).
+    // AVX512F detected. (AVX512-VNNI is *not* auto-selected: on the int8
+    // matrix it is slower than AVX2 for typical LSTM sizes, because dpbusd
+    // needs an unsigned operand and the sign correction has to be applied per
+    // output block. Use 'dotproduct=vnni' to select it explicitly.)
     SetDotProduct(DotProductAVX512F, &IntSimdMatrix::intSimdMatrixAVX2);
 #endif
 #if defined(HAVE_AVX2)
