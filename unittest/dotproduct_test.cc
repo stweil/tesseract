@@ -154,6 +154,20 @@ TEST_F(DotProductTest, FMA) {
 #endif
 }
 
+// Test AVX512F implementation.
+TEST_F(DotProductTest, AVX512F) {
+#if defined(HAVE_AVX512F)
+  if (!SIMDDetect::IsAVX512FAvailable()) {
+    GTEST_LOG_(INFO) << "No AVX512F found! Not tested!";
+    GTEST_SKIP();
+  }
+  ExpectEqualResults(DotProductAVX512F, "DotProductAVX512F");
+#else
+  GTEST_LOG_(INFO) << "AVX512F unsupported! Not tested!";
+  GTEST_SKIP();
+#endif
+}
+
 // Test SVE implementation.
 TEST_F(DotProductTest, SVE) {
 #if defined(__ARM_FEATURE_SVE)
@@ -202,6 +216,12 @@ TEST_F(DotProductTest, Performance) {
 #if defined(HAVE_FMA)
   if (SIMDDetect::IsFMAAvailable()) {
     MeasurePerformance(DotProductFMA, "FMA", n, iterations);
+  }
+#endif
+
+#if defined(HAVE_AVX512F)
+  if (SIMDDetect::IsAVX512FAvailable()) {
+    MeasurePerformance(DotProductAVX512F, "AVX512F", n, iterations);
   }
 #endif
 

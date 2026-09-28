@@ -1307,6 +1307,9 @@ endif
 if HAVE_SSE4_1
 dotproduct_test_CPPFLAGS += -DHAVE_SSE4_1
 endif
+if HAVE_AVX512F
+dotproduct_test_CPPFLAGS += -DHAVE_AVX512F
+endif
 dotproduct_test_LDADD = $(TESS_LIBS)
 
 if !DISABLED_LEGACY_ENGINE

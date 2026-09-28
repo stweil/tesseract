@@ -17,6 +17,9 @@
 #include "intsimdmatrix.h"
 #include <gtest/gtest.h>
 #include <gtest/internal/gtest-port.h>
+#include <chrono>
+#include <iomanip> // for std::setw and std::left
+#include <iostream>
 #include <memory>
 #include <vector>
 #include "include_gunit.h"
@@ -97,6 +100,62 @@ protected:
 #endif
   }
 
+  // Measures the throughput of a matrix kernel and reports it in GFLOPS.
+  // When matrix.matrixDotVectorFunction is null (the generic C kernel), the
+  // base class implementation IntSimdMatrix::MatrixDotVector is timed instead.
+  static void MeasurePerformance(const IntSimdMatrix &matrix, const char *name,
+                                 int num_out, int num_in, int iterations) {
+    TRand random;
+    GENERIC_2D_ARRAY<int8_t> w = [&]() {
+      GENERIC_2D_ARRAY<int8_t> a(num_out, num_in + 1, 0);
+      for (int i = 0; i < num_out; ++i) {
+        for (int j = 0; j < num_in + 1; ++j) {
+          a(i, j) = static_cast<int8_t>(random.SignedRand(INT8_MAX));
+        }
+      }
+      return a;
+    }();
+    std::vector<int8_t> u(matrix.RoundInputs(num_in), 0);
+    for (int i = 0; i < num_in; ++i) {
+      u[i] = static_cast<int8_t>(random.SignedRand(INT8_MAX));
+    }
+    std::vector<TFloat> scales(num_out);
+    for (int i = 0; i < num_out; ++i) {
+      scales[i] = (1.0 + random.SignedRand(1.0)) / INT8_MAX;
+    }
+    const bool have_fn = matrix.matrixDotVectorFunction != nullptr;
+    std::vector<int8_t> shaped_wi;
+    int rounded_num_out;
+    std::vector<TFloat> result;
+    if (have_fn) {
+      matrix.Init(w, shaped_wi, rounded_num_out);
+      scales.resize(rounded_num_out);
+      result.resize(rounded_num_out);
+    } else {
+      result.resize(num_out);
+    }
+    auto run = [&]() {
+      if (have_fn) {
+        matrix.matrixDotVectorFunction(num_out, num_in, &shaped_wi[0], &scales[0], &u[0],
+                                       &result[0]);
+      } else {
+        IntSimdMatrix::MatrixDotVector(w, scales, u.data(), result.data());
+      }
+    };
+    // Warmup.
+    run();
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < iterations; ++i) {
+      run();
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    double elapsed = std::chrono::duration<double>(end - start).count();
+    // Two floating point operations per (output, input) pair.
+    double gflops = (2.0 * num_out * num_in * iterations) / elapsed / 1e9;
+    std::cout << "  " << std::setw(18) << std::left << name << ": " << elapsed << "s, "
+              << gflops << " GFLOPS" << std::endl;
+  }
+
   TRand random_;
 };
 
@@ -166,6 +225,52 @@ TEST_F(IntSimdMatrixTest, NEON_DotProd) {
   GTEST_LOG_(INFO) << "dotprod (SDOT) unsupported! Not tested!";
   GTEST_SKIP();
 #endif
+}
+
+// Performance benchmark - runs and reports GFLOPS for the available int8
+// matrix kernels, like DotProductTest.Performance.
+TEST_F(IntSimdMatrixTest, Performance) {
+  std::cout << "IntSimdMatrix Performance:" << std::endl;
+
+  const int num_out = 128;
+  const int num_in = 1024;
+  const int iterations = 100;
+
+  // Generic C++ implementation (null matrixDotVectorFunction).
+  static const IntSimdMatrix c_matrix = {nullptr, 1, 1, 1, 1};
+  MeasurePerformance(c_matrix, "C", num_out, num_in, iterations);
+
+  if (IntSimdMatrix::intSimdMatrix != nullptr) {
+    MeasurePerformance(*IntSimdMatrix::intSimdMatrix, "Default", num_out,
+                       num_in, iterations);
+  }
+#if defined(HAVE_SSE4_1)
+  if (SIMDDetect::IsSSEAvailable()) {
+    MeasurePerformance(IntSimdMatrix::intSimdMatrixSSE, "SSE", num_out, num_in,
+                       iterations);
+  }
+#endif
+#if defined(HAVE_AVX2)
+  if (SIMDDetect::IsAVX2Available()) {
+    MeasurePerformance(IntSimdMatrix::intSimdMatrixAVX2, "AVX2", num_out,
+                       num_in, iterations);
+  }
+#endif
+#if defined(HAVE_NEON)
+  if (SIMDDetect::IsNEONAvailable()) {
+    MeasurePerformance(IntSimdMatrix::intSimdMatrixNEON, "NEON", num_out,
+                       num_in, iterations);
+  }
+#endif
+#if defined(__aarch64__) || defined(__ARM_FEATURE_DOTPROD)
+  if (SIMDDetect::IsNEONAvailable() && SIMDDetect::IsDotProdAvailable()) {
+    MeasurePerformance(IntSimdMatrix::intSimdMatrixNEONDotProd, "NEON_DotProd",
+                       num_out, num_in, iterations);
+  }
+#endif
+
+  // Ensure the test doesn't fail due to performance variations.
+  SUCCEED();
 }
 
 } // namespace tesseract
