@@ -150,15 +150,20 @@ bool SIMDDetect::neon_dotprod_available_;
 // SVE is an optional CPU feature, so it has to be probed at run time (a given
 // binary may run on CPUs that do or do not implement it).
 bool SIMDDetect::sve_available_ = false;
+// SVE is only selected automatically when its native vector length makes it
+// faster than NEON; set in the constructor once SVE has been probed.
+bool SIMDDetect::sve_preferred_ = false;
 #elif defined(HAVE_NEON)
 // If true, then Neon has been detected.
 bool SIMDDetect::neon_available_;
 // The NEON dot product instructions are only used for ARMv8.
 bool SIMDDetect::neon_dotprod_available_;
 bool SIMDDetect::sve_available_ = false;
+bool SIMDDetect::sve_preferred_ = false;
 #elif defined(HAVE_RVV)
 bool SIMDDetect::rvv_available_;
 bool SIMDDetect::sve_available_ = false;
+bool SIMDDetect::sve_preferred_ = false;
 #else
 // If true, then AVX has been detected.
 bool SIMDDetect::avx_available_;
@@ -401,6 +406,10 @@ SIMDDetect::SIMDDetect() {
   // compiled in, so it is usable only if the CPU implements it.
   // HWCAP_SVE is bit 22 of AT_HWCAP.
   sve_available_ = (getauxval(AT_HWCAP) & HWCAP_SVE) != 0;
+  // SVE is only worth selecting automatically when its native vector length
+  // is large enough to beat NEON (e.g. 128-bit SVE on Neoverse V2 is slower
+  // than NEON, 256-bit SVE on Neoverse V3 / Cortex-X4 is faster).
+  sve_preferred_ = sve_available_ && SVENativeVectorLengthInBits() >= 256;
 #  endif
 #endif
 
@@ -446,8 +455,8 @@ SIMDDetect::SIMDDetect() {
     SetDotProduct(DotProductSSE, &IntSimdMatrix::intSimdMatrixSSE);
 #endif
 #if defined(__ARM_FEATURE_SVE)
-  } else if (sve_available_) {
-    // SVE detected.
+  } else if (sve_preferred_) {
+    // SVE detected with a native vector length large enough to beat NEON.
     SetDotProduct(DotProductSVE, neon_dotprod_available_
                                      ? &IntSimdMatrix::intSimdMatrixNEONDotProd
                                      : &IntSimdMatrix::intSimdMatrixNEON);
