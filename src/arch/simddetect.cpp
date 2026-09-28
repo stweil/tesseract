@@ -126,12 +126,9 @@ static const SIMDDetect &detector_init = SIMDDetect::GetDetector();
 #if defined(__aarch64__)
 // ARMv8 always has NEON.
 bool SIMDDetect::neon_available_ = true;
-// ARMv8 always has SVE when compiled with SVE support.
-#if defined(__ARM_FEATURE_SVE)
-bool SIMDDetect::sve_available_ = true;
-#else
+// SVE is an optional CPU feature, so it has to be probed at run time (a given
+// binary may run on CPUs that do or do not implement it).
 bool SIMDDetect::sve_available_ = false;
-#endif
 // The integer dotprod (SDOT) instruction is an optional ARMv8.2-A feature, so
 // it has to be probed at run time (a given binary may run on CPUs that do or
 // do not implement it).
@@ -310,19 +307,26 @@ SIMDDetect::SIMDDetect() {
 #endif
 
 #if defined(__aarch64__)
-  // Probe the optional ARMv8.2-A integer dotprod (SDOT) instruction at run
-  // time, so the same binary can run on CPUs that do or do not implement it.
+  // SVE and the integer dotprod (SDOT) instruction are optional CPU features,
+  // so they are probed at run time: the same binary may run on CPUs that do or
+  // do not implement them.
 #  if defined(__APPLE__)
   {
+    // Apple Silicon has no SVE; only dotprod is exposed.
     int dotprod = 0;
     size_t len = sizeof(dotprod);
     if (sysctlbyname("hw.optional.arm.FEAT_DotProd", &dotprod, &len, nullptr, 0) == 0)
       dotprod_available_ = dotprod != 0;
   }
 #  else
-  // HWCAP2_ASIMDDP is bit 20. getauxval is available on all aarch64 Linux
-  // targets supported by glibc, bionic and musl.
-  dotprod_available_ = (getauxval(AT_HWCAP2) & (1ul << 20)) != 0;
+  // getauxval is available on all aarch64 Linux targets supported by glibc,
+  // bionic and musl. HWCAP2_SVE is bit 22, HWCAP2_ASIMDDP is bit 20.
+  const unsigned long hwcap2 = getauxval(AT_HWCAP2);
+#if defined(__ARM_FEATURE_SVE)
+  // SVE code is compiled in, so it is usable only if the CPU implements it.
+  sve_available_ = (hwcap2 & (1ul << 22)) != 0;
+#endif
+  dotprod_available_ = (hwcap2 & (1ul << 20)) != 0;
 #  endif
 #endif
 
