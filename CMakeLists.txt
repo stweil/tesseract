@@ -228,6 +228,12 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86|x86_64|AMD64|amd64|i386|i686")
       add_definitions("-DHAVE_AVX512F")
     endif()
 
+    check_cxx_compiler_flag("-mavx512vnni" HAVE_AVX512VNNI)
+    if(HAVE_AVX512VNNI)
+      set(AVX512VNNI_COMPILE_FLAGS "-mavx512vnni")
+      add_definitions("-DHAVE_AVX512VNNI")
+    endif()
+
     check_cxx_compiler_flag("-mfma" HAVE_FMA)
     if(HAVE_FMA)
       set(FMA_COMPILE_FLAGS "-mfma")
@@ -697,6 +703,11 @@ if(HAVE_AVX512F)
   set_source_files_properties(src/arch/dotproductavx512.cpp
                               PROPERTIES COMPILE_FLAGS ${AVX512F_COMPILE_FLAGS})
 endif(HAVE_AVX512F)
+if(HAVE_AVX512VNNI)
+  list(APPEND arch_files_opt src/arch/intsimdmatrixvnni.cpp)
+  set_source_files_properties(src/arch/intsimdmatrixvnni.cpp
+                              PROPERTIES COMPILE_FLAGS ${AVX512VNNI_COMPILE_FLAGS})
+endif(HAVE_AVX512VNNI)
 if(HAVE_FMA)
   list(APPEND arch_files_opt src/arch/dotproductfma.cpp)
   set_source_files_properties(src/arch/dotproductfma.cpp
@@ -804,6 +815,7 @@ if(ENABLE_PRECOMPILED_HEADERS)
     src/arch/intsimdmatrixavx2.cpp
     src/arch/intsimdmatrixsse.cpp
     src/arch/intsimdmatrixneon.cpp
+    src/arch/intsimdmatrixvnni.cpp
   )
 
   foreach(file ${ARCH_FILES_NO_PCH})

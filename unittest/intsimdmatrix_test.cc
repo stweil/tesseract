@@ -193,6 +193,21 @@ TEST_F(IntSimdMatrixTest, AVX2) {
 #endif
 }
 
+// Tests that the AVX512-VNNI implementation gets the same result as the
+// vanilla. Skipped when the CPU does not implement VNNI.
+TEST_F(IntSimdMatrixTest, AVX512VNNI) {
+#if defined(HAVE_AVX512VNNI)
+  if (!SIMDDetect::IsAVX512VNNIAvailable()) {
+    GTEST_LOG_(INFO) << "No AVX512-VNNI found! Not tested!";
+    GTEST_SKIP();
+  }
+  ExpectEqualResults(IntSimdMatrix::intSimdMatrixAVX512VNNI);
+#else
+  GTEST_LOG_(INFO) << "AVX512-VNNI unsupported! Not tested!";
+  GTEST_SKIP();
+#endif
+}
+
 // Tests that the NEON implementation gets the same result as the vanilla.
 TEST_F(IntSimdMatrixTest, NEON) {
 #if defined(HAVE_NEON)
@@ -254,6 +269,12 @@ TEST_F(IntSimdMatrixTest, Performance) {
   if (SIMDDetect::IsAVX2Available()) {
     MeasurePerformance(IntSimdMatrix::intSimdMatrixAVX2, "AVX2", num_out,
                        num_in, iterations);
+  }
+#endif
+#if defined(HAVE_AVX512VNNI)
+  if (SIMDDetect::IsAVX512VNNIAvailable()) {
+    MeasurePerformance(IntSimdMatrix::intSimdMatrixAVX512VNNI, "AVX512VNNI",
+                       num_out, num_in, iterations);
   }
 #endif
 #if defined(HAVE_NEON)

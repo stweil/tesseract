@@ -180,6 +180,14 @@ libtesseract_la_LIBADD += libtesseract_avx512.la
 noinst_LTLIBRARIES += libtesseract_avx512.la
 endif
 
+if HAVE_AVX512VNNI
+libtesseract_avx512vnni_la_CXXFLAGS = -mavx512vnni
+libtesseract_avx512vnni_la_CXXFLAGS += -I$(top_srcdir)/src/ccutil
+libtesseract_avx512vnni_la_SOURCES = src/arch/intsimdmatrixvnni.cpp
+libtesseract_la_LIBADD += libtesseract_avx512vnni.la
+noinst_LTLIBRARIES += libtesseract_avx512vnni.la
+endif
+
 if HAVE_FMA
 libtesseract_fma_la_CXXFLAGS = -mfma
 libtesseract_fma_la_CXXFLAGS += -I$(top_srcdir)/src/ccutil
@@ -1363,6 +1371,9 @@ intsimdmatrix_test_CPPFLAGS += -DHAVE_AVX2
 endif
 if HAVE_SSE4_1
 intsimdmatrix_test_CPPFLAGS += -DHAVE_SSE4_1
+endif
+if HAVE_AVX512VNNI
+intsimdmatrix_test_CPPFLAGS += -DHAVE_AVX512VNNI
 endif
 intsimdmatrix_test_LDADD = $(TESS_LIBS)
 

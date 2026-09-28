@@ -125,6 +125,8 @@ struct TESS_API IntSimdMatrix {
   // Only available with AVX2 / AVX / FMA / SSE.
   static const IntSimdMatrix intSimdMatrixAVX2;
   static const IntSimdMatrix intSimdMatrixSSE;
+  // Only available with AVX512-VNNI.
+  static const IntSimdMatrix intSimdMatrixAVX512VNNI;
 };
 
 } // namespace tesseract

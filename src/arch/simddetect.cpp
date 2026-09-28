@@ -343,9 +343,15 @@ SIMDDetect::SIMDDetect() {
   // Select code for calculation of dot product based on autodetection.
   if (false) {
     // This is a dummy to support conditional compilation.
+#if defined(HAVE_AVX512VNNI) && defined(HAVE_AVX512F)
+  } else if (IsAVX512VNNIAvailable()) {
+    // AVX512-VNNI implies AVX512F. Use AVX512F for the float dot product and
+    // the faster VNNI kernel for the int8 matrix.
+    SetDotProduct(DotProductAVX512F, &IntSimdMatrix::intSimdMatrixAVX512VNNI);
+#endif
 #if defined(HAVE_AVX512F)
   } else if (avx512F_available_) {
-    // AVX512F detected.
+    // AVX512F detected (no VNNI).
     SetDotProduct(DotProductAVX512F, &IntSimdMatrix::intSimdMatrixAVX2);
 #endif
 #if defined(HAVE_AVX2)
@@ -403,6 +409,12 @@ void SIMDDetect::Update() {
     SetDotProduct(DotProductAVX, &IntSimdMatrix::intSimdMatrixAVX2);
     dotproduct_method = "avx2";
 #endif
+#if defined(HAVE_AVX512VNNI)
+  } else if (dotproduct == "vnni" && IsAVX512VNNIAvailable()) {
+    // AVX512-VNNI selected by config variable (for the int8 matrix).
+    SetDotProduct(DotProductAVX, &IntSimdMatrix::intSimdMatrixAVX512VNNI);
+    dotproduct_method = "vnni";
+#endif
 #if defined(HAVE_AVX)
   } else if (dotproduct == "avx") {
     // AVX selected by config variable.
@@ -449,6 +461,9 @@ void SIMDDetect::Update() {
         "Supported values for dotproduct: auto generic native"
 #if defined(HAVE_AVX2)
         " avx2"
+#endif
+#if defined(HAVE_AVX512VNNI)
+        " vnni"
 #endif
 #if defined(HAVE_AVX)
         " avx"
