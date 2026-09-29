@@ -97,7 +97,7 @@ static void PartialVNNI(const int8_t *wi, const TFloat *scales, const int8_t *u,
   result = _mm512_add_epi32(
       result, _mm512_mullo_epi32(bias, _mm512_set1_epi32(INT8_MAX)));
 
-  int32_t tmp[16];
+  alignas(64) int32_t tmp[16];
   _mm512_storeu_si512(reinterpret_cast<__m512i *>(tmp), result);
   for (int i = 0; i < kNumOutputsPerRegister; ++i) {
     v[i] = static_cast<TFloat>(tmp[i]) * scales[i];
