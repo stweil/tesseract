@@ -59,6 +59,11 @@ static INT_PARAM_FLAG(append_index, -1,
                       " attach the new network defined by net_spec");
 static BOOL_PARAM_FLAG(debug_network, false, "Get info on distribution of weight values");
 static INT_PARAM_FLAG(max_iterations, 0, "If set, exit after this many iterations");
+static INT_PARAM_FLAG(checkpoint_every, 0,
+                      "Number of training samples between rolling "
+                      "checkpoint writes. A larger value makes long "
+                      "trainings faster but loses more progress if they "
+                      "are interrupted. Default: internal default (100).");
 static BOOL_PARAM_FLAG(no_subtrainer, false,
                        "Disable the sub-trainer retry with reduced learning "
                        "rates when training makes no progress. Avoids the "
@@ -213,14 +218,17 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  // Apply the stall-retry settings after loading a possible checkpoint, so
-  // that they override any state restored from it (e.g. an active
-  // sub-trainer_).
+  // Apply the stall-retry and checkpoint settings after loading a possible
+  // checkpoint, so that they override any state restored from it (e.g. an
+  // active sub-trainer_).
   if (FLAGS_no_subtrainer) {
     trainer.SetSubtrainerEnabled(false);
   }
   if (FLAGS_min_stall_iterations >= 0) {
     trainer.SetMinStallIterations(FLAGS_min_stall_iterations);
+  }
+  if (FLAGS_checkpoint_every > 0) {
+    trainer.SetCheckpointInterval(FLAGS_checkpoint_every);
   }
 
   // Save an additional intermediate result (a restorable training checkpoint)

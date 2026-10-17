@@ -327,6 +327,43 @@ TEST_F(LSTMTrainerTest, CrashSafeCheckpointTest) {
   EXPECT_EQ(old_iteration, first_iteration);
 }
 
+// Tests that the interval between rolling checkpoint writes is configurable.
+// With an interval larger than the batch size, checkpoints are written only
+// once the interval has been reached (not on every batch), and the written
+// checkpoint is still complete and loadable.
+TEST_F(LSTMTrainerTest, CheckpointIntervalTest) {
+  SetupTrainerEng("[1,1,0,32 Lfx100 O1c1]", "ckpt-interval-lstm", false, false);
+  const std::string model_base = file::JoinPath(FLAGS_test_tmpdir, "ckpt-interval-lstm");
+  const std::string checkpoint = model_base + "_checkpoint";
+  // Remove leftovers from previous test runs.
+  file::Delete(checkpoint.c_str());
+  // Write a checkpoint at most every 300 samples. The main training loop
+  // calls MaintainCheckpoints every 100 samples (one batch), so the
+  // checkpoint must be written after the third batch only.
+  trainer_->SetCheckpointInterval(300);
+  EXPECT_EQ(300, trainer_->checkpoint_interval());
+  for (int batch = 1; batch <= 4; ++batch) {
+    for (int i = 0; i < 100; ++i) {
+      trainer_->TrainOnLine(trainer_.get(), false);
+    }
+    std::stringstream log;
+    trainer_->MaintainCheckpoints(nullptr, log);
+    const bool written =
+        log.str().find("wrote checkpoint") != std::string::npos;
+    const bool expect_write = (batch == 3);
+    LOG(INFO) << "batch=" << batch << " written=" << written << "\n";
+    EXPECT_EQ(expect_write, written) << "batch " << batch;
+  }
+  EXPECT_EQ(400, trainer_->training_iteration());
+  // The checkpoint on disk must be from the last write, i.e. after batch 3.
+  EXPECT_TRUE(file::Readable(checkpoint));
+  LSTMTrainer restored;
+  restored.InitCharSet(
+      file::JoinPath(file::JoinPath(FLAGS_test_tmpdir, "eng"), "eng") + ".traineddata");
+  CHECK(restored.TryLoadingCheckpoint(checkpoint.c_str(), nullptr));
+  EXPECT_EQ(300, restored.training_iteration());
+}
+
 // Tests that the sub-trainer retry (which tries different learning rates
 // when training makes no progress) is triggered when enabled, and fully
 // suppressed when disabled, under otherwise identical deterministic
