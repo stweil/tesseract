@@ -43,6 +43,15 @@ TESS_API
 bool LoadDataFromFile(const char *filename, std::vector<char> *data);
 TESS_API
 bool SaveDataToFile(const std::vector<char> &data, const char *filename);
+// Function to write a std::vector<char> to a whole file atomically. The
+// data is first written to a temporary file in the same directory as
+// filename, flushed and synced to disk, and then moved over filename with
+// an atomic rename. Readers therefore always observe either the complete
+// old content or the complete new content, never a partial write, even if
+// the process is interrupted while the file is being written.
+// Returns false on failure (and leaves filename unchanged on success).
+TESS_API
+bool SaveDataToFileAtomic(const std::vector<char> &data, const char *filename);
 
 // Deserialize data from file.
 template <typename T>
