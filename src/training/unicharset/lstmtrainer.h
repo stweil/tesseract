@@ -148,6 +148,13 @@ public:
   void set_perfect_delay(int delay) {
     perfect_delay_ = delay;
   }
+  // Sets the number of training samples in one epoch. When set (and the
+  // network exists), MaintainCheckpoints writes an additional restorable
+  // training checkpoint at the end of every epoch.
+  void SetEpochSize(int epoch_size);
+  // Saves a restorable FULL training checkpoint named for the given epoch
+  // number. Returns the filename written, or an empty string on failure.
+  std::string SaveEpochCheckpoint(int epoch_number) const;
   const std::vector<char> &best_trainer() const {
     return best_trainer_;
   }
@@ -413,6 +420,11 @@ protected:
   int debug_interval_;
   // Iteration at which the last checkpoint was dumped.
   int checkpoint_iteration_;
+  // Number of training samples in one epoch. 0 disables per-epoch
+  // checkpoints.
+  int epoch_size_ = 0;
+  // Highest epoch number for which an epoch checkpoint has been written.
+  int epoch_number_ = 0;
   // Basename of files to save best models to.
   std::string model_base_;
   // Checkpoint filename.
