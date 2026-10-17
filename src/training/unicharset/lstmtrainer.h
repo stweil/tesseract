@@ -155,6 +155,12 @@ public:
   // Saves a restorable FULL training checkpoint named for the given epoch
   // number. Returns the filename written, or an empty string on failure.
   std::string SaveEpochCheckpoint(int epoch_number) const;
+  // Writes the rolling checkpoint (checkpoint_name_) crash-safely. The new
+  // checkpoint is written atomically, and the previous checkpoint is moved to
+  // checkpoint_name_ + ".bak", so that an interruption at any point leaves at
+  // least one complete, loadable checkpoint (checkpoint or checkpoint.bak).
+  // Returns false if the new checkpoint could not be written.
+  bool WriteCheckpoint(std::stringstream &log_msg) const;
   const std::vector<char> &best_trainer() const {
     return best_trainer_;
   }
