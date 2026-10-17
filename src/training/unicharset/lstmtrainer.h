@@ -187,6 +187,18 @@ public:
   // least one complete, loadable checkpoint (checkpoint or checkpoint.bak).
   // Returns false if the new checkpoint could not be written.
   bool WriteCheckpoint(std::stringstream &log_msg) const;
+  // Sets the number of training samples between rolling checkpoint writes.
+  // Default kNumPagesPerBatch (100). Checkpoints are always written at least
+  // this often, so an interrupted training can resume from a complete
+  // checkpoint and loses at most that many samples.
+  void SetCheckpointInterval(int interval) {
+    if (interval > 0) {
+      checkpoint_interval_ = interval;
+    }
+  }
+  int checkpoint_interval() const {
+    return checkpoint_interval_;
+  }
   const std::vector<char> &best_trainer() const {
     return best_trainer_;
   }
@@ -450,8 +462,12 @@ protected:
 #endif
   // How often to display a debug image.
   int debug_interval_;
-  // Iteration at which the last checkpoint was dumped.
+  // Training iteration of the last written rolling checkpoint. Not
+  // serialized: after restoring a checkpoint, the next MaintainCheckpoints
+  // writes a fresh one immediately, so a complete checkpoint always exists.
   int checkpoint_iteration_;
+  // Number of training samples between rolling checkpoint writes.
+  int checkpoint_interval_;
   // Number of training samples in one epoch. 0 disables per-epoch
   // checkpoints.
   int epoch_size_ = 0;
