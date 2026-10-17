@@ -357,6 +357,20 @@ bool LSTMTrainer::MaintainCheckpoints(const TestCallback &tester,
     // Something interesting happened only if the sub_trainer_ was trained.
     result = sub_trainer_result != STR_NONE;
   }
+  // Write an additional intermediate result at the end of each epoch. An
+  // epoch is one full pass over all training samples, i.e. every
+  // epoch_size_ training iterations (training_iteration_ only counts
+  // samples that actually trained the network).
+  if (epoch_size_ > 0 && network_ != nullptr && training_iteration_ > 0) {
+    const int epoch_number = training_iteration_ / epoch_size_;
+    if (epoch_number > epoch_number_) {
+      const std::string epoch_name = SaveEpochCheckpoint(epoch_number);
+      if (!epoch_name.empty()) {
+        epoch_number_ = epoch_number;
+        log_msg << " wrote epoch checkpoint:" << epoch_name;
+      }
+    }
+  }
   if (checkpoint_name_.length() > 0) {
     // Write a current checkpoint.
     std::vector<char> checkpoint;
@@ -1037,6 +1051,35 @@ std::string LSTMTrainer::DumpFilename() const {
            << "_" << training_iteration_
            << ".checkpoint";
   return filename.str();
+}
+
+void LSTMTrainer::SetEpochSize(int epoch_size) {
+  epoch_size_ = epoch_size;
+  if (epoch_size_ > 0) {
+    // Skip the epochs that already completed before epoch checkpoints were
+    // enabled. In particular, after restoring from a checkpoint partway
+    // through an epoch, we must not re-save that epoch's checkpoint, or it
+    // would be overwritten with a state from inside the next epoch.
+    epoch_number_ = training_iteration() / epoch_size_;
+  }
+}
+
+// Saves a restorable FULL training checkpoint named for the given epoch
+// number. Returns the filename written, or an empty string on failure.
+std::string LSTMTrainer::SaveEpochCheckpoint(int epoch_number) const {
+  std::string filename;
+  {
+    std::stringstream name;
+    name.imbue(std::locale::classic());
+    name << model_base_ << "_epoch" << epoch_number << ".checkpoint";
+    filename = name.str();
+  }
+  std::vector<char> checkpoint;
+  if (!SaveTrainingDump(FULL, *this, &checkpoint) ||
+      !SaveDataToFile(checkpoint, filename.c_str())) {
+    return std::string();
+  }
+  return filename;
 }
 
 // Fills the whole error buffer of the given type with the given value.
