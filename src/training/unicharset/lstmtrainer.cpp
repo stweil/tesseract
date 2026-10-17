@@ -23,6 +23,7 @@
 #endif
 
 #include <cmath>
+#include <cstdio>              // for remove, rename
 #include <iomanip>             // for std::setprecision
 #include <locale>              // for std::locale::classic
 #include <string>
@@ -372,16 +373,35 @@ bool LSTMTrainer::MaintainCheckpoints(const TestCallback &tester,
     }
   }
   if (checkpoint_name_.length() > 0) {
-    // Write a current checkpoint.
-    std::vector<char> checkpoint;
-    if (!SaveTrainingDump(FULL, *this, &checkpoint) ||
-        !SaveDataToFile(checkpoint, checkpoint_name_.c_str())) {
-      log_msg << " failed to write checkpoint.";
-    } else {
-      log_msg << " wrote checkpoint.";
-    }
+    // Write a current checkpoint, crash-safely.
+    WriteCheckpoint(log_msg);
   }
   return result;
+}
+
+// Writes the rolling checkpoint (checkpoint_name_) crash-safely. The
+// previously written checkpoint is first moved to checkpoint_name_ + ".bak",
+// and the new checkpoint is then written atomically, so that an interruption
+// at any point leaves at least one complete, loadable checkpoint (either
+// checkpoint_name_ or checkpoint_name_ + ".bak"). This is what allows an
+// interrupted training to resume as if there had been no interruption.
+bool LSTMTrainer::WriteCheckpoint(std::stringstream &log_msg) const {
+  const std::string bak_name = checkpoint_name_ + ".bak";
+  // Remove any stale backup so the move below succeeds on all platforms
+  // (on Windows, rename does not overwrite an existing destination).
+  remove(bak_name.c_str());
+  // Make the currently complete checkpoint the new backup. Fails silently if
+  // no checkpoint has been written yet (first run).
+  rename(checkpoint_name_.c_str(), bak_name.c_str());
+  // Write the new checkpoint atomically.
+  std::vector<char> checkpoint;
+  if (!SaveTrainingDump(FULL, *this, &checkpoint) ||
+      !SaveDataToFileAtomic(checkpoint, checkpoint_name_.c_str())) {
+    log_msg << " failed to write checkpoint.";
+    return false;
+  }
+  log_msg << " wrote checkpoint.";
+  return true;
 }
 
 // Builds a string containing a progress message with current error rates.
@@ -1076,7 +1096,7 @@ std::string LSTMTrainer::SaveEpochCheckpoint(int epoch_number) const {
   }
   std::vector<char> checkpoint;
   if (!SaveTrainingDump(FULL, *this, &checkpoint) ||
-      !SaveDataToFile(checkpoint, filename.c_str())) {
+      !SaveDataToFileAtomic(checkpoint, filename.c_str())) {
     return std::string();
   }
   return filename;
