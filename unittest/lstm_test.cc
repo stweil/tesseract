@@ -211,4 +211,54 @@ TEST_F(LSTMTrainerTest, TestLayerAccess) {
   }
 }
 
+// Tests that MaintainCheckpoints writes an additional restorable training
+// checkpoint at the end of each epoch, where one epoch is one full pass over
+// all training samples.
+TEST_F(LSTMTrainerTest, EpochCheckpointTest) {
+  SetupTrainerEng("[1,1,0,32 Lfx100 O1c1]", "epoch-lstm", false, false);
+  const std::string model_base = file::JoinPath(FLAGS_test_tmpdir, "epoch-lstm");
+  const int epoch_size = trainer_->mutable_training_data()->TotalPages();
+  LOG(INFO) << "epoch_size=" << epoch_size << "\n";
+  CHECK_GT(epoch_size, 0);
+  // Start clean so stale checkpoints from earlier runs don't confuse the test.
+  for (int epoch = 1; epoch <= 3; ++epoch) {
+    file::Delete((model_base + "_epoch" + std::to_string(epoch) + ".checkpoint").c_str());
+  }
+  trainer_->SetEpochSize(epoch_size);
+  // Train for more than two full epochs, calling MaintainCheckpoints every
+  // 100 samples, as lstmtraining does between batches.
+  const int batch_size = 100;
+  const int total_iterations = (5 * epoch_size) / 2;
+  int iteration = trainer_->training_iteration();
+  while (iteration < total_iterations) {
+    const int target =
+        iteration + batch_size < total_iterations ? iteration + batch_size
+                                                  : total_iterations;
+    while (iteration < target) {
+      trainer_->TrainOnLine(trainer_.get(), false);
+      iteration = trainer_->training_iteration();
+    }
+    std::stringstream log;
+    trainer_->MaintainCheckpoints(nullptr, log);
+    iteration = trainer_->training_iteration();
+  }
+  const int trained = trainer_->training_iteration();
+  LOG(INFO) << "trained=" << trained << "\n";
+  // There must be a checkpoint for every completed epoch.
+  for (int epoch = 1; epoch * epoch_size <= trained; ++epoch) {
+    const std::string name =
+        model_base + "_epoch" + std::to_string(epoch) + ".checkpoint";
+    LOG(INFO) << "Expecting " << name << "\n";
+    CHECK(file::Readable(name));
+    // The checkpoint must be restorable into a fresh trainer, and it must
+    // reflect the state from somewhere within the corresponding epoch.
+    LSTMTrainer restored;
+    restored.InitCharSet(
+        file::JoinPath(file::JoinPath(FLAGS_test_tmpdir, "eng"), "eng") + ".traineddata");
+    EXPECT_TRUE(restored.TryLoadingCheckpoint(name.c_str(), nullptr));
+    EXPECT_GE(restored.training_iteration(), epoch * epoch_size);
+    EXPECT_LT(restored.training_iteration(), (epoch + 1) * epoch_size);
+  }
+}
+
 } // namespace tesseract.
