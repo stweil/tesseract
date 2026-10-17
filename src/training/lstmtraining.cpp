@@ -195,6 +195,16 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
+  // Save an additional intermediate result (a restorable training checkpoint)
+  // at the end of each epoch, where one epoch is one full pass over all
+  // training samples.
+  const int epoch_size = trainer.mutable_training_data()->TotalPages();
+  if (epoch_size > 0) {
+    tprintf("Will save a training checkpoint at the end of each epoch of %d samples.\n",
+            epoch_size);
+    trainer.SetEpochSize(epoch_size);
+  }
+
   tesseract::LSTMTester tester(static_cast<int64_t>(FLAGS_max_image_MB) * 1048576);
   tesseract::TestCallback tester_callback = nullptr;
   if (!FLAGS_eval_listfile.empty()) {
