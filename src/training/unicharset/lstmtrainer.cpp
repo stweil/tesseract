@@ -372,9 +372,13 @@ bool LSTMTrainer::MaintainCheckpoints(const TestCallback &tester,
       }
     }
   }
-  if (checkpoint_name_.length() > 0) {
-    // Write a current checkpoint, crash-safely.
-    WriteCheckpoint(log_msg);
+  if (checkpoint_name_.length() > 0 &&
+      training_iteration_ - checkpoint_iteration_ >= checkpoint_interval_) {
+    // Write a current checkpoint, crash-safely. The interval is relative to
+    // the last write, not absolute, so it holds for any batch size.
+    if (WriteCheckpoint(log_msg)) {
+      checkpoint_iteration_ = training_iteration_;
+    }
   }
   return result;
 }
@@ -1187,6 +1191,7 @@ void LSTMTrainer::EmptyConstructor() {
   num_training_stages_ = 2;
   min_stall_iterations_ = kMinStallIterations;
   subtrainer_enabled_ = true;
+  checkpoint_interval_ = kNumPagesPerBatch;
   InitIterations();
 }
 
