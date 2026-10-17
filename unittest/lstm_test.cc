@@ -327,4 +327,82 @@ TEST_F(LSTMTrainerTest, CrashSafeCheckpointTest) {
   EXPECT_EQ(old_iteration, first_iteration);
 }
 
+// Tests that the sub-trainer retry (which tries different learning rates
+// when training makes no progress) is triggered when enabled, and fully
+// suppressed when disabled, under otherwise identical deterministic
+// conditions.
+TEST_F(LSTMTrainerTest, SubtrainerConfigTest) {
+  // Trains the trainer in batches of 100 (calling MaintainCheckpoints after
+  // each batch, as lstmtraining does) until the best error rate drops below
+  // the start-up threshold (75%). This populates best_trainer_ and puts the
+  // trainer past the start-up phase, which the stall trigger requires.
+  // Returns the final training iteration.
+  auto train_until_started = [](LSTMTrainer *trainer) {
+    const int kMaxIterations = 2000;
+    const double kMinStartedErrorRate = 75.0;
+    int iteration = 0;
+    while (iteration < kMaxIterations &&
+           trainer->best_error_rate() >= kMinStartedErrorRate) {
+      const int target = iteration + 100;
+      while (iteration < target) {
+        trainer->TrainOnLine(trainer, false);
+        iteration = trainer->training_iteration();
+      }
+      std::stringstream batch_log;
+      trainer->MaintainCheckpoints(nullptr, batch_log);
+      iteration = trainer->training_iteration();
+    }
+    return iteration;
+  };
+  // A stall is declared when the rolling char error is more than
+  // kSubTrainerMarginFraction (3/128 ~= 2.34%) above the best, the best is
+  // below the start-up threshold, and the stall iteration has been reached.
+  // Rather than rely on training dynamics to drift the rolling mean far
+  // enough above the best (which is slow and not guaranteed), we reach a
+  // stable best with real training and then force the rolling error to a
+  // known value above the best with FillErrorBuffer. This makes the trigger
+  // condition deterministic.
+  const double kMarginFraction = 3.0 / 128;
+  // Trains until start-up is over, then forces the rolling char error above
+  // the best so the stall condition is met, and runs MaintainCheckpoints.
+  // Returns whether a sub-trainer trial was started (per the log).
+  auto train_and_try_stall =
+      [this, train_until_started, kMarginFraction](LSTMTrainer *trainer) {
+        train_until_started(trainer);
+        CHECK_LT(trainer->best_error_rate(), 75.0);
+        // Force the rolling char error to just above the margin over the
+        // best so that error_rate > best_error_rate_ * (1 + margin).
+        const double best = trainer->best_error_rate();
+        const double forced_error = best * (1.0 + 2.0 * kMarginFraction);
+        trainer->FillErrorBuffer(forced_error / 100.0, ET_CHAR_ERROR);
+        CHECK_GT(trainer->CharError(), best * (1.0 + kMarginFraction));
+        std::stringstream log;
+        trainer->MaintainCheckpoints(nullptr, log);
+        return log.str().find("Trial sub_trainer_") != std::string::npos;
+      };
+  const char *kSpec = "[1,1,0,32 Lfx100 O1c1]";
+  const float kLearningRate = 1e-3;
+  // Enabled: with sub-trainer trials on and no stall delay, the forced stall
+  // must start a sub-trainer trial, which logs "Trial sub_trainer_".
+  SetupTrainer(kSpec, "subtrainer-on", "eng/eng.unicharset", "eng.Arial.exp0.lstmf",
+               false, false, kLearningRate, false, "eng");
+  trainer_->SetMinStallIterations(0);
+  const bool enabled_started = train_and_try_stall(trainer_.get());
+  const int enabled_iteration = trainer_->training_iteration();
+  LOG(INFO) << "enabled: best=" << trainer_->best_error_rate()
+            << " sub_trainer_started=" << enabled_started << "\n";
+  EXPECT_TRUE(enabled_started);
+  // Disabled: the identical run must never start a sub-trainer.
+  SetupTrainer(kSpec, "subtrainer-off", "eng/eng.unicharset", "eng.Arial.exp0.lstmf",
+               false, false, kLearningRate, false, "eng");
+  trainer_->SetMinStallIterations(0);
+  trainer_->SetSubtrainerEnabled(false);
+  const bool disabled_started = train_and_try_stall(trainer_.get());
+  LOG(INFO) << "disabled: best=" << trainer_->best_error_rate()
+            << " sub_trainer_started=" << disabled_started << "\n";
+  EXPECT_FALSE(disabled_started);
+  // The two runs are deterministic and must train to the same point.
+  EXPECT_EQ(enabled_iteration, trainer_->training_iteration());
+}
+
 } // namespace tesseract.
