@@ -218,11 +218,17 @@ int main(int argc, char **argv) {
 
   int max_iterations = FLAGS_max_iterations;
   if (max_iterations < 0) {
-    // A negative value is interpreted as epochs
-    max_iterations = filenames.size() * (-max_iterations);
+    // A negative value is interpreted as the number of epochs, where one
+    // epoch is one full pass over all training samples (lines).
+    max_iterations = epoch_size * (-max_iterations);
   } else if (max_iterations == 0) {
     // "Infinite" iterations.
     max_iterations = INT_MAX;
+  }
+  if (max_iterations == 0) {
+    // This can only happen when the training data is empty (epoch_size == 0).
+    tprintf("Training data is empty; nothing to do.\n");
+    return EXIT_FAILURE;
   }
 
   do {
