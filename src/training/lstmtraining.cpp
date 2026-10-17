@@ -59,6 +59,17 @@ static INT_PARAM_FLAG(append_index, -1,
                       " attach the new network defined by net_spec");
 static BOOL_PARAM_FLAG(debug_network, false, "Get info on distribution of weight values");
 static INT_PARAM_FLAG(max_iterations, 0, "If set, exit after this many iterations");
+static BOOL_PARAM_FLAG(no_subtrainer, false,
+                       "Disable the sub-trainer retry with reduced learning "
+                       "rates when training makes no progress. Avoids the "
+                       "expensive learning-rate search and the doubled "
+                       "training time while a sub-trainer catches up.");
+static INT_PARAM_FLAG(min_stall_iterations, -1,
+                     "Number of iterations without improvement before "
+                     "training is considered stalled and a sub-trainer with "
+                     "reduced learning rates is tried. Use 0 to try "
+                     "immediately, or a large value to effectively disable "
+                     "the retry. Default: internal default (10000).");
 static STRING_PARAM_FLAG(traineddata, "", "Combined Dawgs/Unicharset/Recoder for language model");
 static STRING_PARAM_FLAG(old_traineddata, "",
                          "When changing the character set, this specifies the old"
@@ -200,6 +211,16 @@ int main(int argc, char **argv) {
           FLAGS_randomly_rotate)) {
     tprintf("Load of images failed!!\n");
     return EXIT_FAILURE;
+  }
+
+  // Apply the stall-retry settings after loading a possible checkpoint, so
+  // that they override any state restored from it (e.g. an active
+  // sub-trainer_).
+  if (FLAGS_no_subtrainer) {
+    trainer.SetSubtrainerEnabled(false);
+  }
+  if (FLAGS_min_stall_iterations >= 0) {
+    trainer.SetMinStallIterations(FLAGS_min_stall_iterations);
   }
 
   // Save an additional intermediate result (a restorable training checkpoint)

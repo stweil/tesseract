@@ -148,6 +148,32 @@ public:
   void set_perfect_delay(int delay) {
     perfect_delay_ = delay;
   }
+  // Number of iterations without improvement before training is considered
+  // stalled. Default kMinStallIterations. For a fresh trainer (no training
+  // iterations yet) the stall iteration is set immediately; a trainer
+  // restored from a checkpoint keeps its serialized stall iteration, and the
+  // new value is used for subsequent resets after each new best.
+  void SetMinStallIterations(int iterations) {
+    min_stall_iterations_ = iterations;
+    if (training_iteration() == 0) {
+      stall_iteration_ = iterations;
+    }
+  }
+  int min_stall_iterations() const {
+    return min_stall_iterations_;
+  }
+  // Whether to try a sub-trainer with reduced learning rates when training
+  // stalls. Disabling also discards a currently active sub_trainer_, e.g.
+  // one restored from a checkpoint. Default true.
+  void SetSubtrainerEnabled(bool enabled) {
+    subtrainer_enabled_ = enabled;
+    if (!enabled) {
+      sub_trainer_.reset();
+    }
+  }
+  bool subtrainer_enabled() const {
+    return subtrainer_enabled_;
+  }
   // Sets the number of training samples in one epoch. When set (and the
   // network exists), MaintainCheckpoints writes an additional restorable
   // training checkpoint at the end of every epoch.
@@ -471,6 +497,12 @@ protected:
   float error_rate_of_last_saved_best_;
   // Current stage of training.
   int training_stage_;
+  // Number of iterations without improvement before training is considered
+  // stalled and a sub-trainer trial with reduced learning rates is started.
+  // Initialized in EmptyConstructor.
+  int min_stall_iterations_;
+  // Whether sub-trainer trials are enabled at all.
+  bool subtrainer_enabled_;
   // History of best error rate against iteration. Used for computing the
   // number of steps to each 2% improvement.
   std::vector<double> best_error_history_;

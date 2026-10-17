@@ -194,10 +194,10 @@ void LSTMTrainer::InitIterations() {
   best_iteration_ = 0;
   worst_error_rate_ = 0.0;
   worst_iteration_ = 0;
-  stall_iteration_ = kMinStallIterations;
+  stall_iteration_ = min_stall_iterations_;
   best_error_history_.clear();
   best_error_iterations_.clear();
-  improvement_steps_ = kMinStallIterations;
+  improvement_steps_ = min_stall_iterations_;
   perfect_delay_ = 0;
   last_perfect_training_iteration_ = 0;
   for (int i = 0; i < ET_COUNT; ++i) {
@@ -291,7 +291,7 @@ bool LSTMTrainer::MaintainCheckpoints(const TestCallback &tester,
   PrepareLogMsg(log_msg);
   double error_rate = CharError();
   int iteration = learning_iteration();
-  if (iteration >= stall_iteration_ &&
+  if (subtrainer_enabled_ && iteration >= stall_iteration_ &&
       error_rate > best_error_rate_ * (1.0 + kSubTrainerMarginFraction) &&
       best_error_rate_ < kMinStartedErrorRate && !best_trainer_.empty()) {
     // It hasn't got any better in a long while, and is a margin worse than the
@@ -299,7 +299,7 @@ bool LSTMTrainer::MaintainCheckpoints(const TestCallback &tester,
     StartSubtrainer(log_msg);
   }
   SubTrainerResult sub_trainer_result = STR_NONE;
-  if (sub_trainer_ != nullptr) {
+  if (subtrainer_enabled_ && sub_trainer_ != nullptr) {
     sub_trainer_result = UpdateSubtrainer(log_msg);
     if (sub_trainer_result == STR_REPLACED) {
       // Reset the inputs, as we have overwritten *this.
@@ -317,7 +317,7 @@ bool LSTMTrainer::MaintainCheckpoints(const TestCallback &tester,
     // If sub_trainer_ is not nullptr, either *this beat it to a new best, or it
     // just overwrote *this. In either case, we have finished with it.
     sub_trainer_.reset();
-    stall_iteration_ = learning_iteration() + kMinStallIterations;
+    stall_iteration_ = learning_iteration() + min_stall_iterations_;
     if (TransitionTrainingStage(kStageTransitionThreshold)) {
       log_msg << " Transitioned to stage " << CurrentTrainingStage();
     }
@@ -1185,6 +1185,8 @@ void LSTMTrainer::EmptyConstructor() {
   checkpoint_iteration_ = 0;
   training_stage_ = 0;
   num_training_stages_ = 2;
+  min_stall_iterations_ = kMinStallIterations;
+  subtrainer_enabled_ = true;
   InitIterations();
 }
 
