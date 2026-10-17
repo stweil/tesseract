@@ -149,10 +149,17 @@ int main(int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  // Checkpoints always take priority if they are available.
-  if (trainer.TryLoadingCheckpoint(checkpoint_file.c_str(), nullptr) ||
-      trainer.TryLoadingCheckpoint(checkpoint_bak.c_str(), nullptr)) {
-    tprintf("Successfully restored trainer from %s\n", checkpoint_file.c_str());
+  // Checkpoints always take priority if they are available. If the
+  // checkpoint file is missing or corrupted (e.g. the process was
+  // interrupted while writing it), fall back to the backup.
+  if (trainer.TryLoadingCheckpoint(checkpoint_file.c_str(), nullptr)) {
+    tprintf("Successfully restored trainer from %s (iteration %d)\n",
+            checkpoint_file.c_str(), trainer.training_iteration());
+  } else if (trainer.TryLoadingCheckpoint(checkpoint_bak.c_str(), nullptr)) {
+    tprintf("Checkpoint %s is unavailable; restored trainer from backup %s "
+            "(iteration %d)\n",
+            checkpoint_file.c_str(), checkpoint_bak.c_str(),
+            trainer.training_iteration());
   } else {
     if (!FLAGS_continue_from.empty()) {
       // Load a past model file to improve upon.

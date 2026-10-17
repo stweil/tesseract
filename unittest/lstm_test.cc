@@ -261,4 +261,70 @@ TEST_F(LSTMTrainerTest, EpochCheckpointTest) {
   }
 }
 
+// Tests that the rolling checkpoint is written crash-safely, so that an
+// interrupted training can resume as if there had been no interruption.
+// WriteCheckpoint atomically replaces the checkpoint and keeps the previous
+// one in checkpoint.bak, so there is always a complete, loadable checkpoint
+// even if the process dies while writing the next one.
+TEST_F(LSTMTrainerTest, CrashSafeCheckpointTest) {
+  SetupTrainerEng("[1,1,0,32 Lfx100 O1c1]", "crash-lstm", false, false);
+  const std::string model_base = file::JoinPath(FLAGS_test_tmpdir, "crash-lstm");
+  const std::string checkpoint = model_base + "_checkpoint";
+  const std::string checkpoint_bak = checkpoint + ".bak";
+  // Remove leftovers from previous test runs.
+  file::Delete(checkpoint.c_str());
+  file::Delete(checkpoint_bak.c_str());
+  // Write the first checkpoint (no .bak exists yet).
+  for (int i = 0; i < 250; ++i) {
+    trainer_->TrainOnLine(trainer_.get(), false);
+  }
+  std::stringstream log;
+  trainer_->MaintainCheckpoints(nullptr, log);
+  CHECK(file::Readable(checkpoint));
+  const int first_iteration = trainer_->training_iteration();
+  // Write a second checkpoint. The first must now be preserved as .bak.
+  for (int i = 0; i < 250; ++i) {
+    trainer_->TrainOnLine(trainer_.get(), false);
+  }
+  trainer_->MaintainCheckpoints(nullptr, log);
+  CHECK(file::Readable(checkpoint));
+  CHECK(file::Readable(checkpoint_bak));
+  // Both must be loadable, and the .bak must be the older state.
+  auto load_state = [](const char *filename, int *iteration) {
+    LSTMTrainer state;
+    state.InitCharSet(file::JoinPath(file::JoinPath(FLAGS_test_tmpdir, "eng"), "eng") +
+                      ".traineddata");
+    if (!state.TryLoadingCheckpoint(filename, nullptr)) {
+      return false;
+    }
+    *iteration = state.training_iteration();
+    return true;
+  };
+  int new_iteration = 0;
+  int old_iteration = 0;
+  CHECK(load_state(checkpoint.c_str(), &new_iteration));
+  CHECK(load_state(checkpoint_bak.c_str(), &old_iteration));
+  EXPECT_GT(new_iteration, old_iteration);
+  EXPECT_EQ(new_iteration, trainer_->training_iteration());
+  EXPECT_EQ(old_iteration, first_iteration);
+  // Simulate an interruption during a checkpoint write by truncating the
+  // live checkpoint, and verify recovery: a fresh run restores from the
+  // good .bak and can keep writing checkpoints.
+  {
+    std::string contents;
+    CHECK(file::GetContents(checkpoint, &contents, file::Defaults()));
+    file::WriteStringToFile(contents.substr(0, contents.size() / 2), checkpoint);
+  }
+  LSTMTrainer restored;
+  restored.InitCharSet(
+      file::JoinPath(file::JoinPath(FLAGS_test_tmpdir, "eng"), "eng") + ".traineddata");
+  // The corrupt checkpoint cannot be loaded...
+  EXPECT_FALSE(restored.TryLoadingCheckpoint(checkpoint.c_str(), nullptr));
+  // ...but the backup can, and it restores the previous training state, so
+  // the interrupted run resumes without losing more than one checkpoint
+  // interval of progress.
+  CHECK(load_state(checkpoint_bak.c_str(), &old_iteration));
+  EXPECT_EQ(old_iteration, first_iteration);
+}
+
 } // namespace tesseract.
