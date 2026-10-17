@@ -24,6 +24,15 @@
 
 #include <climits> // for INT_MAX
 #include <cstdio>
+#include <cstring>
+
+#ifdef _WIN32
+#include "host.h"    // windows.h, for MoveFileEx
+#include <io.h>      // for _commit, _fileno
+#include <process.h> // for _getpid
+#else
+#include <unistd.h> // for fileno, fsync, getpid
+#endif
 
 namespace tesseract {
 
@@ -57,6 +66,64 @@ bool SaveDataToFile(const std::vector<char> &data, const char *filename) {
   }
   bool result = fwrite(&data[0], 1, data.size(), fp) == data.size();
   fclose(fp);
+  return result;
+}
+
+// Writes the vector of char to the filename file atomically. The data is
+// written to a temporary file in the same directory as filename, flushed
+// and synced to disk, and then moved over filename with an atomic rename.
+// On failure filename is left unchanged and the temporary file is removed.
+bool SaveDataToFileAtomic(const std::vector<char> &data, const char *filename) {
+  // Build a unique temporary name in the same directory, so that the
+  // final rename is an atomic move on the same filesystem.
+  std::string temp_name = filename;
+  temp_name += ".tmp";
+  {
+    static int counter = 0;
+    char suffix[32];
+#ifdef _WIN32
+    const int pid = _getpid();
+#else
+    const int pid = getpid();
+#endif
+    snprintf(suffix, sizeof(suffix), "%d_%d", ++counter, pid);
+    temp_name += ".";
+    temp_name += suffix;
+  }
+  FILE *fp = fopen(temp_name.c_str(), "wb");
+  if (fp == nullptr) {
+    return false;
+  }
+  bool result = !data.empty()
+                    ? fwrite(&data[0], 1, data.size(), fp) == data.size()
+                    : true;
+  // Flush userspace buffers and sync to disk before the rename, so that an
+  // interruption after the rename does not leave a file whose content is
+  // still being written.
+  if (result) {
+    fflush(fp);
+#ifdef _WIN32
+    result = _commit(_fileno(fp)) == 0;
+#else
+    result = fsync(fileno(fp)) == 0;
+#endif
+  }
+  if (fclose(fp) != 0) {
+    result = false;
+  }
+  if (result) {
+#ifdef _WIN32
+    // On Windows, rename() fails if the destination already exists.
+    // MoveFileEx with MOVEFILE_REPLACE_EXISTING performs an atomic replace.
+    result = MoveFileEx(temp_name.c_str(), filename, MOVEFILE_REPLACE_EXISTING)
+               != 0;
+#else
+    result = rename(temp_name.c_str(), filename) == 0;
+#endif
+  }
+  if (!result) {
+    remove(temp_name.c_str());
+  }
   return result;
 }
 
