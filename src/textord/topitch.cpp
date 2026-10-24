@@ -1181,7 +1181,7 @@ float tune_row_pitch2(          // find fp cells
     bool testing_on             // individual words
 ) {
   int pitch_delta;    // offset pitch
-  int16_t pixel;      // pixel coord
+  int32_t pixel;      // pixel coord
   int16_t best_pixel; // pixel coord
   int16_t best_delta; // best pitch
   int16_t best_pitch; // best pitch
