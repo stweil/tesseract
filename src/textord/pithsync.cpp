@@ -303,7 +303,7 @@ double check_pitch_sync2(    // find segmentation
 ) {
   bool faking;                  // illegal cut pt
   bool mid_cut;                 // cheap cut pt.
-  int16_t x;                    // current coord
+  int32_t x;                    // current coord
   int16_t blob_index;           // blob number
   int16_t left_edge;            // of word
   int16_t right_edge;           // of word
@@ -494,7 +494,7 @@ double check_pitch_sync3(    // find segmentation
   bool mid_cut;                 // cheap cut pt.
   int16_t left_edge;            // of word
   int16_t right_edge;           // of word
-  int16_t x;                    // current coord
+  int32_t x;                    // current coord
   int16_t array_origin;         // x coord of array
   int16_t offset;               // dist to legal area
   int16_t projection_offset;    // from scaled projection
