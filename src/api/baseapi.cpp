@@ -2141,6 +2141,67 @@ int TessBaseAPI::FindLines() {
     return -1;
   }
 
+  // A global Otsu threshold can leave dense high-resolution pages (e.g.
+  // newspaper scans with uneven background tone) so poorly separated that the
+  // page segmenter cannot find any text regions and declares the page empty.
+  // If that happens, retry with the adaptive thresholding methods, which track
+  // the local background tone, and keep the first segmentation that yields
+  // content.
+  const ThresholdMethod orig_method =
+      static_cast<ThresholdMethod>(static_cast<int>(tesseract_->thresholding_method));
+  if (block_list_->empty() && tesseract_->tessedit_retry_threshold_on_empty &&
+      orig_method == ThresholdMethod::Otsu &&
+      PSM_COL_FIND_ENABLED(static_cast<int>(tesseract_->tessedit_pageseg_mode))) {
+    Pix *binary = tesseract_->pix_binary();
+    // Skip the retry for blank (or nearly blank) pages: there is nothing for
+    // an adaptive threshold to separate.
+    bool has_ink = false;
+    if (binary != nullptr) {
+      l_int32 ink_count = 0;
+      long long total = static_cast<long long>(pixGetWidth(binary)) * pixGetHeight(binary);
+      pixCountPixels(binary, &ink_count, nullptr);
+      // At least 1 in 100000 pixels set: skip truly blank pages.
+      has_ink = total > 0 && static_cast<long long>(ink_count) * 100000 >= total;
+    }
+    if (has_ink) {
+      static const ThresholdMethod retry_methods[] = {ThresholdMethod::Sauvola,
+                                                      ThresholdMethod::LeptonicaOtsu};
+      for (ThresholdMethod method : retry_methods) {
+        tesseract_->thresholding_method.set_value(static_cast<int>(method));
+        // SetRectangle clears the (empty) block list and the working images,
+        // so the next Threshold is a fresh pass over the same rectangle.
+        SetRectangle(rect_left_, rect_top_, rect_width_, rect_height_);
+        if (!Threshold(&tesseract_->mutable_pix_binary()->pix_)) {
+          break;
+        }
+        tesseract_->PrepareForPageseg();
+        if (tesseract_->SegmentPage(input_file_.c_str(), block_list_, osd_tess, &osr) < 0) {
+          break;
+        }
+        if (!block_list_->empty()) {
+          tprintf("Empty page with global Otsu thresholding; "
+                  "adaptive thresholding (%s) found content.\n",
+                  method == ThresholdMethod::Sauvola ? "Sauvola" : "Leptonica Otsu");
+          break;
+        }
+      }
+      // The retry is a page-local salvage: restore the thresholding method
+      // so that subsequent pages (or any later re-thresholding) again use the
+      // method the user configured.
+      tesseract_->thresholding_method.set_value(static_cast<int>(orig_method));
+      if (block_list_->empty()) {
+        // Also restore the thresholded image so the (still) empty page is
+        // reported the way it would have been without the retry. If the
+        // retry found content, pix_binary_ and the block list belong to the
+        // retry method and must be left in sync.
+        SetRectangle(rect_left_, rect_top_, rect_width_, rect_height_);
+        if (Threshold(&tesseract_->mutable_pix_binary()->pix_)) {
+          tesseract_->PrepareForPageseg();
+        }
+      }
+    }
+  }
+
   // If Devanagari is being recognized, we use different images for page seg
   // and for OCR.
   tesseract_->PrepareForTessOCR(block_list_);

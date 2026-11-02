@@ -61,6 +61,18 @@ std::string GetCleanedTextResult(tesseract::TessBaseAPI *tess, Image pix) {
   return ocr_result;
 }
 
+namespace {
+
+// Runs page segmentation only and returns the number of layout blocks found.
+int CountBlocks(tesseract::TessBaseAPI &api) {
+  Boxa *regions = api.GetRegions(nullptr);
+  int count = regions == nullptr ? 0 : boxaGetCount(regions);
+  boxaDestroy(&regions);
+  return count;
+}
+
+} // namespace
+
 // The fixture for testing Tesseract.
 class TesseractTest : public testing::Test {
 protected:
@@ -76,6 +88,52 @@ protected:
 TEST_F(TesseractTest, StaticTessBaseAPI) {
   static tesseract::TessBaseAPI api;
   api.End();
+}
+
+// FindLines() may retry page segmentation with adaptive thresholding when
+// the global Otsu threshold yields an empty page
+// (tessedit_retry_threshold_on_empty). The retry must be a no-op everywhere
+// else: the flag is on by default, blank pages stay empty (no retry for
+// pages without ink), and pages that segment fine are unaffected.
+TEST_F(TesseractTest, RetryThresholdOnEmptyPage) {
+  tesseract::TessBaseAPI api;
+  REQUIRE_TRAINEDDATA(TESSDATA_DIR, "eng");
+  if (api.Init(TessdataPath().c_str(), "eng", tesseract::OEM_TESSERACT_ONLY) == -1) {
+    // eng.traineddata not found.
+    GTEST_SKIP();
+  }
+  api.SetPageSegMode(tesseract::PSM_AUTO);
+
+  // The retry must be enabled by default.
+  bool default_value = false;
+  ASSERT_TRUE(api.GetBoolVariable("tessedit_retry_threshold_on_empty", &default_value));
+  EXPECT_TRUE(default_value);
+
+  // A genuinely blank page stays empty: the ink pre-check keeps the retry
+  // from firing on pages without anything to separate.
+  {
+    Image blank = pixCreate(1000, 1000, 8);
+    pixSetAll(blank);
+    api.SetImage(blank);
+    api.SetInputName("retry_threshold_blank");
+    EXPECT_EQ(CountBlocks(api), 0);
+    blank.destroy();
+  }
+
+  // A page that segments fine under global Otsu is unaffected by the retry:
+  // identical layout with the flag on and off.
+  {
+    Image page = pixRead(TestDataNameToPath("HelloGoogle.tif").c_str());
+    ASSERT_TRUE(page);
+    api.SetImage(page);
+    api.SetInputName("HelloGoogle.tif");
+    int count_with_retry = CountBlocks(api);
+    ASSERT_GT(count_with_retry, 0);
+    api.SetVariable("tessedit_retry_threshold_on_empty", "false");
+    EXPECT_EQ(CountBlocks(api), count_with_retry);
+    api.SetVariable("tessedit_retry_threshold_on_empty", "true");
+    page.destroy();
+  }
 }
 
 // Tests that Tesseract gets exactly the right answer on phototest.
