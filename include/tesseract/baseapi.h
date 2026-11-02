@@ -749,6 +749,16 @@ protected:
    */
   int FindLines();
 
+  /**
+   * Multi-column (newspaper) recognition: automatically detect the vertical
+   * gutters that separate columns, recognise each column independently so that
+   * words from adjacent columns are never interleaved, and merge the results
+   * back into a single page result in column-major reading order. Used as an
+   * alternative to the normal FindLines()/recog_all_words() flow when
+   * textord_auto_columns is enabled and more than one column is detected.
+   */
+  bool RecognizeMultiColumn(ETEXT_DESC *monitor);
+
   /** Delete the pageres and block list ready for a new page. */
   void ClearResults();
 
@@ -789,6 +799,7 @@ protected:
   std::string language_;             ///< Last initialized language.
   OcrEngineMode last_oem_requested_; ///< Last ocr language mode requested.
   bool recognition_done_;            ///< page_res_ contains recognition data.
+  int auto_columns_;                 ///< Columns used by the last auto-column recognise (0 = none).
 
   /**
    * @defgroup ThresholderParams Thresholder Parameters
