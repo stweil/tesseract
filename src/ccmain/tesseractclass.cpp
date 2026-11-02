@@ -116,6 +116,12 @@ Tesseract::Tesseract()
                     "method. "
                     "For standard Otsu use 0.0, otherwise 0.1 is recommended",
                     this->params())
+    , BOOL_MEMBER(tessedit_retry_threshold_on_empty, true,
+                  "When global Otsu thresholding leads to an empty page "
+                  "during page segmentation, retry once with each adaptive "
+                  "thresholding method (Sauvola, Leptonica Otsu). Only takes "
+                  "effect on pages that would otherwise yield no blocks.",
+                  this->params())
     , INT_INIT_MEMBER(tessedit_ocr_engine_mode, tesseract::OEM_DEFAULT,
                       "Which OCR engine(s) to run (Tesseract, LSTM, both)."
                       " Defaults to loading and running the most accurate"
