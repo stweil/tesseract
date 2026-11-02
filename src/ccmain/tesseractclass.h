@@ -771,6 +771,7 @@ public:
   double_VAR_H(thresholding_tile_size);
   double_VAR_H(thresholding_smooth_kernel_size);
   double_VAR_H(thresholding_score_fraction);
+  BOOL_VAR_H(tessedit_retry_threshold_on_empty);
   INT_VAR_H(tessedit_ocr_engine_mode);
   STRING_VAR_H(tessedit_char_blacklist);
   STRING_VAR_H(tessedit_char_whitelist);
