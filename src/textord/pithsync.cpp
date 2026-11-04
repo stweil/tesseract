@@ -41,7 +41,7 @@ void FPCUTPT::setup(      // constructor
     STATS *projection,    // vertical occupation
     int16_t zero_count,   // official zero
     int16_t pitch,        // proposed pitch
-    int16_t x,            // position
+    int32_t x,            // position
     int16_t offset        // dist to gap
 ) {
   // half of pitch
@@ -97,7 +97,7 @@ void FPCUTPT::setup(      // constructor
 void FPCUTPT::assign(       // constructor
     FPCUTPT *cutpts,        // predecessors
     int16_t array_origin,   // start coord
-    int16_t x,              // position
+    int32_t x,              // position
     bool faking,            // faking this one
     bool mid_cut,           // cheap cut.
     int16_t offset,         // dist to gap
@@ -199,7 +199,7 @@ void FPCUTPT::assign(       // constructor
 void FPCUTPT::assign_cheap( // constructor
     FPCUTPT *cutpts,        // predecessors
     int16_t array_origin,   // start coord
-    int16_t x,              // position
+    int32_t x,              // position
     bool faking,            // faking this one
     bool mid_cut,           // cheap cut.
     int16_t offset,         // dist to gap
@@ -310,8 +310,8 @@ double check_pitch_sync2(    // find segmentation
   int16_t array_origin;         // x coord of array
   int16_t offset;               // dist to legal area
   int16_t zero_count;           // projection zero
-  int16_t best_left_x = 0;      // for equals
-  int16_t best_right_x = 0;     // right edge
+  int32_t best_left_x = 0;      // for equals
+  int32_t best_right_x = 0;     // right edge
   TBOX this_box;                // bounding box
   TBOX next_box;                // box of next blob
   FPSEGPT *segpt;               // segment point
@@ -501,8 +501,8 @@ double check_pitch_sync3(    // find segmentation
   int16_t prev_zero;            // previous zero dist
   int16_t next_zero;            // next zero dist
   int16_t zero_offset;          // scan window
-  int16_t best_left_x = 0;      // for equals
-  int16_t best_right_x = 0;     // right edge
+  int32_t best_left_x = 0;      // for equals
+  int32_t best_right_x = 0;     // right edge
   FPSEGPT *segpt;               // segment point
   int minindex;                 // next input position
   int test_index;               // index to mins
