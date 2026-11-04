@@ -36,13 +36,13 @@ public:
       STATS *projection,    // occupation
       int16_t zero_count,   // official zero
       int16_t pitch,        // proposed pitch
-      int16_t x,            // position
+      int32_t x,            // position
       int16_t offset);      // dist to gap
 
   void assign(                // evaluate cut
       FPCUTPT cutpts[],       // predecessors
       int16_t array_origin,   // start coord
-      int16_t x,              // position
+      int32_t x,              // position
       bool faking,            // faking this one
       bool mid_cut,           // doing free cut
       int16_t offset,         // extra cost dist
@@ -55,7 +55,7 @@ public:
   void assign_cheap(          // evaluate cut
       FPCUTPT cutpts[],       // predecessors
       int16_t array_origin,   // start coord
-      int16_t x,              // position
+      int32_t x,              // position
       bool faking,            // faking this one
       bool mid_cut,           // doing free cut
       int16_t offset,         // extra cost dist
