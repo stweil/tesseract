@@ -1389,7 +1389,16 @@ void TableFinder::GetTableRegions(ColSegment_LIST *table_columns,
       TBOX intersection_box = col_box.intersection(part_box);
       // project table column on the y-axis
       for (int i = intersection_box.bottom(); i < intersection_box.top(); i++) {
-        table_region[i - bleft().y()] = true;
+        // Skip rows outside the page range. The projection is bounded by
+        // bleft()/tright(), but on a tall page a deskewed table column
+        // corner can carry a coordinate that no longer fits the dimension
+        // type and wraps, so i - bleft().y() may fall outside
+        // [0, page_height).
+        int idx = i - bleft().y();
+        if (idx < 0 || idx >= page_height) {
+          continue;
+        }
+        table_region[idx] = true;
       }
     }
     // set x-limits of table regions to page column width
@@ -1807,7 +1816,13 @@ void TableFinder::DeleteSingleColumnTables() {
 
         xstart = std::max(xstart, next_position_to_write);
         for (int i = xstart; i < xend; i++) {
-          table_xprojection[i - bleft().x()]++;
+          // Skip columns outside the page range; see GetTableRegions for
+          // why a deskewed coordinate can fall outside [0, page_width).
+          int idx = i - bleft().x();
+          if (idx < 0 || idx >= page_width) {
+            continue;
+          }
+          table_xprojection[idx]++;
         }
         next_position_to_write = xend;
       }
