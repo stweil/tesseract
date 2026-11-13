@@ -216,7 +216,7 @@ TEST_F(LSTMTrainerTest, TestLayerAccess) {
 // all training samples.
 TEST_F(LSTMTrainerTest, EpochCheckpointTest) {
   SetupTrainerEng("[1,1,0,32 Lfx100 O1c1]", "epoch-lstm", false, false);
-  const std::string model_base = file::JoinPath(FLAGS_test_tmpdir, "epoch-lstm");
+  const std::string model_base = file::JoinPath(file::MakeTmpdirForTestProgram(), "epoch-lstm");
   const int epoch_size = trainer_->mutable_training_data()->TotalPages();
   LOG(INFO) << "epoch_size=" << epoch_size << "\n";
   CHECK_GT(epoch_size, 0);
@@ -254,7 +254,7 @@ TEST_F(LSTMTrainerTest, EpochCheckpointTest) {
     // reflect the state from somewhere within the corresponding epoch.
     LSTMTrainer restored;
     restored.InitCharSet(
-        file::JoinPath(file::JoinPath(FLAGS_test_tmpdir, "eng"), "eng") + ".traineddata");
+        file::JoinPath(file::MakeTmpdirForTestProgram(), "eng", "eng") + ".traineddata");
     EXPECT_TRUE(restored.TryLoadingCheckpoint(name.c_str(), nullptr));
     EXPECT_GE(restored.training_iteration(), epoch * epoch_size);
     EXPECT_LT(restored.training_iteration(), (epoch + 1) * epoch_size);
@@ -268,7 +268,7 @@ TEST_F(LSTMTrainerTest, EpochCheckpointTest) {
 // even if the process dies while writing the next one.
 TEST_F(LSTMTrainerTest, CrashSafeCheckpointTest) {
   SetupTrainerEng("[1,1,0,32 Lfx100 O1c1]", "crash-lstm", false, false);
-  const std::string model_base = file::JoinPath(FLAGS_test_tmpdir, "crash-lstm");
+  const std::string model_base = file::JoinPath(file::MakeTmpdirForTestProgram(), "crash-lstm");
   const std::string checkpoint = model_base + "_checkpoint";
   const std::string checkpoint_bak = checkpoint + ".bak";
   // Remove leftovers from previous test runs.
@@ -292,7 +292,7 @@ TEST_F(LSTMTrainerTest, CrashSafeCheckpointTest) {
   // Both must be loadable, and the .bak must be the older state.
   auto load_state = [](const char *filename, int *iteration) {
     LSTMTrainer state;
-    state.InitCharSet(file::JoinPath(file::JoinPath(FLAGS_test_tmpdir, "eng"), "eng") +
+    state.InitCharSet(file::JoinPath(file::MakeTmpdirForTestProgram(), "eng", "eng") +
                       ".traineddata");
     if (!state.TryLoadingCheckpoint(filename, nullptr)) {
       return false;
@@ -317,7 +317,7 @@ TEST_F(LSTMTrainerTest, CrashSafeCheckpointTest) {
   }
   LSTMTrainer restored;
   restored.InitCharSet(
-      file::JoinPath(file::JoinPath(FLAGS_test_tmpdir, "eng"), "eng") + ".traineddata");
+      file::JoinPath(file::MakeTmpdirForTestProgram(), "eng", "eng") + ".traineddata");
   // The corrupt checkpoint cannot be loaded...
   EXPECT_FALSE(restored.TryLoadingCheckpoint(checkpoint.c_str(), nullptr));
   // ...but the backup can, and it restores the previous training state, so
@@ -333,7 +333,8 @@ TEST_F(LSTMTrainerTest, CrashSafeCheckpointTest) {
 // checkpoint is still complete and loadable.
 TEST_F(LSTMTrainerTest, CheckpointIntervalTest) {
   SetupTrainerEng("[1,1,0,32 Lfx100 O1c1]", "ckpt-interval-lstm", false, false);
-  const std::string model_base = file::JoinPath(FLAGS_test_tmpdir, "ckpt-interval-lstm");
+  const std::string model_base =
+      file::JoinPath(file::MakeTmpdirForTestProgram(), "ckpt-interval-lstm");
   const std::string checkpoint = model_base + "_checkpoint";
   // Remove leftovers from previous test runs.
   file::Delete(checkpoint.c_str());
@@ -359,7 +360,7 @@ TEST_F(LSTMTrainerTest, CheckpointIntervalTest) {
   EXPECT_TRUE(file::Readable(checkpoint));
   LSTMTrainer restored;
   restored.InitCharSet(
-      file::JoinPath(file::JoinPath(FLAGS_test_tmpdir, "eng"), "eng") + ".traineddata");
+      file::JoinPath(file::MakeTmpdirForTestProgram(), "eng", "eng") + ".traineddata");
   CHECK(restored.TryLoadingCheckpoint(checkpoint.c_str(), nullptr));
   EXPECT_EQ(300, restored.training_iteration());
 }
