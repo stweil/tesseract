@@ -172,6 +172,51 @@ and after the new NEON functions for the integer matrix product:
   X925 and 1.55 times faster on A725. The text results are identical.
 - The float models do not use the integer matrix product.
 
+### Whole-vector functions
+
+"Before" is the commit "lstm: calculate several dot products at once with
+NEON", "after" the commit which adds the NEON implementations of the
+functions for tanh, the logistic function and the conversion to `int8_t`
+for whole vectors (`src/arch/functionsneon.cpp`).
+
+Time for 36 pages (see above, `tessdata_fast`) and for the first 12 of them
+(`tessdata_best`) on M1 and on the Cortex-X925 cores of the DGX Spark:
+
+| Models                     | M1 before | M1 after | X925 before | X925 after |
+| -------------------------- | --------: | -------: | ----------: | ---------: |
+| `tessdata_fast` (36 pages) |    17.1 s |   13.8 s |     14.7 s  |    11.6 s  |
+| `tessdata_best` (12 pages) |    16.1 s |   14.4 s |     12.1 s  |    11.1 s  |
+
+- Recognition is 1.23 times faster with the integer models on M1 and 1.27
+  times on the X925, and 1.11 times faster with the float models on M1 and
+  1.09 times on the X925. The text results are identical.
+
+Training time (1000 training lines) on M1 and the X925:
+
+| Settings   | M1 before | M1 after | X925 before | X925 after |
+| ---------- | --------: | -------: | ----------: | ---------: |
+| Default    |   15.83 s |  15.38 s |     10.4 s  |    10.1 s  |
+
+- The training is 1.03 times faster on both machines. The before and the
+  after runs give exactly the same results (`mean rms=5.173%`,
+  `delta=35.870%` on M1 and `delta=35.879%` on the X925), so the NEON
+  functions give exactly the same results as the scalar functions, also
+  with g++ 13.
+
+Time for the whole-vector functions with 192 values (best of several runs,
+`-O3`, Apple clang 21) compared to the generic implementations, which use
+the scalar functions:
+
+| Function            | Generic | NEON  |
+| ------------------- | ------: | ----: |
+| Tanh                |  175 ns | 98 ns |
+| Logistic            |  162 ns | 138 ns |
+| Conversion to `int8_t` | 41 ns | 37 ns |
+
+- Tanh is about 1.8 times faster (the other layer widths give 1.7 to
+  1.8 times), the conversion to `int8_t` about 1.1 times faster and the
+  logistic function a bit faster.
+
 ## Results for x86_64
 
 Measured in November 2026 on an Intel Core i3-1115G4 (Tiger Lake, AVX512),
@@ -380,9 +425,9 @@ Training, 1000 lines, FAST_FLOAT:
 
 | Platform                    | Build              | Before | After | Speedup |
 | --------------------------- | ------------------ | -----: | ----: | ------: |
-| Apple M1 Pro                | Apple clang 21     | 22.2 s | 15.9 s |  1.40  |
-| DGX Spark, Cortex-X925      | g++ 13             | 14.4 s | 10.2 s |  1.41  |
-| DGX Spark, Cortex-A725      | g++ 13             | 31.3 s | 24.3 s |  1.29  |
+| Apple M1 Pro                | Apple clang 21     | 22.2 s | 15.3 s |  1.45  |
+| DGX Spark, Cortex-X925      | g++ 13             | 14.4 s |  9.9 s |  1.45  |
+| DGX Spark, Cortex-A725      | g++ 13             | 31.3 s | 24.0 s |  1.30  |
 | Intel i3-1115G4 (AVX512)    | g++ 14             | 24.3 s | 15.3 s |  1.59  |
 | AMD EPYC 9554 (AVX512)      | g++ 14             | 22.2 s | 16.0 s |  1.39  |
 | AMD EPYC 9554 (AVX512)      | clang-22           |    -   | 16.0 s |    -    |
@@ -391,30 +436,30 @@ Recognition with the integer model `tessdata_fast` (36 pages):
 
 | Platform                | Build          | Before | After | Speedup |
 | ----------------------- | -------------- | -----: | ----: | ------: |
-| Apple M1 Pro            | Apple clang 21 | 22.2 s | 17.4 s |  1.27  |
-| Cortex-X925             | g++ 13         | 18.7 s | 14.8 s |  1.26  |
-| Cortex-A725             | g++ 13         | 43.1 s | 27.8 s |  1.55  |
+| Apple M1 Pro            | Apple clang 21 | 22.2 s | 13.8 s |  1.61  |
+| Cortex-X925             | g++ 13         | 18.7 s | 11.6 s |  1.61  |
+| Cortex-A725             | g++ 13         | 43.1 s | 23.4 s |  1.84  |
 | Intel i3-1115G4 (AVX512) | g++ 14        | 23.0 s | 17.0 s |  1.35  |
 | AMD EPYC 9554 (AVX512)  | g++ 14         | 24.0 s | 17.1 s |  1.40  |
 | AMD EPYC 9554 (AVX512)  | clang-22       |    -   | 16.2 s |    -    |
 
-Recognition with the float model `tessdata_best` (12 pages):
+Recognition with the float model `tessdata_best` (36 pages):
 
 | Platform                | Build          | Before | After | Speedup |
 | ----------------------- | -------------- | -----: | ----: | ------: |
-| Apple M1 Pro            | Apple clang 21 | 48.7 s | 48.6 s |  1.00  |
-| Cortex-X925             | g++ 13         | 36.3 s | 36.2 s |  1.00  |
-| Intel i3-1115G4 (AVX512) | g++ 14        | 22.7 s | 16.4 s |  1.38  |
-| AMD EPYC 9554 (AVX512)  | g++ 14         | 18.0 s | 12.9 s |  1.39  |
-| AMD EPYC 9554 (AVX512)  | clang-22       |    -   | 13.3 s |    -    |
+| Apple M1 Pro            | Apple clang 21 | 48.7 s | 42.8 s |  1.14  |
+| Cortex-X925             | g++ 13         | 36.3 s | 33.3 s |  1.09  |
+| Intel i3-1115G4 (AVX512) | g++ 14        | 68.1 s | 49.2 s |  1.38  |
+| AMD EPYC 9554 (AVX512)  | g++ 14         | 54.0 s | 38.7 s |  1.39  |
+| AMD EPYC 9554 (AVX512)  | clang-22       |    -   | 39.9 s |    -    |
 
 - The training is 1.3 to 1.6 times faster on all platforms.
-- Recognition with the integer models is 1.26 to 1.55 times faster; the
+- Recognition with the integer models is 1.35 to 1.84 times faster; the
   Cortex-A725 gains more relatively than the Cortex-X925, because the old
   code was less efficient there.
-- Recognition with the float models is only measured before and after for
-  the x86_64 platforms and is 1.4 times faster there. The "before" times
-  for the ARM64 platforms already contained the first NEON changes.
+- Recognition with the float models is 1.09 to 1.4 times faster. The
+  "before" times for the ARM64 platforms already contained the first NEON
+  changes.
 - g++ 14 and clang-22 give the same times for the training and are within
   a few percent of each other for the recognition: clang is about 5 %
   faster with the integer models and about 3 % slower with the float
