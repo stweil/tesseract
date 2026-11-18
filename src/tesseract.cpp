@@ -113,7 +113,7 @@ static void PrintVersionInfo() {
     printf(" Found NEON\n");
   if (tesseract::SIMDDetect::IsSVEAvailable())
     printf(" Found SVE\n");
-  if (tesseract::SIMDDetect::IsDotProdAvailable())
+  if (tesseract::SIMDDetect::IsNEONDotProdAvailable())
     printf(" Found DotProd\n");
 #elif defined(HAVE_RVV)
   if (tesseract::SIMDDetect::IsRVVAvailable())
