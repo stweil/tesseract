@@ -21,6 +21,7 @@
 #else
 
 #  include <arm_neon.h>
+#  include <cmath>
 #  include <cstdint>
 #  include "dotproduct.h"
 #  include "functions.h" // for Tanh, Logistic, TanhTable, LogisticTable
@@ -144,6 +145,36 @@ void FloatToInt8VectorNEON(int n, const float *in, int8_t *out) {
   for (; i < n; i++) {
     out[i] = IntCastRounded(
         ClipToRange<float>(in[i] * INT8_MAX, -INT8_MAX, INT8_MAX));
+  }
+}
+
+// Computes w[i] += sum[i] / (sqrt(sqsum[i]) + epsilon) for n values. All
+// calculations are done with double precision and in the same order as in
+// the generic function (see AdamUpdateGeneric in simddetect.cpp), and the
+// square root and the division are correctly rounded with NEON, too, so the
+// results are exactly the same. There is no multiplication which a compiler
+// could contract with an addition.
+void AdamUpdateNEON(int n, const float *sum, const float *sqsum, float epsilon,
+                    float *w) {
+  const float64x2_t eps = vdupq_n_f64(epsilon);
+  int i = 0;
+  for (; i + 4 <= n; i += 4) {
+    float32x4_t sq = vld1q_f32(sqsum + i);
+    float32x4_t s = vld1q_f32(sum + i);
+    float32x4_t old = vld1q_f32(w + i);
+    float64x2_t lo = vaddq_f64(
+        vcvt_f64_f32(vget_low_f32(old)),
+        vdivq_f64(vcvt_f64_f32(vget_low_f32(s)),
+                  vaddq_f64(vsqrtq_f64(vcvt_f64_f32(vget_low_f32(sq))), eps)));
+    float64x2_t hi = vaddq_f64(
+        vcvt_high_f64_f32(old),
+        vdivq_f64(vcvt_high_f64_f32(s),
+                  vaddq_f64(vsqrtq_f64(vcvt_high_f64_f32(sq)), eps)));
+    vst1q_f32(w + i, vcombine_f32(vcvt_f32_f64(lo), vcvt_f32_f64(hi)));
+  }
+  for (; i < n; i++) {
+    w[i] = static_cast<float>(
+        w[i] + sum[i] / (std::sqrt(static_cast<double>(sqsum[i])) + epsilon));
   }
 }
 

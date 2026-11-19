@@ -64,6 +64,57 @@ TEST(FunctionsTest, InterpolatesInRange) {
   }
 }
 
+// AdamUpdate, which uses SIMD code if the CPU supports it, must give exactly
+// the same results as the expression which it replaces for all lengths.
+TEST(FunctionsTest, AdamUpdateMatchesScalar) {
+  TRand random;
+  random.set_seed(1);
+  std::vector<TFloat> sum, sqsum, weights;
+  // Special values: no gradients at all, tiny and huge values.
+  const TFloat kSpecial[] = {0.0f, 1e-38f, 1e-30f, 1e-16f, 1e-8f, 1.0f, 1e30f};
+  for (TFloat sq : kSpecial) {
+    for (TFloat s : {0.0f, -0.0f, 1e-30f, -1e-10f, 1e-3f, -2.5f}) {
+      sum.push_back(s);
+      sqsum.push_back(sq);
+      weights.push_back(static_cast<TFloat>(random.SignedRand(1.0)));
+    }
+  }
+  for (int i = 0; i < 4000; ++i) {
+    TFloat gradient = static_cast<TFloat>(
+        random.SignedRand(1.0) * std::pow(10.0, random.SignedRand(6.0)));
+    sum.push_back(static_cast<TFloat>(gradient * random.SignedRand(1e-3)));
+    sqsum.push_back(gradient * gradient);
+    weights.push_back(static_cast<TFloat>(random.SignedRand(2.0)));
+  }
+  const size_t kLengths[] = {sum.size(), 1, 2, 3, 4, 5, 7, 8, 9, 15, 16, 17, 31};
+  for (TFloat epsilon : {1e-11f, 1e-8f, 0.0f}) {
+    for (size_t n : kLengths) {
+      // The weights are in the middle of a larger vector to detect writes
+      // outside of the n values.
+      const TFloat kGuard = 12345;
+      std::vector<TFloat> result(n + 2, kGuard);
+      std::copy(weights.begin(), weights.begin() + n, result.begin() + 1);
+      AdamUpdate(n, sum.data(), sqsum.data(), epsilon, result.data() + 1);
+      for (size_t i = 0; i < n; ++i) {
+        TFloat expected = weights[i];
+        // The same expression as in the generic function, also with sqrt
+        // instead of std::sqrt.
+        expected += sum[i] / (sqrt(sqsum[i]) + epsilon);
+        if (std::isnan(expected)) {
+          // 0 / 0 (only without epsilon).
+          EXPECT_TRUE(std::isnan(result[i + 1])) << "i=" << i << ", n=" << n;
+        } else {
+          EXPECT_EQ(expected, result[i + 1])
+              << "i=" << i << ", n=" << n << ", sum=" << sum[i]
+              << ", sqsum=" << sqsum[i] << ", epsilon=" << epsilon;
+        }
+      }
+      EXPECT_EQ(kGuard, result[0]);
+      EXPECT_EQ(kGuard, result[n + 1]);
+    }
+  }
+}
+
 // The functions for whole vectors (TanhVector, LogisticVector and
 // FloatToInt8Vector, which use SIMD code if the CPU supports it) must give
 // exactly the same results as the scalar functions for all lengths, also for

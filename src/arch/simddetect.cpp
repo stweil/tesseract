@@ -18,8 +18,10 @@
 #ifdef HAVE_CONFIG_H
 #  include "config_auto.h" // for HAVE_AVX, ...
 #endif
+#include <cmath>   // for sqrt
 #include <cstdlib> // for getenv
 #include <numeric> // for std::inner_product
+#include <type_traits> // for std::is_same
 #include "dotproduct.h"
 #include "functions.h"     // for Tanh, Logistic
 #include "intsimdmatrix.h" // for IntSimdMatrix
@@ -111,6 +113,7 @@ CrossDotProductsFunction CrossDotProducts;
 VectorFunction TanhVector;
 VectorFunction LogisticVector;
 FloatToInt8Function FloatToInt8Vector;
+AdamUpdateFunction AdamUpdate;
 
 static STRING_VAR(dotproduct, "auto", "Function used for calculation of dot product");
 
@@ -233,16 +236,40 @@ static void FloatToInt8VectorGeneric(int n, const TFloat *in, int8_t *out) {
   }
 }
 
+// Computes w[i] += sum[i] / (sqrt(sqsum[i]) + epsilon) for n values.
+// Note that sqrt is not std::sqrt: with most C++ libraries it is the function
+// for double, so the whole expression is calculated with double precision
+// also for float values. Compilers don't use SIMD instructions for this loop
+// unless they are allowed to ignore errno.
+static void AdamUpdateGeneric(int n, const TFloat *sum, const TFloat *sqsum,
+                              TFloat epsilon, TFloat *w) {
+  for (int i = 0; i < n; ++i) {
+    w[i] += sum[i] / (sqrt(sqsum[i]) + epsilon);
+  }
+}
+
+#if defined(FAST_FLOAT)
+// The optimized functions for the update with Adam calculate with double
+// precision. They only give the same results as the generic function (and
+// are only used) if that does so, too.
+[[maybe_unused]] static constexpr bool kAdamUpdateUsesDouble =
+    std::is_same<decltype(sqrt(TFloat())), double>::value;
+#endif
+
 static void SetDotProduct(DotProductFunction f, const IntSimdMatrix *m = nullptr) {
   TanhVector = TanhVectorGeneric;
   LogisticVector = LogisticVectorGeneric;
   FloatToInt8Vector = FloatToInt8VectorGeneric;
+  AdamUpdate = AdamUpdateGeneric;
 #if defined(FAST_FLOAT) && defined(HAVE_AVX2)
   // The integer matrix for AVX2 is only selected for a CPU with AVX2.
   if (m == &IntSimdMatrix::intSimdMatrixAVX2) {
     TanhVector = TanhVectorAVX2;
     LogisticVector = LogisticVectorAVX2;
     FloatToInt8Vector = FloatToInt8VectorAVX2;
+    if (kAdamUpdateUsesDouble) {
+      AdamUpdate = AdamUpdateAVX2;
+    }
   }
 #endif
 #if defined(FAST_FLOAT) && defined(__ARM_ARCH_ISA_A64)
@@ -252,6 +279,9 @@ static void SetDotProduct(DotProductFunction f, const IntSimdMatrix *m = nullptr
     TanhVector = TanhVectorNEON;
     LogisticVector = LogisticVectorNEON;
     FloatToInt8Vector = FloatToInt8VectorNEON;
+    if (kAdamUpdateUsesDouble) {
+      AdamUpdate = AdamUpdateNEON;
+    }
   }
 #endif
   RowDotProductsFunction rows = RowDotProductsGeneric;

@@ -59,6 +59,14 @@ extern TESS_API VectorFunction LogisticVector;
 using FloatToInt8Function = void (*)(int n, const TFloat *in, int8_t *out);
 extern TESS_API FloatToInt8Function FloatToInt8Vector;
 
+// Function pointer for the update of n weights with Adam:
+// w[i] += sum[i] / (sqrt(sqsum[i]) + epsilon). All implementations give
+// exactly the same results.
+using AdamUpdateFunction = void (*)(int n, const TFloat *sum,
+                                    const TFloat *sqsum, TFloat epsilon,
+                                    TFloat *w);
+extern TESS_API AdamUpdateFunction AdamUpdate;
+
 // Architecture detector. Add code here to detect any other architectures for
 // SIMD-based faster dot product functions. Intended to be a single static
 // object, but it does no real harm to have more than one.

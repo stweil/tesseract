@@ -475,16 +475,6 @@ public:
     }
   }
 
-  // Scales each element using the adam algorithm, ie array_[i] by
-  // sqrt(sqsum[i] + epsilon)).
-  void AdamUpdate(const GENERIC_2D_ARRAY<T> &sum, const GENERIC_2D_ARRAY<T> &sqsum,
-                  const T &epsilon) {
-    int size = num_elements();
-    for (int i = 0; i < size; ++i) {
-      array_[i] += sum.array_[i] / (sqrt(sqsum.array_[i]) + epsilon);
-    }
-  }
-
   void AssertFinite() const {
     int size = num_elements();
     for (int i = 0; i < size; ++i) {
