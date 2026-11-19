@@ -57,6 +57,10 @@ void CrossDotProductsNEON(const float *u, int num_u, const float *v, int num_v,
 void TanhVectorNEON(int n, const float *in, float *out);
 void LogisticVectorNEON(int n, const float *in, float *out);
 void FloatToInt8VectorNEON(int n, const float *in, int8_t *out);
+
+// Update of n weights with Adam, see AdamUpdate in simddetect.h.
+void AdamUpdateNEON(int n, const float *sum, const float *sqsum, float epsilon,
+                    float *w);
 #endif
 
 #if defined(FAST_FLOAT)
@@ -76,6 +80,10 @@ void CrossDotProductsAVX512F(const float *u, int num_u, const float *v,
 void TanhVectorAVX2(int n, const float *in, float *out);
 void LogisticVectorAVX2(int n, const float *in, float *out);
 void FloatToInt8VectorAVX2(int n, const float *in, int8_t *out);
+
+// Update of n weights with Adam, see AdamUpdate in simddetect.h.
+void AdamUpdateAVX2(int n, const float *sum, const float *sqsum, float epsilon,
+                    float *w);
 #endif
 
 } // namespace tesseract.

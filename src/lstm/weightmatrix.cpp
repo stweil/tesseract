@@ -559,7 +559,8 @@ void WeightMatrix::Update(float learning_rate, float momentum, float adam_beta, 
     dw_ *= learning_rate * (1.0f - momentum);
     updates_ *= momentum;
     updates_ += dw_;
-    wf_.AdamUpdate(updates_, dw_sq_sum_, learning_rate * kAdamEpsilon);
+    AdamUpdate(wf_.num_elements(), updates_[0], dw_sq_sum_[0],
+               learning_rate * kAdamEpsilon, wf_[0]);
   } else {
     dw_ *= learning_rate;
     updates_ += dw_;
