@@ -79,25 +79,41 @@ void Convolve::Forward(bool debug, const NetworkIO &input,
                        NetworkScratch * /*scratch*/, NetworkIO *output) {
   output->Resize(input, no_);
   int y_scale = 2 * half_y_ + 1;
-  StrideMap::Index dest_index(output->stride_map());
+  const StrideMap &stride_map = output->stride_map();
+  // The timestep of a neighbor in the same image differs by 1 for each step
+  // in x and by the width of the map for each step in y, so the neighbors
+  // are found without a new index for each of them.
+  const int t_step_y = stride_map.Size(FD_WIDTH);
+  StrideMap::Index dest_index(stride_map);
+  int batch = -1;
+  int max_x = 0;
+  int max_y = 0;
   do {
+    if (dest_index.index(FD_BATCH) != batch) {
+      // The size of the image can be different for each batch.
+      batch = dest_index.index(FD_BATCH);
+      max_x = dest_index.MaxIndexOfDim(FD_WIDTH);
+      max_y = dest_index.MaxIndexOfDim(FD_HEIGHT);
+    }
     // Stack x_scale groups of y_scale * ni_ inputs together.
     int t = dest_index.t();
+    int dest_x = dest_index.index(FD_WIDTH);
+    int dest_y = dest_index.index(FD_HEIGHT);
     int out_ix = 0;
     for (int x = -half_x_; x <= half_x_; ++x, out_ix += y_scale * ni_) {
-      StrideMap::Index x_index(dest_index);
-      if (!x_index.AddOffset(x, FD_WIDTH)) {
+      int src_x = dest_x + x;
+      if (src_x < 0 || src_x > max_x) {
         // This x is outside the image.
         output->Randomize(t, out_ix, y_scale * ni_, randomizer_);
       } else {
         int out_iy = out_ix;
         for (int y = -half_y_; y <= half_y_; ++y, out_iy += ni_) {
-          StrideMap::Index y_index(x_index);
-          if (!y_index.AddOffset(y, FD_HEIGHT)) {
+          int src_y = dest_y + y;
+          if (src_y < 0 || src_y > max_y) {
             // This y is outside the image.
             output->Randomize(t, out_iy, ni_, randomizer_);
           } else {
-            output->CopyTimeStepGeneral(t, out_iy, ni_, input, y_index.t(), 0);
+            output->CopyTimeStepGeneral(t, out_iy, ni_, input, t + x + y * t_step_y, 0);
           }
         }
       }
@@ -119,19 +135,32 @@ bool Convolve::Backward(bool /*debug*/, const NetworkIO &fwd_deltas, NetworkScra
   delta_sum.ResizeFloat(fwd_deltas, ni_, scratch);
   delta_sum->Zero();
   int y_scale = 2 * half_y_ + 1;
-  StrideMap::Index src_index(fwd_deltas.stride_map());
+  const StrideMap &stride_map = fwd_deltas.stride_map();
+  // See Forward for the timesteps of the neighbors.
+  const int t_step_y = stride_map.Size(FD_WIDTH);
+  StrideMap::Index src_index(stride_map);
+  int batch = -1;
+  int max_x = 0;
+  int max_y = 0;
   do {
+    if (src_index.index(FD_BATCH) != batch) {
+      batch = src_index.index(FD_BATCH);
+      max_x = src_index.MaxIndexOfDim(FD_WIDTH);
+      max_y = src_index.MaxIndexOfDim(FD_HEIGHT);
+    }
     // Stack x_scale groups of y_scale * ni_ inputs together.
     int t = src_index.t();
+    int src_x = src_index.index(FD_WIDTH);
+    int src_y = src_index.index(FD_HEIGHT);
     int out_ix = 0;
     for (int x = -half_x_; x <= half_x_; ++x, out_ix += y_scale * ni_) {
-      StrideMap::Index x_index(src_index);
-      if (x_index.AddOffset(x, FD_WIDTH)) {
+      int dest_x = src_x + x;
+      if (dest_x >= 0 && dest_x <= max_x) {
         int out_iy = out_ix;
         for (int y = -half_y_; y <= half_y_; ++y, out_iy += ni_) {
-          StrideMap::Index y_index(x_index);
-          if (y_index.AddOffset(y, FD_HEIGHT)) {
-            fwd_deltas.AddTimeStepPart(t, out_iy, ni_, delta_sum->f(y_index.t()));
+          int dest_y = src_y + y;
+          if (dest_y >= 0 && dest_y <= max_y) {
+            fwd_deltas.AddTimeStepPart(t, out_iy, ni_, delta_sum->f(t + x + y * t_step_y));
           }
         }
       }

@@ -41,12 +41,27 @@ void Maxpool::Forward(bool /*debug*/, const NetworkIO &input,
   maxes_.ResizeNoInit(output->Width(), ni_);
   back_map_ = input.stride_map();
 
+  // The timestep of a neighbor in the same image differs by 1 for each step
+  // in x and by the width of the map for each step in y, so the inputs of a
+  // group are found without a new index for each of them.
+  const int t_step_y = input.stride_map().Size(FD_WIDTH);
   StrideMap::Index dest_index(output->stride_map());
+  int batch = -1;
+  int max_x = 0;
+  int max_y = 0;
   do {
     int out_t = dest_index.t();
     StrideMap::Index src_index(input.stride_map(), dest_index.index(FD_BATCH),
                                dest_index.index(FD_HEIGHT) * y_scale_,
                                dest_index.index(FD_WIDTH) * x_scale_);
+    if (src_index.index(FD_BATCH) != batch) {
+      // The size of the image can be different for each batch.
+      batch = src_index.index(FD_BATCH);
+      max_x = src_index.MaxIndexOfDim(FD_WIDTH);
+      max_y = src_index.MaxIndexOfDim(FD_HEIGHT);
+    }
+    int src_x = src_index.index(FD_WIDTH);
+    int src_y = src_index.index(FD_HEIGHT);
     // Find the max input out of x_scale_ groups of y_scale_ inputs.
     // Do it independently for each input dimension.
     int *max_line = maxes_[out_t];
@@ -57,9 +72,8 @@ void Maxpool::Forward(bool /*debug*/, const NetworkIO &input,
     }
     for (int x = 0; x < x_scale_; ++x) {
       for (int y = 0; y < y_scale_; ++y) {
-        StrideMap::Index src_xy(src_index);
-        if (src_xy.AddOffset(x, FD_WIDTH) && src_xy.AddOffset(y, FD_HEIGHT)) {
-          output->MaxpoolTimeStep(out_t, input, src_xy.t(), max_line);
+        if (src_x + x <= max_x && src_y + y <= max_y) {
+          output->MaxpoolTimeStep(out_t, input, in_t + x + y * t_step_y, max_line);
         }
       }
     }
