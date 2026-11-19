@@ -115,6 +115,10 @@ public:
     ASSERT_HOST(!int_mode_);
     return f_[t];
   }
+  int8_t *i(int t) {
+    ASSERT_HOST(int_mode_);
+    return i_[t];
+  }
   const int8_t *i(int t) const {
     ASSERT_HOST(int_mode_);
     return i_[t];
