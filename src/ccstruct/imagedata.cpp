@@ -43,15 +43,12 @@ namespace tesseract {
 const int kMaxReadAhead = 8;
 
 ImageData::ImageData() : page_number_(-1), vertical_text_(false) {}
-// Takes ownership of the pix and destroys it.
+// Takes ownership of the pix. The pix is kept as it is, because most callers
+// only use it once for a recognition. It is only encoded if it is serialized.
 ImageData::ImageData(bool vertical, Image pix)
-    : page_number_(0), vertical_text_(vertical) {
-  SetPix(pix);
-}
+    : page_number_(0), internal_pix_(pix), vertical_text_(vertical) {}
 ImageData::~ImageData() {
-#ifdef TESSERACT_IMAGEDATA_AS_PIX
   internal_pix_.destroy();
-#endif
 }
 
 // Builds and returns an ImageData from the basic data. Note that imagedata,
@@ -95,7 +92,14 @@ bool ImageData::Serialize(TFile *fp) const {
   if (!fp->Serialize(&page_number_)) {
     return false;
   }
-  if (!fp->Serialize(image_data_)) {
+  if (internal_pix_ != nullptr) {
+    // The image was not encoded up to now.
+    std::vector<char> image_data;
+    SetPixInternal(internal_pix_.clone(), &image_data);
+    if (!fp->Serialize(image_data)) {
+      return false;
+    }
+  } else if (!fp->Serialize(image_data_)) {
     return false;
   }
   if (!fp->Serialize(language_)) {
@@ -183,6 +187,7 @@ bool ImageData::SkipDeSerialize(TFile *fp) {
 // In case of missing PNG support in Leptonica use PNM format,
 // which requires more memory.
 void ImageData::SetPix(Image pix) {
+  internal_pix_.destroy();
 #ifdef TESSERACT_IMAGEDATA_AS_PIX
   internal_pix_ = pix;
 #else
@@ -192,19 +197,12 @@ void ImageData::SetPix(Image pix) {
 
 // Returns the Pix image for *this. Must be pixDestroyed after use.
 Image ImageData::GetPix() const {
-#ifdef TESSERACT_IMAGEDATA_AS_PIX
-#  ifdef GRAPHICS_DISABLED
-  /* The only caller of this is the scaling functions to prescale the
-   * source. Thus we can just return a new pointer to the same data. */
-  return internal_pix_.clone();
-#  else
-  /* pixCopy always does an actual copy, so the caller can modify the
-   * changed data. */
-  return internal_pix_.copy();
-#  endif
-#else
+  if (internal_pix_ != nullptr) {
+    // The callers (PreScale and Display) don't modify the image, so a new
+    // reference to the same data is sufficient.
+    return internal_pix_.clone();
+  }
   return GetPixInternal(image_data_);
-#endif
 }
 
 // Gets anything and everything with a non-nullptr pointer, prescaled to a
@@ -267,6 +265,9 @@ Image ImageData::PreScale(int target_height, int max_height,
 }
 
 int ImageData::MemoryUsed() const {
+  if (internal_pix_ != nullptr) {
+    return 4 * pixGetWpl(internal_pix_) * pixGetHeight(internal_pix_);
+  }
   return image_data_.size();
 }
 
@@ -327,7 +328,6 @@ void ImageData::AddBoxes(const std::vector<TBOX> &boxes,
   }
 }
 
-#ifndef TESSERACT_IMAGEDATA_AS_PIX
 // Saves the given Pix as a PNG-encoded string and destroys it.
 // In case of missing PNG support in Leptonica use PNM format,
 // which requires more memory.
@@ -357,7 +357,6 @@ Image ImageData::GetPixInternal(const std::vector<char> &image_data) {
   }
   return pix;
 }
-#endif
 
 // Parses the text string as a box file and adds any discovered boxes that
 // match the page number. Returns false on error.
