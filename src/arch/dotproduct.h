@@ -83,6 +83,14 @@ void FloatToInt8VectorAVX2(int n, const float *in, int8_t *out);
 // Use ARM SVE intrinsics.
 TFloat DotProductSVE(const TFloat *u, const TFloat *v, int n);
 
+#if defined(FAST_FLOAT) && defined(__ARM_FEATURE_SVE)
+// The same functions as RowDotProductsNEON and CrossDotProductsNEON for SVE.
+void RowDotProductsSVE(const float *w, int w_stride, int num_rows,
+                       const float *u, int n, float *v);
+void CrossDotProductsSVE(const float *u, int num_u, const float *v, int num_v,
+                         int n, float *out, int out_stride);
+#endif
+
 #if defined(__ARM_FEATURE_SVE)
 // Returns the number of bits of the native SVE vector length of the CPU.
 // Only call this when SVE is known to be available (e.g.

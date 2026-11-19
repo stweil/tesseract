@@ -276,6 +276,12 @@ static void SetDotProduct(DotProductFunction f, const IntSimdMatrix *m = nullptr
     cross = CrossDotProductsNEON;
   }
 #endif
+#if defined(FAST_FLOAT) && defined(__ARM_FEATURE_SVE)
+  if (f == DotProductSVE) {
+    rows = RowDotProductsSVE;
+    cross = CrossDotProductsSVE;
+  }
+#endif
 #if defined(FAST_FLOAT) && defined(HAVE_FMA)
   if (f == DotProductFMA) {
     rows = RowDotProductsFMA;
@@ -406,9 +412,9 @@ SIMDDetect::SIMDDetect() {
   // compiled in, so it is usable only if the CPU implements it.
   // HWCAP_SVE is bit 22 of AT_HWCAP.
   sve_available_ = (getauxval(AT_HWCAP) & HWCAP_SVE) != 0;
-  // SVE is only worth selecting automatically when its native vector length
-  // is large enough to beat NEON (e.g. 128-bit SVE on Neoverse V2 is slower
-  // than NEON, 256-bit SVE on Neoverse V3 / Cortex-X4 is faster).
+  // SVE is only selected automatically when its native vector length is
+  // larger than the 128 bits of NEON. With 128 bits it is as fast as NEON
+  // (measured on Cortex-X925), so there is no reason to prefer it.
   sve_preferred_ = sve_available_ && SVENativeVectorLengthInBits() >= 256;
 #  endif
 #endif

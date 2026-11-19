@@ -56,6 +56,85 @@ protected:
     TFloat expected = DotProductGeneric(u.data(), v.data(), 500);
     TFloat result = func(u.data(), v.data(), 500);
     EXPECT_FLOAT_EQ(expected, result) << name;
+    ExpectExactResultsForAllLengths(func, name);
+  }
+
+  // Tests all vector lengths up to a limit which is larger than two SIMD
+  // registers of any implementation, so that every remainder is covered.
+  // The vectors only contain small positive integers. All products and sums
+  // are therefore exact, the order of the additions does not matter, and a
+  // missing or duplicated element always changes the result.
+  static void ExpectExactResultsForAllLengths(DotProductFunction func,
+                                              const char *name) {
+    const int kMaxLength = 300;
+    std::vector<TFloat> u(kMaxLength), v(kMaxLength);
+    for (int k = 0; k < kMaxLength; ++k) {
+      u[k] = static_cast<TFloat>(k % 7 + 1);
+      v[k] = static_cast<TFloat>(k % 5 + 1);
+    }
+    for (int n = 0; n <= kMaxLength; ++n) {
+      TFloat expected = DotProductGeneric(u.data(), v.data(), n);
+      TFloat result = func(u.data(), v.data(), n);
+      EXPECT_EQ(expected, result) << name << " with n=" << n;
+    }
+  }
+
+  // Tests the functions which calculate several dot products at once (see
+  // RowDotProducts and CrossDotProducts in simddetect.h) for all numbers of
+  // rows up to kMaxRows and all vector lengths up to kMaxLength. Like above
+  // all values are small positive integers, so the results must be exact.
+  // The rows of w and of the result of cross are longer than needed, and the
+  // unused elements of the results must not be changed.
+  static void ExpectExactRowAndCrossResults(RowDotProductsFunction rows,
+                                            CrossDotProductsFunction cross,
+                                            const char *name) {
+    const int kMaxRows = 9;
+    const int kMaxLength = 70;
+    const TFloat kUnused = -1;
+    auto fill = [](std::vector<TFloat> &vec, int factor) {
+      for (size_t k = 0; k < vec.size(); ++k) {
+        vec[k] = static_cast<TFloat>(k * factor % 7 + 1);
+      }
+    };
+    for (int n = 0; n <= kMaxLength; ++n) {
+      for (int num_rows = 0; num_rows <= kMaxRows; ++num_rows) {
+        const int stride = n + 3;
+        std::vector<TFloat> w(num_rows * stride), u(n);
+        std::vector<TFloat> v(num_rows + 1, kUnused);
+        fill(w, 3);
+        fill(u, 5);
+        rows(w.data(), stride, num_rows, u.data(), n, v.data());
+        for (int i = 0; i < num_rows; ++i) {
+          EXPECT_EQ(DotProductGeneric(&w[i * stride], u.data(), n), v[i])
+              << name << " rows with n=" << n << ", num_rows=" << num_rows
+              << ", i=" << i;
+        }
+        EXPECT_EQ(kUnused, v[num_rows]) << name << " rows with n=" << n;
+      }
+      for (int num_u = 0; num_u <= kMaxRows; ++num_u) {
+        for (int num_v = 0; num_v <= kMaxRows; ++num_v) {
+          const int stride = num_v + 2;
+          std::vector<TFloat> u(num_u * n), v(num_v * n);
+          std::vector<TFloat> out(num_u * stride, kUnused);
+          fill(u, 3);
+          fill(v, 5);
+          cross(u.data(), num_u, v.data(), num_v, n, out.data(), stride);
+          for (int i = 0; i < num_u; ++i) {
+            for (int j = 0; j < num_v; ++j) {
+              TFloat expected =
+                  DotProductGeneric(u.data() + i * n, v.data() + j * n, n);
+              EXPECT_EQ(expected, out[i * stride + j])
+                  << name << " cross with n=" << n << ", num_u=" << num_u
+                  << ", num_v=" << num_v << ", i=" << i << ", j=" << j;
+            }
+            EXPECT_EQ(kUnused, out[i * stride + num_v])
+                << name << " cross with n=" << n;
+            EXPECT_EQ(kUnused, out[i * stride + num_v + 1])
+                << name << " cross with n=" << n;
+          }
+        }
+      }
+    }
   }
 
   static void MeasurePerformance(DotProductFunction func, const char *name,
@@ -178,6 +257,58 @@ TEST_F(DotProductTest, SVE) {
   ExpectEqualResults(DotProductSVE, "DotProductSVE");
 #else
   GTEST_LOG_(INFO) << "SVE unsupported! Not tested!";
+  GTEST_SKIP();
+#endif
+}
+
+// Test the functions for several dot products at once, which only exist for
+// float (FAST_FLOAT) and for some of the instruction sets.
+TEST_F(DotProductTest, RowAndCrossNEON) {
+#if defined(FAST_FLOAT) && defined(__ARM_ARCH_ISA_A64)
+  ExpectExactRowAndCrossResults(RowDotProductsNEON, CrossDotProductsNEON,
+                                "NEON");
+#else
+  GTEST_LOG_(INFO) << "NEON functions for float unsupported! Not tested!";
+  GTEST_SKIP();
+#endif
+}
+
+TEST_F(DotProductTest, RowAndCrossFMA) {
+#if defined(FAST_FLOAT) && defined(HAVE_FMA)
+  if (!SIMDDetect::IsFMAAvailable() || !SIMDDetect::IsAVXAvailable()) {
+    GTEST_LOG_(INFO) << "No FMA found! Not tested!";
+    GTEST_SKIP();
+  }
+  ExpectExactRowAndCrossResults(RowDotProductsFMA, CrossDotProductsFMA, "FMA");
+#else
+  GTEST_LOG_(INFO) << "FMA functions for float unsupported! Not tested!";
+  GTEST_SKIP();
+#endif
+}
+
+TEST_F(DotProductTest, RowAndCrossAVX512F) {
+#if defined(FAST_FLOAT) && defined(HAVE_AVX512F)
+  if (!SIMDDetect::IsAVX512FAvailable()) {
+    GTEST_LOG_(INFO) << "No AVX512F found! Not tested!";
+    GTEST_SKIP();
+  }
+  ExpectExactRowAndCrossResults(RowDotProductsAVX512F, CrossDotProductsAVX512F,
+                                "AVX512F");
+#else
+  GTEST_LOG_(INFO) << "AVX512F functions for float unsupported! Not tested!";
+  GTEST_SKIP();
+#endif
+}
+
+TEST_F(DotProductTest, RowAndCrossSVE) {
+#if defined(FAST_FLOAT) && defined(__ARM_FEATURE_SVE)
+  if (!SIMDDetect::IsSVEAvailable()) {
+    GTEST_LOG_(INFO) << "No SVE found! Not tested!";
+    GTEST_SKIP();
+  }
+  ExpectExactRowAndCrossResults(RowDotProductsSVE, CrossDotProductsSVE, "SVE");
+#else
+  GTEST_LOG_(INFO) << "SVE functions for float unsupported! Not tested!";
   GTEST_SKIP();
 #endif
 }
