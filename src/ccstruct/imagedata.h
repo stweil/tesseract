@@ -65,6 +65,8 @@ public:
   // Takes ownership of the pix.
   ImageData(bool vertical, Image pix);
   ~ImageData();
+  ImageData(const ImageData &) = delete;
+  ImageData &operator=(const ImageData &) = delete;
 
   // Builds and returns an ImageData from the basic data. Note that imagedata,
   // truth_text, and box_text are all the actual file data, NOT filenames.
@@ -91,9 +93,6 @@ public:
   }
   void set_page_number(int num) {
     page_number_ = num;
-  }
-  const std::vector<char> &image_data() const {
-    return image_data_;
   }
   const std::string &language() const {
     return language_;
@@ -152,12 +151,11 @@ private:
 private:
   std::string imagefilename_; // File to read image from.
   int32_t page_number_;  // Page number if multi-page tif or -1.
-  // see https://github.com/tesseract-ocr/tesseract/pull/2965
-  // EP: reconsider for tess6.0/opencv
-#ifdef TESSERACT_IMAGEDATA_AS_PIX
+  // Image which was not encoded. It is set by the constructor which takes
+  // a pix (and by SetPix if TESSERACT_IMAGEDATA_AS_PIX is defined, see
+  // https://github.com/tesseract-ocr/tesseract/pull/2965).
   Image internal_pix_;
-#endif
-  std::vector<char> image_data_;  // PNG/PNM file data.
+  std::vector<char> image_data_;  // PNG/PNM file data (unless internal_pix_).
   std::string language_;          // Language code for image.
   std::string transcription_;     // UTF-8 ground truth of image.
   std::vector<TBOX> boxes_;       // If non-empty boxes of the image.
