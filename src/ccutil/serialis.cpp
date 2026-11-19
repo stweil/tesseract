@@ -305,11 +305,7 @@ size_t TFile::FWrite(const void *buffer, size_t size, size_t count) {
   ASSERT_HOST(SIZE_MAX / size > count);
   size_t total = size * count;
   const char *buf = static_cast<const char *>(buffer);
-  // This isn't very efficient, but memory is so fast compared to disk
-  // that it is relatively unimportant, and very simple.
-  for (size_t i = 0; i < total; ++i) {
-    data_->push_back(buf[i]);
-  }
+  data_->insert(data_->end(), buf, buf + total);
   return count;
 }
 
