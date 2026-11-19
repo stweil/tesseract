@@ -21,6 +21,7 @@
 #else
 
 #  include <immintrin.h>
+#  include <cmath>
 #  include <cstdint>
 #  include "dotproduct.h"
 #  include "functions.h" // for Tanh, Logistic, TanhTable, LogisticTable
@@ -130,6 +131,28 @@ void FloatToInt8VectorAVX2(int n, const float *in, int8_t *out) {
   for (; i < n; i++) {
     out[i] = IntCastRounded(
         ClipToRange<float>(in[i] * INT8_MAX, -INT8_MAX, INT8_MAX));
+  }
+}
+
+// Computes w[i] += sum[i] / (sqrt(sqsum[i]) + epsilon) for n values. All
+// calculations are done with double precision and in the same order as in
+// the generic function (see AdamUpdateGeneric in simddetect.cpp), and the
+// square root and the division are correctly rounded with SIMD instructions,
+// too, so the results are exactly the same.
+void AdamUpdateAVX2(int n, const float *sum, const float *sqsum, float epsilon,
+                    float *w) {
+  const __m256d eps = _mm256_set1_pd(epsilon);
+  int i = 0;
+  for (; i + 4 <= n; i += 4) {
+    __m256d root = _mm256_sqrt_pd(_mm256_cvtps_pd(_mm_loadu_ps(sqsum + i)));
+    __m256d update = _mm256_div_pd(_mm256_cvtps_pd(_mm_loadu_ps(sum + i)),
+                                   _mm256_add_pd(root, eps));
+    __m256d result = _mm256_add_pd(_mm256_cvtps_pd(_mm_loadu_ps(w + i)), update);
+    _mm_storeu_ps(w + i, _mm256_cvtpd_ps(result));
+  }
+  for (; i < n; i++) {
+    w[i] = static_cast<float>(
+        w[i] + sum[i] / (std::sqrt(static_cast<double>(sqsum[i])) + epsilon));
   }
 }
 
