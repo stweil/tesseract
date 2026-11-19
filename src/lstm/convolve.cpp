@@ -24,6 +24,7 @@
 #include "convolve.h"
 
 #include <cstdint>
+#include <cstring> // for memcpy
 
 #include "networkscratch.h"
 #include "serialis.h"
@@ -72,6 +73,17 @@ bool Convolve::DeSerialize(TFile *fp) {
   return true;
 }
 
+// Copies n features. Most networks use a convolution for a single feature
+// (the gray value of the image), which does not need a call of memcpy.
+template <typename T>
+static inline void CopyFeatures(T *dest, const T *src, int n) {
+  if (n == 1) {
+    *dest = *src;
+  } else {
+    memcpy(dest, src, n * sizeof(T));
+  }
+}
+
 // Runs forward propagation of activations on the input line.
 // See NetworkCpp for a detailed discussion of the arguments.
 void Convolve::Forward(bool debug, const NetworkIO &input,
@@ -84,6 +96,8 @@ void Convolve::Forward(bool debug, const NetworkIO &input,
   // in x and by the width of the map for each step in y, so the neighbors
   // are found without a new index for each of them.
   const int t_step_y = stride_map.Size(FD_WIDTH);
+  // The output has the same mode as the input.
+  const bool int_mode = input.int_mode();
   StrideMap::Index dest_index(stride_map);
   int batch = -1;
   int max_x = 0;
@@ -97,6 +111,8 @@ void Convolve::Forward(bool debug, const NetworkIO &input,
     }
     // Stack x_scale groups of y_scale * ni_ inputs together.
     int t = dest_index.t();
+    int8_t *out_i = int_mode ? output->i(t) : nullptr;
+    float *out_f = int_mode ? nullptr : output->f(t);
     int dest_x = dest_index.index(FD_WIDTH);
     int dest_y = dest_index.index(FD_HEIGHT);
     int out_ix = 0;
@@ -112,8 +128,10 @@ void Convolve::Forward(bool debug, const NetworkIO &input,
           if (src_y < 0 || src_y > max_y) {
             // This y is outside the image.
             output->Randomize(t, out_iy, ni_, randomizer_);
+          } else if (int_mode) {
+            CopyFeatures(out_i + out_iy, input.i(t + x + y * t_step_y), ni_);
           } else {
-            output->CopyTimeStepGeneral(t, out_iy, ni_, input, t + x + y * t_step_y, 0);
+            CopyFeatures(out_f + out_iy, input.f(t + x + y * t_step_y), ni_);
           }
         }
       }

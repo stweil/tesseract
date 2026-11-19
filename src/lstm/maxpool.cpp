@@ -72,7 +72,8 @@ void Maxpool::Forward(bool /*debug*/, const NetworkIO &input,
     }
     for (int x = 0; x < x_scale_; ++x) {
       for (int y = 0; y < y_scale_; ++y) {
-        if (src_x + x <= max_x && src_y + y <= max_y) {
+        // The first input of the group was already copied to the output.
+        if ((x != 0 || y != 0) && src_x + x <= max_x && src_y + y <= max_y) {
           output->MaxpoolTimeStep(out_t, input, in_t + x + y * t_step_y, max_line);
         }
       }
