@@ -683,21 +683,21 @@ void NetworkIO::MaxpoolTimeStep(int dest_t, const NetworkIO &src, int src_t, int
     int dim = i_.dim2();
     int8_t *dest_line = i_[dest_t];
     const int8_t *src_line = src.i_[src_t];
+    // Written without branches, so the compiler can use SIMD instructions.
     for (int i = 0; i < dim; ++i) {
-      if (dest_line[i] < src_line[i]) {
-        dest_line[i] = src_line[i];
-        max_line[i] = src_t;
-      }
+      const bool larger = dest_line[i] < src_line[i];
+      dest_line[i] = larger ? src_line[i] : dest_line[i];
+      max_line[i] = larger ? src_t : max_line[i];
     }
   } else {
     int dim = f_.dim2();
     float *dest_line = f_[dest_t];
     const float *src_line = src.f_[src_t];
+    // Written without branches, so the compiler can use SIMD instructions.
     for (int i = 0; i < dim; ++i) {
-      if (dest_line[i] < src_line[i]) {
-        dest_line[i] = src_line[i];
-        max_line[i] = src_t;
-      }
+      const bool larger = dest_line[i] < src_line[i];
+      dest_line[i] = larger ? src_line[i] : dest_line[i];
+      max_line[i] = larger ? src_t : max_line[i];
     }
   }
 }
