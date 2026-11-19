@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////
 // File:        dropout.cpp
-// Description: Placeholder for a dropout layer.
+// Description: Dropout layer.
 // Author:      Stefan Weil
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +24,7 @@
 #include "tprintf.h"
 
 #include <cstdint>   // for uint32_t
+#include <cstring>   // for memset
 #include <stdexcept> // for std::invalid_argument
 
 namespace tesseract {
@@ -71,12 +72,77 @@ void Dropout::Forward([[maybe_unused]] bool debug, const NetworkIO &input,
                       [[maybe_unused]] NetworkScratch *scratch, NetworkIO *output) {
   // The output has the same shape as the input (ni_ == no_).
   output->Resize(input, no_);
-  // Pass the input through unchanged. CopyTimeStepFrom is mode-aware, so
-  // this also works for a network which was converted to integer mode.
+
   const int width = input.Width();
-  for (int t = 0; t < width; ++t) {
-    output->CopyTimeStepFrom(t, input, t);
+  const int num_features = input.NumFeatures();
+
+  if (IsTraining() && dropout_rate_ > 0.0f) {
+    // Inverted dropout: scale the retained activations by 1 / keep_prob, so
+    // the recognition can pass its input through unchanged.
+    const float keep_prob = 1.0f - dropout_rate_;
+    const float scale = 1.0f / keep_prob;
+
+    if (dropout_dim_ == 2) {
+      // Feature dropout: one mask value per feature for all timesteps.
+      dropout_mask_.resize(num_features);
+      for (int i = 0; i < num_features; ++i) {
+        float r = randomizer_->UnsignedRand(1.0f);
+        dropout_mask_[i] = (r < keep_prob) ? 1 : 0;
+      }
+      for (int t = 0; t < width; ++t) {
+        const float *in = input.f(t);
+        float *out = output->f(t);
+        for (int i = 0; i < num_features; ++i) {
+          out[i] = dropout_mask_[i] ? in[i] * scale : 0.0f;
+        }
+      }
+    } else if (dropout_dim_ == 1) {
+      // Temporal dropout: one mask value per timestep for all features.
+      dropout_mask_.resize(width);
+      for (int t = 0; t < width; ++t) {
+        float r = randomizer_->UnsignedRand(1.0f);
+        dropout_mask_[t] = (r < keep_prob) ? 1 : 0;
+      }
+      for (int t = 0; t < width; ++t) {
+        const float *in = input.f(t);
+        float *out = output->f(t);
+        if (dropout_mask_[t]) {
+          for (int i = 0; i < num_features; ++i) {
+            out[i] = in[i] * scale;
+          }
+        } else {
+          memset(out, 0, sizeof(float) * num_features);
+        }
+      }
+    } else {
+      // Dropout of single elements (dimension 0, the default).
+      dropout_mask_.resize(static_cast<size_t>(width) * num_features);
+      for (int t = 0; t < width; ++t) {
+        const float *in = input.f(t);
+        float *out = output->f(t);
+        char *mask = dropout_mask_.data() + static_cast<size_t>(t) * num_features;
+        for (int i = 0; i < num_features; ++i) {
+          // UnsignedRand(1.0f) returns a value in [0, 1].
+          float r = randomizer_->UnsignedRand(1.0f);
+          mask[i] = (r < keep_prob) ? 1 : 0;
+          out[i] = mask[i] ? in[i] * scale : 0.0f;
+        }
+      }
+    }
+  } else {
+    // Recognition (or a dropout rate of 0): pass the input through unchanged.
+    // CopyTimeStepFrom is mode-aware, so this also works for a network which
+    // was converted to integer mode.
+    for (int t = 0; t < width; ++t) {
+      output->CopyTimeStepFrom(t, input, t);
+    }
   }
+
+#ifndef GRAPHICS_DISABLED
+  if (debug) {
+    DisplayForward(*output);
+  }
+#endif
 }
 
 // Runs backward propagation of errors on the deltas line.
@@ -84,11 +150,56 @@ void Dropout::Forward([[maybe_unused]] bool debug, const NetworkIO &input,
 bool Dropout::Backward([[maybe_unused]] bool debug, const NetworkIO &fwd_deltas,
                        [[maybe_unused]] NetworkScratch *scratch, NetworkIO *back_deltas) {
   back_deltas->Resize(fwd_deltas, ni_);
-  // Pass the deltas through unchanged.
+
   const int width = fwd_deltas.Width();
-  for (int t = 0; t < width; ++t) {
-    back_deltas->CopyTimeStepFrom(t, fwd_deltas, t);
+  const int num_features = fwd_deltas.NumFeatures();
+
+  if (IsTraining() && dropout_rate_ > 0.0f) {
+    // Use the mask of the forward pass again.
+    const float scale = 1.0f / (1.0f - dropout_rate_);
+
+    if (dropout_dim_ == 2) {
+      for (int t = 0; t < width; ++t) {
+        const float *in = fwd_deltas.f(t);
+        float *out = back_deltas->f(t);
+        for (int i = 0; i < num_features; ++i) {
+          out[i] = dropout_mask_[i] ? in[i] * scale : 0.0f;
+        }
+      }
+    } else if (dropout_dim_ == 1) {
+      for (int t = 0; t < width; ++t) {
+        const float *in = fwd_deltas.f(t);
+        float *out = back_deltas->f(t);
+        if (dropout_mask_[t]) {
+          for (int i = 0; i < num_features; ++i) {
+            out[i] = in[i] * scale;
+          }
+        } else {
+          memset(out, 0, sizeof(float) * num_features);
+        }
+      }
+    } else {
+      for (int t = 0; t < width; ++t) {
+        const float *in = fwd_deltas.f(t);
+        float *out = back_deltas->f(t);
+        const char *mask = dropout_mask_.data() + static_cast<size_t>(t) * num_features;
+        for (int i = 0; i < num_features; ++i) {
+          out[i] = mask[i] ? in[i] * scale : 0.0f;
+        }
+      }
+    }
+  } else {
+    // Recognition: pass the deltas through unchanged.
+    for (int t = 0; t < width; ++t) {
+      back_deltas->CopyTimeStepFrom(t, fwd_deltas, t);
+    }
   }
+
+#ifndef GRAPHICS_DISABLED
+  if (debug) {
+    DisplayBackward(*back_deltas);
+  }
+#endif
   return needs_to_backprop_;
 }
 

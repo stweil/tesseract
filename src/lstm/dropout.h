@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////
 // File:        dropout.h
-// Description: Placeholder for a dropout layer.
+// Description: Dropout layer.
 // Author:      Stefan Weil
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,16 +21,16 @@
 
 #include <cstdio> // for std::snprintf
 #include <string>
+#include <vector>
 
 namespace tesseract {
 
-// Placeholder for a dropout layer.
+// Dropout layer.
 //
-// A dropout layer only changes its input while a network is trained. When a
-// model is used for recognition, the layer passes its input through
-// unchanged. This class implements only that pass-through, so models which
-// contain a dropout layer can be loaded and used for recognition. This
-// version of Tesseract cannot train with dropout.
+// A dropout layer only changes its input while a network is trained: it sets
+// random values to zero and scales the other values by 1 / (1 - rate)
+// (inverted dropout). When a model is used for recognition, the layer passes
+// its input through unchanged.
 //
 // The layer stores two values in a model file: the dropout rate (float,
 // 0 <= rate < 1) and the dropout dimension (32 bit unsigned integer,
@@ -78,6 +78,9 @@ private:
     return dropout_rate >= 0 && dropout_rate < 1 && dropout_dim <= 2;
   }
 
+  // Mask of the last forward pass in training mode (1 = kept, 0 = dropped),
+  // which is used again by the backward pass. It is not stored in a model.
+  std::vector<char> dropout_mask_;
   float dropout_rate_;
   unsigned dropout_dim_; // 0=elementwise, 1=temporal, 2=feature/channel
 };
