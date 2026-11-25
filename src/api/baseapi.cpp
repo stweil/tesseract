@@ -2242,10 +2242,11 @@ int TessBaseAPI::FindLines() {
 namespace {
 // Multi-column (newspaper) support. See RecognizeMultiColumn below.
 
-// A single candidate gutter: x in full-resolution pixels, top y (full-res).
+// A single candidate gutter: x in full-resolution pixels, and its strength
+// (the number of gutter pixels in its best pixel column at half resolution).
 struct GutterX {
   int x;
-  int y;
+  int strength;
 };
 
 // Detect the vertical gutters that separate the columns of a newspaper page,
@@ -2255,10 +2256,10 @@ struct GutterX {
 // re-binarised with a local (rank) threshold -- which is what makes the
 // detection robust to faint, variable-intensity rules -- then inverted so the
 // ink-free gutters become the foreground, opened into vertical strokes,
-// dilated, and connected. A tall-and-narrow connected component is a gutter
-// candidate; a minimum-column-width post-filter then rejects edge printing
-// artifacts and next-page slivers, which would otherwise create a too-narrow
-// column. Returns an empty vector for a single-column (or too-irregular) page.
+// and dilated. A narrow group of pixel columns which are gutter over most of
+// the page height is a gutter candidate; a minimum-column-width post-filter
+// then rejects edge printing artifacts, next-page slivers and the gaps inside
+// tables, which would otherwise create a too-narrow column. Returns an empty vector for a single-column (or too-irregular) page.
 std::vector<GutterX> DetectColumnGutters(Pix *page) {
   std::vector<GutterX> gutters;
   if (page == nullptr) {
@@ -2302,24 +2303,59 @@ std::vector<GutterX> DetectColumnGutters(Pix *page) {
   Pix *strokes = pixMorphSequence(rank, "o1.50", 0);
   Pix *mask = pixExpandBinaryPower2(strokes, 4);
 
-  Pixa *cc = nullptr;
-  Boxa *boxes = pixConnComp(mask, &cc, 8);
-
-  // Gutter candidates: tall, narrow, not at the page edge.
+  // Gutter candidates: pixel columns which are gutter over most of the page
+  // height, in a narrow group, not at the page edge. The vertical projection
+  // is used instead of the connected components of the mask: a component also
+  // contains the white areas which touch the gutter (the ends of short lines,
+  // which are all on the left side of a gutter), so the centre of its bounding
+  // box lies inside the text of the left column, and two gutters which are
+  // connected through such areas form a single component.
   std::vector<GutterX> cands;
   const int emargin = (int)(0.05 * w);
-  for (int i = 0; i < boxaGetCount(boxes); ++i) {
-    l_int32 x, y, bw, bh;
-    boxaGetBoxGeometry(boxes, i, &x, &y, &bw, &bh);
-    if (bh < 0.40 * h || bw > 0.05 * w) {
+  // The mask can be a few pixels narrower than w (reduced and expanded by 4).
+  const int mask_width = pixGetWidth(mask);
+  Numa *colsum = pixCountPixelsByColumn(mask);
+  auto column_count = [colsum, mask_width](int x) {
+    l_int32 count = 0;
+    if (colsum != nullptr && x >= 0 && x < mask_width) {
+      numaGetIValue(colsum, x, &count);
+    }
+    return count;
+  };
+  const int min_count = (int)(0.60 * h);
+  for (int x = 0; x < mask_width; ++x) {
+    if (column_count(x) < min_count) {
       continue;
     }
-    int cx = x + bw / 2;
+    // [x, end) is a run of gutter columns.
+    int end = x + 1;
+    int peak = column_count(x);
+    while (end < mask_width && column_count(end) >= min_count) {
+      peak = std::max(peak, column_count(end));
+      ++end;
+    }
+    // Cut in the middle of the columns which are (nearly) as free as the best
+    // one: the lower flanks of the run are the ends of short lines.
+    const int near_peak = peak - peak / 20;
+    int first = x;
+    while (column_count(first) < near_peak) {
+      ++first;
+    }
+    int last = end - 1;
+    while (column_count(last) < near_peak) {
+      --last;
+    }
+    x = end;
+    if (last - first + 1 > 0.05 * w) {
+      continue;
+    }
+    const int cx = (first + last + 1) / 2;
     if (cx < emargin || cx > w - emargin) {
       continue;
     }
-    cands.push_back(GutterX{cx * 2, y * 2});
+    cands.push_back(GutterX{cx * 2, peak});
   }
+  numaDestroy(&colsum);
 
   // Sort by x, then drop any gutter that would leave a column narrower than
   // the minimum real-column width (rejects edge artifacts / slivers).
@@ -2356,18 +2392,17 @@ std::vector<GutterX> DetectColumnGutters(Pix *page) {
     } else if (worst_edge == (int)cands.size()) {
       drop = (int)cands.size() - 1;
     } else {
-      // Interior narrow gap: drop the gutter whose candidate is the shorter
-      // (weaker) stroke; on a tie drop the left one.
-      drop = (cands[worst_edge].y <= cands[worst_edge - 1].y) ? worst_edge
-                                                             : worst_edge - 1;
+      // Interior narrow gap: drop the weaker of its two gutters; on a tie
+      // drop the left one.
+      drop = (cands[worst_edge].strength < cands[worst_edge - 1].strength)
+                 ? worst_edge
+                 : worst_edge - 1;
     }
     cands.erase(cands.begin() + drop);
   }
 
   gutters = std::move(cands);
 
-  boxaDestroy(&boxes);
-  pixaDestroy(&cc);
   pixDestroy(&mask);
   pixDestroy(&strokes);
   pixDestroy(&rank);
