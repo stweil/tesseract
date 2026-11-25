@@ -2242,12 +2242,35 @@ int TessBaseAPI::FindLines() {
 namespace {
 // Multi-column (newspaper) support. See RecognizeMultiColumn below.
 
-// A single candidate gutter: x in full-resolution pixels, and its strength
-// (the number of gutter pixels in its best pixel column at half resolution).
+// A single candidate gutter: the line x + slope * (y - height / 2) in
+// full-resolution pixels (a gutter is only vertical if the page has no skew),
+// and its strength (the number of gutter pixels along that line at half
+// resolution).
 struct GutterX {
   int x;
   int strength;
+  double slope;
+  // The x coordinate of the gutter in row y of an image of the given height.
+  int XAtY(int y, int height) const {
+    return x + static_cast<int>(std::lround(slope * (y - height / 2)));
+  }
 };
+
+// Number of horizontal bands of the page for which the gutter pixels are
+// counted per pixel column, and the slopes (dx / dy) which are tried for a
+// gutter: up to about 3 degrees of skew.
+const int kGutterBands = 32;
+const double kMaxGutterSlope = 0.05;
+const double kGutterSlopeStep = 0.0025;
+// A gutter must be free of text over this fraction of the page height.
+// Measured on the 101 double pages of the ground truth reichsanzeiger-gt
+// (character error rate of the text lines 26.95 % without the column
+// recognition): 0.7 and 0.8 give nearly the same result (5.24 %, 5.40 %),
+// 0.9 misses gutters which are crossed by headings (6.74 %).
+const double kMinGutterHeightFraction = 0.80;
+// Minimum width of a column as a fraction of the image width. A scan of two
+// newspaper pages with five columns each has columns of about 8 %.
+const double kMinColumnWidthFraction = 0.07;
 
 // Detect the vertical gutters that separate the columns of a newspaper page,
 // working at half resolution (the morphological structuring elements are
@@ -2256,10 +2279,12 @@ struct GutterX {
 // re-binarised with a local (rank) threshold -- which is what makes the
 // detection robust to faint, variable-intensity rules -- then inverted so the
 // ink-free gutters become the foreground, opened into vertical strokes,
-// and dilated. A narrow group of pixel columns which are gutter over most of
-// the page height is a gutter candidate; a minimum-column-width post-filter
-// then rejects edge printing artifacts, next-page slivers and the gaps inside
-// tables, which would otherwise create a too-narrow column. Returns an empty vector for a single-column (or too-irregular) page.
+// and dilated. A narrow group of lines (vertical, or slanted a little for a
+// page with skew) which are gutter over most of the page height is a gutter
+// candidate; a minimum-column-width post-filter then rejects edge printing
+// artifacts, next-page slivers and the gaps inside tables, which would
+// otherwise create a too-narrow column. Returns an empty vector for a
+// single-column (or too-irregular) page.
 std::vector<GutterX> DetectColumnGutters(Pix *page) {
   std::vector<GutterX> gutters;
   if (page == nullptr) {
@@ -2303,26 +2328,76 @@ std::vector<GutterX> DetectColumnGutters(Pix *page) {
   Pix *strokes = pixMorphSequence(rank, "o1.50", 0);
   Pix *mask = pixExpandBinaryPower2(strokes, 4);
 
-  // Gutter candidates: pixel columns which are gutter over most of the page
-  // height, in a narrow group, not at the page edge. The vertical projection
-  // is used instead of the connected components of the mask: a component also
-  // contains the white areas which touch the gutter (the ends of short lines,
-  // which are all on the left side of a gutter), so the centre of its bounding
-  // box lies inside the text of the left column, and two gutters which are
-  // connected through such areas form a single component.
+  // Gutter candidates: lines which are gutter over most of the page height,
+  // in a narrow group, not at the page edge. The gutter pixels are counted
+  // along slanted lines too, because the gutters of a page with a little skew
+  // are not vertical: a vertical line through such a gutter is free over a
+  // part of the height only and cuts off the ends of the text lines above or
+  // below. A projection is used instead of the connected components of the
+  // mask: a component also contains the white areas which touch the gutter
+  // (the ends of short lines, which are all on the left side of a gutter), so
+  // the centre of its bounding box lies inside the text of the left column,
+  // and two gutters which are connected through such areas form a single
+  // component.
   std::vector<GutterX> cands;
   const int emargin = (int)(0.05 * w);
   // The mask can be a few pixels narrower than w (reduced and expanded by 4).
   const int mask_width = pixGetWidth(mask);
-  Numa *colsum = pixCountPixelsByColumn(mask);
-  auto column_count = [colsum, mask_width](int x) {
-    l_int32 count = 0;
-    if (colsum != nullptr && x >= 0 && x < mask_width) {
-      numaGetIValue(colsum, x, &count);
+  const int mask_height = pixGetHeight(mask);
+  // Count the gutter pixels of each pixel column in horizontal bands.
+  std::vector<std::vector<int>> band_sums(kGutterBands, std::vector<int>(mask_width, 0));
+  std::vector<double> band_mid_y(kGutterBands, 0.0);
+  for (int b = 0; b < kGutterBands; ++b) {
+    const int y0 = static_cast<int>(static_cast<int64_t>(mask_height) * b / kGutterBands);
+    const int y1 = static_cast<int>(static_cast<int64_t>(mask_height) * (b + 1) / kGutterBands);
+    band_mid_y[b] = (y0 + y1) / 2.0 - mask_height / 2.0;
+    if (y1 <= y0) {
+      continue;
     }
-    return count;
+    Box *band_box = boxCreate(0, y0, mask_width, y1 - y0);
+    Pix *band = pixClipRectangle(mask, band_box, nullptr);
+    Numa *sums = band != nullptr ? pixCountPixelsByColumn(band) : nullptr;
+    if (sums != nullptr) {
+      for (int x = 0; x < mask_width; ++x) {
+        l_int32 count = 0;
+        numaGetIValue(sums, x, &count);
+        band_sums[b][x] = count;
+      }
+    }
+    numaDestroy(&sums);
+    pixDestroy(&band);
+    boxDestroy(&band_box);
+  }
+  // For each pixel column (at half of the height) the best count along a
+  // line through it, and the slope of that line.
+  std::vector<int> best_count(mask_width, 0);
+  std::vector<double> best_slope(mask_width, 0.0);
+  const int num_slopes = static_cast<int>(std::lround(kMaxGutterSlope / kGutterSlopeStep));
+  std::vector<int> line_count(mask_width);
+  for (int k = 0; k <= 2 * num_slopes; ++k) {
+    // Try the slopes 0, +step, -step, +2 * step, ... so that the vertical
+    // line wins a tie.
+    const double slope = ((k + 1) / 2) * kGutterSlopeStep * ((k & 1) ? 1 : -1);
+    std::fill(line_count.begin(), line_count.end(), 0);
+    for (int b = 0; b < kGutterBands; ++b) {
+      const int shift = static_cast<int>(std::lround(slope * band_mid_y[b]));
+      const int first_x = std::max(0, -shift);
+      const int last_x = std::min(mask_width, mask_width - shift);
+      for (int x = first_x; x < last_x; ++x) {
+        line_count[x] += band_sums[b][x + shift];
+      }
+    }
+    for (int x = 0; x < mask_width; ++x) {
+      if (line_count[x] > best_count[x]) {
+        best_count[x] = line_count[x];
+        best_slope[x] = slope;
+      }
+    }
+  }
+  auto column_count = [&best_count, mask_width](int x) {
+    return x >= 0 && x < mask_width ? best_count[x] : 0;
   };
-  const int min_count = (int)(0.60 * h);
+  const int min_count = (int)(kMinGutterHeightFraction * h);
   for (int x = 0; x < mask_width; ++x) {
     if (column_count(x) < min_count) {
       continue;
@@ -2330,8 +2405,12 @@ std::vector<GutterX> DetectColumnGutters(Pix *page) {
     // [x, end) is a run of gutter columns.
     int end = x + 1;
     int peak = column_count(x);
+    int peak_x = x;
     while (end < mask_width && column_count(end) >= min_count) {
-      peak = std::max(peak, column_count(end));
+      if (column_count(end) > peak) {
+        peak = column_count(end);
+        peak_x = end;
+      }
       ++end;
     }
     // Cut in the middle of the columns which are (nearly) as free as the best
@@ -2353,15 +2432,14 @@ std::vector<GutterX> DetectColumnGutters(Pix *page) {
     if (cx < emargin || cx > w - emargin) {
       continue;
     }
-    cands.push_back(GutterX{cx * 2, peak});
+    cands.push_back(GutterX{cx * 2, peak, best_slope[peak_x]});
   }
-  numaDestroy(&colsum);
 
   // Sort by x, then drop any gutter that would leave a column narrower than
   // the minimum real-column width (rejects edge artifacts / slivers).
   std::sort(cands.begin(), cands.end(),
             [](const GutterX &a, const GutterX &b) { return a.x < b.x; });
-  const double minw = 0.14 * w0;
+  const double minw = kMinColumnWidthFraction * w0;
   for (;;) {
     if (cands.empty()) {
       break;
@@ -2459,9 +2537,10 @@ void ShiftColumnGeometry(BLOCK_LIST *blocks, int dx) {
  * into a single page result in column-major reading order (the natural order
  * for a newspaper body).
  *
- * Each column is cropped full-height and recognised with its own thresholded
- * image, then its block geometry is shifted right by the column's left edge so
- * that bounding boxes line up in full-page coordinates. The full-page
+ * Each column is cut out full-height along its gutters, which need not be
+ * vertical, and recognised with its own thresholded image, then its block
+ * geometry is shifted right by the left edge of the cut-out so that bounding
+ * boxes line up in full-page coordinates. The full-page
  * thresholded image is restored before returning so the renderers convert
  * boxes correctly.
  *
@@ -2491,14 +2570,30 @@ bool TessBaseAPI::RecognizeMultiColumn(ETEXT_DESC *monitor) {
     return false;
   }
 
-  // Column left-edges in rectangle coordinates (0, gutters..., rect width).
-  std::vector<int> colx;
-  colx.push_back(0);
-  for (int c = 0; c < n; ++c) {
-    colx.push_back(gutters[c].x);
+  const int ncols = n + 1;
+
+  // The whole source image, from which the columns are cut. A column lies
+  // between two gutters which need not be vertical, so it is not a rectangle
+  // of the page: it is cut out with its bounding rectangle, and the parts of
+  // that rectangle which belong to the neighbouring columns are painted
+  // white.
+  thresholder_->SetRectangle(0, 0, image_width_, image_height_);
+  Image full_pix = thresholder_->GetPixRect();
+  if (full_pix == nullptr) {
+    thresholder_->SetRectangle(rl, rt, rw, rh);
+    return false;
   }
-  colx.push_back(rw);
-  const int ncols = (int)colx.size() - 1;
+  // x coordinate (in rectangle coordinates) of the left edge of column c, or
+  // of the right edge of column c - 1, in row y.
+  auto edge_at = [&gutters, n, rw, rh](int c, int y) {
+    if (c <= 0) {
+      return 0;
+    }
+    if (c > n) {
+      return rw;
+    }
+    return ClipToRange(gutters[c - 1].XAtY(y, rh), 0, rw);
+  };
 
   // Same one-time per-page configuration the normal flow performs.
   tesseract_->SetBlackAndWhitelist();
@@ -2509,15 +2604,38 @@ bool TessBaseAPI::RecognizeMultiColumn(ETEXT_DESC *monitor) {
   col_page_res.reserve(ncols);
 
   for (int c = 0; c < ncols; ++c) {
-    const int x0 = colx[c];
-    const int cw = colx[c + 1] - x0;
+    const int x0 = std::min(edge_at(c, 0), edge_at(c, rh - 1));
+    const int cw = std::max(edge_at(c + 1, 0), edge_at(c + 1, rh - 1)) - x0;
     if (cw <= 0) {
       continue;
     }
-    // SetRectangle -> ClearResults: clears block_list_ / page_res_ and the
-    // working pix. block_list_ is guaranteed empty here (the previous column's
-    // blocks were extracted out below), so FindLines will re-segment.
-    SetRectangle(rl + x0, rt, cw, rh);
+    Box *col_box = boxCreate(rl + x0, rt, cw, rh);
+    Pix *col_pix = pixClipRectangle(full_pix, col_box, nullptr);
+    boxDestroy(&col_box);
+    if (col_pix == nullptr) {
+      continue;
+    }
+    // Paint the parts white which lie beyond the gutters.
+    const l_int32 white = pixGetDepth(col_pix) == 1 ? PIX_CLR : PIX_SET;
+    const int kRowStep = 8;
+    for (int y = 0; y < rh; y += kRowStep) {
+      const int mid_y = std::min(rh - 1, y + kRowStep / 2);
+      const int left = edge_at(c, mid_y) - x0;
+      if (left > 0) {
+        pixRasterop(col_pix, 0, y, left, kRowStep, white, nullptr, 0, 0);
+      }
+      const int right = std::max(0, edge_at(c + 1, mid_y) - x0);
+      if (right < cw) {
+        pixRasterop(col_pix, right, y, cw - right, kRowStep, white, nullptr, 0, 0);
+      }
+    }
+    // The column replaces the source image for now. ClearResults clears
+    // block_list_ / page_res_ and the working pix. block_list_ is guaranteed
+    // empty here (the previous column's blocks were extracted out below), so
+    // FindLines will re-segment.
+    thresholder_->SetImage(col_pix);
+    pixDestroy(&col_pix);
+    ClearResults();
     if (!Threshold(&tesseract_->mutable_pix_binary()->pix_)) {
       continue;
     }
@@ -2545,6 +2663,10 @@ bool TessBaseAPI::RecognizeMultiColumn(ETEXT_DESC *monitor) {
     col_blocks.push_back(own);
     col_page_res.push_back(res);
   }
+
+  // Put the whole source image back.
+  thresholder_->SetImage(full_pix);
+  full_pix.destroy();
 
   if (col_page_res.empty()) {
     for (auto *b : col_blocks) {
