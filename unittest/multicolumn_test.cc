@@ -15,6 +15,7 @@
 #include <tesseract/renderer.h>
 
 #include "image.h" // for Image
+#include "tesseractclass.h" // for Tesseract::auto_columns_used
 
 #include <memory>
 #include <string>
@@ -40,10 +41,11 @@ namespace tesseract {
 // yields no gutter, which drives the safe no-split fallback.
 class FriendlyTessBaseAPI : public tesseract::TessBaseAPI {
  public:
-  // Expose the (protected) number of columns the automatic multi-column path
-  // used for the last recognised page, without adding a public API method.
+  // Expose the number of columns the automatic multi-column path used for
+  // the last recognised page, without adding anything to the public API: the
+  // count is kept in the internal Tesseract class.
   int auto_columns_used() const {
-    return auto_columns_;
+    return tesseract_->auto_columns_used();
   }
 };
 

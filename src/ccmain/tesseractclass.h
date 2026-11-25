@@ -257,6 +257,14 @@ public:
   void set_source_resolution(int ppi) {
     source_resolution_ = ppi;
   }
+  // Number of columns which the automatic multi-column recognition
+  // (textord_auto_columns) used for the last page, 0 if it did not split it.
+  int auto_columns_used() const {
+    return auto_columns_used_;
+  }
+  void set_auto_columns_used(int columns) {
+    auto_columns_used_ = columns;
+  }
   int ImageWidth() const {
     return pixGetWidth(pix_binary_);
   }
@@ -993,6 +1001,8 @@ private:
   // Image used for input to layout analysis and tesseract recognition.
   // May be modified by the ShiroRekhaSplitter to eliminate the top-line.
   Image pix_binary_;
+  // Columns used by the last automatic multi-column recognition (0 = none).
+  int auto_columns_used_ = 0;
   // The pixels of the lines which the layout analysis removed from the binary
   // image, or nullptr. Kept for the font style pass, which needs them to find
   // underlined words.

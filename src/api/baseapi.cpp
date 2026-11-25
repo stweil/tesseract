@@ -179,7 +179,6 @@ TessBaseAPI::TessBaseAPI()
     , page_res_(nullptr)
     , last_oem_requested_(OEM_DEFAULT)
     , recognition_done_(false)
-    , auto_columns_(0)
     , rect_left_(0)
     , rect_top_(0)
     , rect_width_(0)
@@ -783,7 +782,7 @@ int TessBaseAPI::Recognize(ETEXT_DESC *monitor) {
     tprintf("Error: Recognize called without a loaded language. Pass a language to Init.\n");
     return -1;
   }
-  auto_columns_ = 0;
+  tesseract_->set_auto_columns_used(0);
   // Automatic multi-column (newspaper) support: when enabled, detect the
   // column gutters, recognise each column independently and merge the results
   // in column-major order. If no gutter is found (single-column or irregular
@@ -2726,7 +2725,7 @@ bool TessBaseAPI::RecognizeMultiColumn(ETEXT_DESC *monitor) {
     DetectParagraphs(true);
   }
   recognition_done_ = true;
-  auto_columns_ = ncols;
+  tesseract_->set_auto_columns_used(ncols);
   return true;
 }
 
