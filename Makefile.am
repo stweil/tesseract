@@ -1230,6 +1230,7 @@ if ENABLE_TRAINING
 check_PROGRAMS += pango_font_info_test
 endif # ENABLE_TRAINING
 check_PROGRAMS += paragraphs_test
+check_PROGRAMS += pdfrenderer_test
 check_PROGRAMS += pithsync_test
 check_PROGRAMS += plumbing_dimensions_test
 check_PROGRAMS += plumbing_test
@@ -1532,6 +1533,10 @@ pango_font_info_test_LDADD += $(pangoft2_LIBS)
 paragraphs_test_SOURCES = unittest/paragraphs_test.cc
 paragraphs_test_CPPFLAGS = $(unittest_CPPFLAGS)
 paragraphs_test_LDADD = $(TESS_LIBS)
+
+pdfrenderer_test_SOURCES = unittest/pdfrenderer_test.cc
+pdfrenderer_test_CPPFLAGS = $(unittest_CPPFLAGS)
+pdfrenderer_test_LDADD = $(TESS_LIBS)
 
 pithsync_test_SOURCES = unittest/pithsync_test.cc
 pithsync_test_CPPFLAGS = $(unittest_CPPFLAGS)
