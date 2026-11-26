@@ -632,17 +632,36 @@ bool TessPDFRenderer::BeginDocumentHandler() {
           "end\n"
           "end\n";
   const std::string tounicode = cmap.str();
-
+  len = tounicode.size();
+#ifndef NO_PDF_COMPRESSION
+  comp = zlibCompress(reinterpret_cast<const unsigned char *>(tounicode.data()), tounicode.size(),
+                      &len);
+  if (comp == nullptr) {
+    return false;
+  }
+#endif
   stream.str("");
   stream << "6 0 obj\n"
             "<< /Length "
-         << tounicode.size()
-         << " >>\n"
-            "stream\n"
-         << tounicode
-         << "endstream\n"
-            "endobj\n";
-  AppendPDFObject(stream.str().c_str());
+         << len
+         << ""
+#ifndef NO_PDF_COMPRESSION
+            " /Filter /FlateDecode"
+#endif
+            " >>\n"
+            "stream\n";
+  AppendString(stream.str().c_str());
+  objsize = stream.str().size();
+#ifndef NO_PDF_COMPRESSION
+  AppendData(reinterpret_cast<char *>(comp), len);
+  lept_free(comp);
+#else
+  AppendData(tounicode.data(), len);
+#endif
+  objsize += len;
+  objsize += AppendData("endstream\n"sv);
+  objsize += AppendData("endobj\n"sv);
+  AppendPDFObjectDIY(objsize);
 
   // FONT DESCRIPTOR
   stream.str("");

@@ -1536,7 +1536,7 @@ paragraphs_test_LDADD = $(TESS_LIBS)
 
 pdfrenderer_test_SOURCES = unittest/pdfrenderer_test.cc
 pdfrenderer_test_CPPFLAGS = $(unittest_CPPFLAGS)
-pdfrenderer_test_LDADD = $(TESS_LIBS)
+pdfrenderer_test_LDADD = $(TESS_LIBS) $(LEPTONICA_LIBS)
 
 pithsync_test_SOURCES = unittest/pithsync_test.cc
 pithsync_test_CPPFLAGS = $(unittest_CPPFLAGS)

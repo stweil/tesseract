@@ -12,6 +12,8 @@
 
 #include "include_gunit.h"
 
+#include <allheaders.h> // for zlibUncompress
+
 #include <cstdlib> // for strtoul
 #include <filesystem>
 #include <fstream>
@@ -57,7 +59,7 @@ bool ParseCode(const std::string &token, unsigned *code) {
   return end == token.c_str() + 5;
 }
 
-// Returns the stream of the object with the given number.
+// Returns the decoded stream of the object with the given number.
 // Fails if the stream does not have the size given by /Length.
 std::string GetStream(const std::string &pdf, int objnum) {
   const std::string header = "\n" + std::to_string(objnum) + " 0 obj\n";
@@ -69,6 +71,7 @@ std::string GetStream(const std::string &pdf, int objnum) {
     ADD_FAILURE() << "No object " << objnum;
     return "";
   }
+  const auto dictionary = pos;
   pos = pdf.find(length_key, pos);
   if (pos == std::string::npos) {
     ADD_FAILURE() << "No /Length in object " << objnum;
@@ -80,10 +83,24 @@ std::string GetStream(const std::string &pdf, int objnum) {
     ADD_FAILURE() << "No stream in object " << objnum;
     return "";
   }
+  const bool compressed =
+      pdf.substr(dictionary, pos - dictionary).find("/FlateDecode") != std::string::npos;
   pos += stream_key.size();
   EXPECT_EQ(pdf.compare(pos + length, end_key.size(), end_key), 0)
       << "Wrong /Length " << length << " in object " << objnum;
-  return pdf.substr(pos, length);
+  if (!compressed) {
+    return pdf.substr(pos, length);
+  }
+  size_t size = 0;
+  l_uint8 *data =
+      zlibUncompress(reinterpret_cast<const l_uint8 *>(pdf.data()) + pos, length, &size);
+  if (data == nullptr) {
+    ADD_FAILURE() << "Cannot decode the stream of object " << objnum;
+    return "";
+  }
+  const std::string stream(reinterpret_cast<const char *>(data), size);
+  lept_free(data);
+  return stream;
 }
 
 } // namespace
