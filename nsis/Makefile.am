@@ -13,10 +13,10 @@ Plugins/x86-unicode/INetC.dll:
 	unzip Inetc.zip $@
 
 winpath.exe: winpath.cpp
-	x86_64-w64-mingw32-g++ -Os -o $@ $<
-	x86_64-w64-mingw32-strip --strip-unneeded $@
+	$(CXX) -Os -o $@ $<
+	$(STRIP) --strip-unneeded $@
 
 winsetup: Plugins/x86-unicode/INetC.dll winpath.exe
-	makensis -DCROSSBUILD -DSHARED -DSIGNCODE=$(SIGNCODE) -DSRCDIR=$(top_srcdir) -DVERSION=${gitrev} $(shell test "$(host_cpu)" = x86_64 && echo "-DW64") -NOCD $(top_srcdir)/nsis/tesseract.nsi
+	makensis -DCROSSBUILD -DSHARED -DSIGNCODE=$(SIGNCODE) -DSRCDIR=$(top_srcdir) -DPREFIX=$(prefix) -DVERSION=${gitrev} $(shell test "$(host_cpu)" = x86_64 && echo "-DW64") -NOCD $(top_srcdir)/nsis/tesseract.nsi
 
 endif

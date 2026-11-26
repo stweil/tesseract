@@ -4,76 +4,44 @@
 
 # Author: Stefan Weil (2010-2026)
 
+# Usage: nsis/build.sh [HOST [PREFIX]]
+#
+# The cross compiler for HOST and the libraries for Windows in PREFIX
+# must be installed before this script is run. For the MSYS2 environment
+# CLANG64 this is done by
+#
+#     .github/actions/setup-msys2-cross/setup.sh CLANG64 \
+#       curl-winssl giflib icu leptonica libarchive libidn2 openjpeg2 \
+#       openssl pango libpng libtiff libwebp
+#
+# which also shows the directories which must be added to PATH.
+
 set -e
 set -x
 
 LANG=C.UTF-8
 
-ARCH=$1
-
-if [ "$ARCH" = "i686" ]; then
-  MINGW=/mingw32
-else
-  ARCH=x86_64
-  MINGW=/mingw64
-fi
+# Host triplet of the cross compiler.
+HOST=${1:-x86_64-w64-mingw32}
+# Installation directory of the MSYS2 packages.
+MINGW=${2:-/clang64}
 
 ROOTDIR=$PWD
-HOST=$ARCH-w64-mingw32
 TAG=$(cat VERSION).$(date +%Y%m%d)
 BUILDDIR=bin/ndebug/$HOST
-PKG_ARCH=mingw-w64-${ARCH/_/-}
+
+if [ "$(id -u)" -eq 0 ]; then
+  SUDO=
+else
+  SUDO=sudo
+fi
 
 # Install packages.
-sudo apt-get update --quiet
-sudo apt-get install --assume-yes --no-install-recommends --quiet \
+$SUDO apt-get update --quiet
+$SUDO apt-get install --assume-yes --no-install-recommends --quiet \
   asciidoctor ruby-asciidoctor-pdf curl \
-  automake dpkg-dev libtool pkg-config default-jdk-headless \
-  mingw-w64-tools nsis g++-"$PKG_ARCH" \
-  makepkg pacman-package-manager python3-venv unzip
-
-# Configure pacman.
-
-# Enable mirrorlist.
-sudo sed -Ei 's/^#.*(Include.*mirrorlist)/\1/' /etc/pacman.conf
-(
-# Add msys key for pacman.
-cd /usr/share/keyrings
-sudo curl -OsS https://raw.githubusercontent.com/msys2/MSYS2-keyring/master/msys2.gpg
-sudo curl -OsS https://raw.githubusercontent.com/msys2/MSYS2-keyring/master/msys2-revoked
-sudo curl -OsS https://raw.githubusercontent.com/msys2/MSYS2-keyring/master/msys2-trusted
-)
-(
-# Add active environments for pacman.
-# See https://www.msys2.org/docs/repos-mirrors/.
-sudo mkdir -p /etc/pacman.d
-cd /etc/pacman.d
-cat <<eod | sudo tee mirrorlist >/dev/null
-[mingw64]
-Include = /etc/pacman.d/mirrorlist.mingw
-eod
-sudo curl -OsS https://raw.githubusercontent.com/msys2/MSYS2-packages/master/pacman-mirrors/mirrorlist.mingw
-# sudo curl -OsS https://raw.githubusercontent.com/msys2/MSYS2-packages/master/pacman-mirrors/mirrorlist.msys
-)
-
-sudo pacman-key --init
-sudo pacman-key --populate msys2
-sudo pacman -Syu --noconfirm
-
-# Install required pacman packages.
-sudo pacman -S --noconfirm \
- mingw-w64-x86_64-curl-winssl \
- mingw-w64-x86_64-giflib \
- mingw-w64-x86_64-icu \
- mingw-w64-x86_64-leptonica \
- mingw-w64-x86_64-libarchive \
- mingw-w64-x86_64-libidn2 \
- mingw-w64-x86_64-openjpeg2 \
- mingw-w64-x86_64-openssl \
- mingw-w64-x86_64-pango \
- mingw-w64-x86_64-libpng \
- mingw-w64-x86_64-libtiff \
- mingw-w64-x86_64-libwebp
+  automake libtool make pkg-config default-jdk-headless \
+  nsis python3-venv unzip
 
 git config --global user.email "sw@weilnetz.de"
 git config --global user.name "Stefan Weil"
@@ -86,24 +54,27 @@ git tag -a "v$TAG" -m "Tesseract $TAG"
 mkdir -p "$BUILDDIR" && cd "$BUILDDIR"
 
 # Run configure.
-PKG_CONFIG_PATH=$MINGW/lib/pkgconfig
-export PKG_CONFIG_PATH
+# The compiler uses $MINGW as sysroot, and $HOST-pkg-config only finds
+# the packages which are installed there, so no search paths are needed.
 # Disable OpenMP (see https://github.com/tesseract-ocr/tesseract/issues/1662).
 ../../../configure --disable-openmp --host="$HOST" --prefix="/usr/$HOST" \
-  CXX="$HOST-g++-posix" \
-  CXXFLAGS="-fno-math-errno -Wall -Wextra -Wpedantic -g -O2 -isystem $MINGW/include" \
-  LDFLAGS="-L$MINGW/lib"
+  CXX="$HOST-clang++" \
+  CXXFLAGS="-fno-math-errno -Wall -Wextra -Wpedantic -g -O2"
 
 make all -j$(nproc)
 make training -j$(nproc)
 
 MINGW_INSTALL=${PWD}${MINGW}
-make install-jars install training-install html prefix="$MINGW_INSTALL" INSTALL_STRIP_FLAG=-s
+# Strip the installed files with the cross tool. The strip program of the
+# build machine does not always support Windows executables.
+make install-jars install training-install html prefix="$MINGW_INSTALL" \
+  INSTALL_STRIP_FLAG="-s --strip-program=$HOST-strip"
 test -d venv || python3 -m venv venv
 source venv/bin/activate
 pip install pefile
+# Get the DLL files which are needed for the installer. This includes the
+# DLL files of the compiler (C++ standard library, unwinder, threads).
+# They are part of the MSYS2 environment which was used as sysroot.
 mkdir -p dll
-ln -sv $("$ROOTDIR/nsis/find_deps.py" "$MINGW_INSTALL"/bin/*.exe "$MINGW_INSTALL"/bin/*.dll) dll/
-ln -svf /usr/lib/gcc/x86_64-w64-mingw32/*-win32/libstdc++-6.dll dll/
-ln -svf /usr/lib/gcc/x86_64-w64-mingw32/*-win32/libgcc_s_seh-1.dll dll/
+ln -svf $("$ROOTDIR/nsis/find_deps.py" --dlldir "$MINGW/bin" "$MINGW_INSTALL"/bin/*.exe "$MINGW_INSTALL"/bin/*.dll) dll/
 make winsetup prefix="$MINGW_INSTALL"

@@ -45,7 +45,7 @@ def main():
 
     parser = argparse.ArgumentParser(description='Find and copy DLL dependencies')
     parser.add_argument('files', nargs='+', help='Paths to executable or library files')
-    parser.add_argument('--dlldir', dest='dlldir', default='/mingw64/bin/',
+    parser.add_argument('--dlldir', dest='dlldir', default='/clang64/bin/',
                         help='path to dll files')
 
     args = parser.parse_args()

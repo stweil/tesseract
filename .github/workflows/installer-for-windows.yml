@@ -13,14 +13,33 @@ on:
         type: choice
         options:
           - 'Windows (64 bit)'
+      msystem:
+        description: 'MSYS2 environment which provides the libraries'
+        required: true
+        default: 'CLANG64'
+        type: choice
+        options:
+          - 'CLANG64'
+          - 'UCRT64'
 
 jobs:
   build64:
     runs-on: [ubuntu-24.04]
     steps:
     - uses: actions/checkout@v7
+    - name: Install llvm-mingw and MSYS2 packages
+      id: cross
+      uses: ./.github/actions/setup-msys2-cross
+      with:
+        msystem: ${{ inputs.msystem }}
+        packages: >-
+          curl-winssl giflib icu leptonica libarchive libidn2 openjpeg2
+          openssl pango libpng libtiff libwebp
     - name: Build Tesseract installer (64 bit)
-      run: nsis/build.sh x86_64
+      run: nsis/build.sh "$HOST" "$PREFIX"
+      env:
+        HOST: ${{ steps.cross.outputs.host }}
+        PREFIX: ${{ steps.cross.outputs.prefix }}
     - uses: actions/upload-artifact@v7
       with:
         name: Tesseract Installer for Windows (64 bit)

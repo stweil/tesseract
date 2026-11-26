@@ -72,7 +72,7 @@ OutFile ${OUTFILE}
 !endif
 
 !ifndef PREFIX
-!define PREFIX "../mingw64"
+!define PREFIX "../clang64"
 !endif
 !define BINDIR "${PREFIX}/bin"
 
