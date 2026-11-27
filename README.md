@@ -17,6 +17,7 @@
   * [For developers](#for-developers)
   * [Support](#support)
   * [License](#license)
+  * [Code signing policy](#code-signing-policy)
   * [Dependencies](#dependencies)
   * [Latest Version of README](#latest-version-of-readme)
 
@@ -116,6 +117,33 @@ Please report an issue only for a **bug**, not for asking questions.
 
 Tesseract uses the [Leptonica library](http://www.leptonica.org/) which essentially
 uses a [BSD 2-clause license](http://www.leptonica.org/about-the-license.html).
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/),
+certificate by [SignPath Foundation](https://signpath.org/).
+
+The signature covers the Tesseract installer for Windows and the programs
+and libraries in it which are built from the code in this repository.
+Libraries from other open source projects which are part of the installer
+are not signed.
+
+Team roles and their members:
+
+* Contributors: Anybody can propose changes with a pull request.
+  Changes from contributors who are not committers are only merged after
+  a review by a committer.
+* Committers and reviewers: The owners of the
+  [tesseract-ocr organisation](https://github.com/tesseract-ocr) and the
+  other members and collaborators with write access to this repository.
+  They can approve and merge pull requests.
+* Approvers of signing requests:
+  The [owners](https://github.com/orgs/tesseract-ocr/people?query=role%3Aowner)
+  of the organisation.
+
+Privacy policy: This program will not transfer any information to other
+networked systems unless specifically requested by the user or the person
+installing or operating it.
 
 ## Dependencies
 
