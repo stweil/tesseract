@@ -17,6 +17,11 @@ winpath.exe: winpath.cpp
 	$(STRIP) --strip-unneeded $@
 
 winsetup: Plugins/x86-unicode/INetC.dll winpath.exe
-	makensis -DCROSSBUILD -DSHARED -DSIGNCODE=$(SIGNCODE) -DSRCDIR=$(top_srcdir) -DPREFIX=$(prefix) -DVERSION=${gitrev} $(shell test "$(host_cpu)" = x86_64 && echo "-DW64") -NOCD $(top_srcdir)/nsis/tesseract.nsi
+	case "$(host_cpu)" in \
+	aarch64) arch="-DW64 -DARM64";; \
+	x86_64) arch="-DW64";; \
+	*) arch="";; \
+	esac; \
+	makensis -DCROSSBUILD -DSHARED -DSIGNCODE=$(SIGNCODE) -DSRCDIR=$(top_srcdir) -DPREFIX=$(prefix) -DVERSION=${gitrev} $$arch -NOCD $(top_srcdir)/nsis/tesseract.nsi
 
 endif

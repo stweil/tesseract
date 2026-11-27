@@ -2,28 +2,26 @@
 
 name: Cross build for Windows
 
+# Show the MSYS2 environment in the list of workflow runs.
+run-name: Cross build for Windows (${{ inputs.msystem }})
+
 on:
   # Trigger workflow in GitHub web frontend or from API.
   workflow_dispatch:
     inputs:
-      targets:
-        description: 'Target operating system'
-        required: true
-        default: 'Windows (64 bit)'
-        type: choice
-        options:
-          - 'Windows (64 bit)'
       msystem:
-        description: 'MSYS2 environment which provides the libraries'
+        description: 'MSYS2 environment'
         required: true
         default: 'CLANG64'
         type: choice
         options:
           - 'CLANG64'
           - 'UCRT64'
+          - 'CLANGARM64'
 
 jobs:
   build64:
+    name: Installer (${{ inputs.msystem }})
     runs-on: [ubuntu-24.04]
     steps:
     - uses: actions/checkout@v7
@@ -35,13 +33,13 @@ jobs:
         packages: >-
           curl-winssl giflib icu leptonica libarchive libidn2 openjpeg2
           openssl pango libpng libtiff libwebp
-    - name: Build Tesseract installer (64 bit)
+    - name: Build Tesseract installer
       run: nsis/build.sh "$HOST" "$PREFIX"
       env:
         HOST: ${{ steps.cross.outputs.host }}
         PREFIX: ${{ steps.cross.outputs.prefix }}
     - uses: actions/upload-artifact@v7
       with:
-        name: Tesseract Installer for Windows (64 bit)
-        path: bin/ndebug/x86_64-w64-mingw32/nsis/tesseract-ocr-w*-setup-*.exe
+        name: Tesseract Installer for Windows (${{ inputs.msystem }})
+        path: bin/ndebug/${{ steps.cross.outputs.host }}/nsis/tesseract-ocr-*-setup-*.exe
         archive: false

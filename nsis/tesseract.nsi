@@ -27,6 +27,7 @@ Unicode true
 ;define CROSSBUILD
 ;define SHARED
 ;define W64
+;define ARM64
 !ifndef COMMENTS
 !define COMMENTS "GitHub CI build"
 !endif
@@ -54,12 +55,18 @@ Unicode true
 !addplugindir Plugins/x86-unicode
 !endif
 
+!ifdef ARM64
+; Installer for Windows on ARM (64 bit). W64 must be defined, too.
+!define ARCH "aarch64"
+!define SETUP "tesseract-ocr-arm64-setup"
+!else
 !ifdef W64
 !define ARCH "x86_64"
 !define SETUP "tesseract-ocr-w64-setup"
 !else
 !define ARCH "i686"
 !define SETUP "tesseract-ocr-w32-setup"
+!endif
 !endif
 
 # Name of program and file

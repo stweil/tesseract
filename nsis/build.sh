@@ -15,6 +15,12 @@
 #       openssl pango libpng libtiff libwebp
 #
 # which also shows the directories which must be added to PATH.
+#
+# Supported combinations of HOST and PREFIX:
+#
+#     x86_64-w64-mingw32   /clang64      (default)
+#     x86_64-w64-mingw32   /ucrt64
+#     aarch64-w64-mingw32  /clangarm64   (Windows on ARM)
 
 set -e
 set -x
