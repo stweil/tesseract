@@ -27,7 +27,7 @@ jobs:
     - uses: actions/checkout@v7
     - name: Install llvm-mingw and MSYS2 packages
       id: cross
-      uses: ./.github/actions/setup-msys2-cross
+      uses: stweil/setup-msys2-cross@v1
       with:
         msystem: ${{ inputs.msystem }}
         packages: >-

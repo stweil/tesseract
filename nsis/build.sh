@@ -7,14 +7,16 @@
 # Usage: nsis/build.sh [HOST [PREFIX]]
 #
 # The cross compiler for HOST and the libraries for Windows in PREFIX
-# must be installed before this script is run. For the MSYS2 environment
-# CLANG64 this is done by
+# must be installed before this script is run. The GitHub workflow uses
+# the action https://github.com/stweil/setup-msys2-cross for that. Without
+# GitHub Actions, the script setup.sh from that repository does the same.
+# For the MSYS2 environment CLANG64 it is run like this:
 #
-#     .github/actions/setup-msys2-cross/setup.sh CLANG64 \
+#     setup.sh CLANG64 \
 #       curl-winssl giflib icu leptonica libarchive libidn2 openjpeg2 \
 #       openssl pango libpng libtiff libwebp
 #
-# which also shows the directories which must be added to PATH.
+# It also shows the directories which must be added to PATH.
 #
 # Supported combinations of HOST and PREFIX:
 #
