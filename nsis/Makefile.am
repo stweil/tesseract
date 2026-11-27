@@ -12,8 +12,11 @@ Plugins/x86-unicode/INetC.dll:
 	curl -OsS https://nsis.sourceforge.io/mediawiki/images/c/c9/Inetc.zip
 	unzip Inetc.zip $@
 
-winpath.exe: winpath.cpp
-	$(CXX) -Os -o $@ $<
+winpath_rc.o: $(top_srcdir)/src/tesseract.rc
+	$(WINDRES) -DTESS_RC_PRODUCT_VERSION=$(PACKAGE_VERSION:v%=%) -I$(top_builddir)/include -i $(top_srcdir)/src/tesseract.rc -o $@
+
+winpath.exe: winpath.cpp winpath_rc.o
+	$(CXX) -Os -o $@ $< winpath_rc.o
 	$(STRIP) --strip-unneeded $@
 
 winsetup: Plugins/x86-unicode/INetC.dll winpath.exe

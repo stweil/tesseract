@@ -1,0 +1,60 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Windows version resource for the Tesseract programs and for the library.
+//
+// It gives all of them the same product name and product version, which
+// are shown in the file properties and are needed for code signing.
+//
+// TESS_RC_DLL must be defined when the resource is used for the library.
+// TESS_RC_PRODUCT_VERSION can be defined to set the version string (without
+// quotes). All programs, the library and the installer must use the same.
+
+#include <winver.h>
+#include <tesseract/version.h>
+
+#ifdef TESS_RC_DLL
+#define TESS_RC_FILETYPE VFT_DLL
+#define TESS_RC_DESCRIPTION "Tesseract OCR library"
+#else
+#define TESS_RC_FILETYPE VFT_APP
+#define TESS_RC_DESCRIPTION "Tesseract OCR"
+#endif
+
+#ifdef TESS_RC_PRODUCT_VERSION
+#define TESS_RC_STRING2(x) #x
+#define TESS_RC_STRING(x) TESS_RC_STRING2(x)
+#define TESS_RC_VERSION_STR TESS_RC_STRING(TESS_RC_PRODUCT_VERSION)
+#else
+#define TESS_RC_VERSION_STR TESSERACT_VERSION_STR
+#endif
+
+#define TESS_RC_VERSION \
+  TESSERACT_MAJOR_VERSION, TESSERACT_MINOR_VERSION, TESSERACT_MICRO_VERSION, 0
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION TESS_RC_VERSION
+PRODUCTVERSION TESS_RC_VERSION
+FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+FILEFLAGS 0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE TESS_RC_FILETYPE
+FILESUBTYPE VFT2_UNKNOWN
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    // Language U.S. English, character set Unicode.
+    BLOCK "040904b0"
+    BEGIN
+      VALUE "CompanyName", "Tesseract-OCR community"
+      VALUE "FileDescription", TESS_RC_DESCRIPTION
+      VALUE "FileVersion", TESS_RC_VERSION_STR
+      VALUE "LegalCopyright", "Apache-2.0"
+      VALUE "ProductName", "Tesseract-OCR"
+      VALUE "ProductVersion", TESS_RC_VERSION_STR
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

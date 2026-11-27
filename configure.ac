@@ -93,6 +93,10 @@ case "${host_os}" in
         AM_CONDITIONAL([MINGW], true)
         AM_CONDITIONAL([ADD_RT], false)
         AC_SUBST([AM_LDFLAGS], ['-no-undefined'])
+        # The resource compiler is needed for the version resource.
+        AC_CHECK_TOOL([WINDRES], [windres])
+        AS_IF([test -z "$WINDRES"],
+              [AC_MSG_ERROR([windres is required for the Windows version resource])])
         ;;
     cygwin*)
         AM_CONDITIONAL([ADD_RT], false)

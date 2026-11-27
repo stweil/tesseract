@@ -18,6 +18,7 @@ if !GRAPHICS_DISABLED
 EXTRA_DIST += java
 endif
 EXTRA_DIST += CMakeLists.txt tesseract.pc.cmake cmake VERSION
+EXTRA_DIST += src/tesseract.rc
 # Header shared by the unit tests, not listed in any _SOURCES.
 EXTRA_DIST += unittest/util/tempdir.h
 EXTRA_DIST += unittest/weightmatrix_test_helper.h
@@ -745,6 +746,25 @@ if T_WIN
 tesseract_LDADD += -ltiff
 tesseract_LDADD += -lws2_32
 endif
+
+if MINGW
+# Windows version resource for all programs and for the library.
+# It gives them a product name and a product version. The version is the
+# same as for the installer (without the "v" of a version from git).
+TESS_RC_FLAGS = -DTESS_RC_PRODUCT_VERSION=$(PACKAGE_VERSION:v%=%)
+TESS_RC_FLAGS += -I$(top_builddir)/include
+
+tesseract_rc.o: $(top_srcdir)/src/tesseract.rc include/tesseract/version.h
+	$(WINDRES) $(TESS_RC_FLAGS) -i $(top_srcdir)/src/tesseract.rc -o $@
+
+libtesseract_rc.o: $(top_srcdir)/src/tesseract.rc include/tesseract/version.h
+	$(WINDRES) -DTESS_RC_DLL $(TESS_RC_FLAGS) -i $(top_srcdir)/src/tesseract.rc -o $@
+
+CLEANFILES += tesseract_rc.o libtesseract_rc.o
+EXTRA_libtesseract_la_DEPENDENCIES = libtesseract_rc.o
+libtesseract_la_LDFLAGS += -Wl,libtesseract_rc.o
+tesseract_LDADD += tesseract_rc.o
+endif
 if ADD_RT
 tesseract_LDADD += -lrt
 endif
@@ -909,6 +929,9 @@ extralib += $(libarchive_LIBS)
 extralib += $(LEPTONICA_LIBS)
 if T_WIN
 extralib += -lws2_32
+endif
+if MINGW
+extralib += tesseract_rc.o
 endif
 
 if !DISABLED_LEGACY_ENGINE
